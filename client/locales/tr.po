@@ -13254,6 +13254,12 @@ msgctxt "translate.menu.translateNow"
 msgid "Translate"
 msgstr "Çevir"
 
+#. Settings → Translation, a model's row: status line saying this translation model cannot work on the user's device; the reason follows on the next line as a sentence of its own. Short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.cantRun"
+msgid "Can't run on this device"
+msgstr "Bu cihazda çalışamaz"
+
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
@@ -13296,8 +13302,9 @@ msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
 msgstr "Yükleniyor… {percent}%"
 
-#. Under one GPU model in the model list of Settings → Translation, when this device cannot load it: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Its Download button is greyed out.
+#. Reason a GPU translation model cannot load here: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Shown under the model's row in Settings → Translation (its Download button greyed out) and, after a lead sentence such as 'Correcting a message needs the GPU model.', wherever an action needing that model is unavailable.
 #: client/components/Settings/Translation.vue
+#: client/js/helpers/translateWhy.ts
 msgctxt "translate.model.needsBuffer"
 msgid "Needs a GPU buffer of {needed}; this device binds at most {limit}"
 msgstr "{needed} boyutunda bir GPU arabelleği gerektirir; bu cihaz en fazla {limit} bağlayabiliyor"
@@ -13326,11 +13333,36 @@ msgctxt "translate.model.percent"
 msgid "{percent}%"
 msgstr "{percent}%"
 
+#. Settings → Translation, a model's row: status line saying this translation model works on the user's device. Short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.runsHere"
+msgid "Can run on this device"
+msgstr "Bu cihazda çalışabilir"
+
+#. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.switchedOff"
+msgid "Switched off above"
+msgstr "Yukarıda kapatıldı"
+
 #. Label of the compact equals-icon chip shown in place of a translation that failed because the engine returned the source line as its own answer. Also the chip's tooltip and aria-label; the reason text beside it only appears in development builds.
 #: client/components/TranslationLine.vue
 msgctxt "translate.notTranslated"
 msgid "Not translated"
 msgstr "Çeviri yapılmamış"
+
+#. Lead sentence when a translation is unavailable for a language pair (the composer's translate dialog, the translation panel's 'Send my messages in'); the reason follows as a sentence of its own. {from} and {to} are language names, already in the interface language.
+#: client/components/SourceLanguagePicker.vue
+#: client/components/TranslationPanel.vue
+msgctxt "translate.pair.unavailable"
+msgid "Nothing on this device can translate {from} into {to}."
+msgstr "Bu cihazdaki hiçbir şey çeviri yapamıyor: {from} → {to}."
+
+#. Lead sentence in the composer's translate dialog when the source is 'Detect automatically' and no engine here translates into the chosen language; the reason follows as a sentence of its own. {to} is a language name, already in the interface language.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.pair.unavailableInto"
+msgid "Nothing on this device can translate into {to}."
+msgstr "Bu cihazdaki hiçbir şey şu dile çeviremiyor: {to}."
 
 #. The placeholder option of the picker that adds a language to the list of languages spoken in this conversation, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13476,11 +13508,12 @@ msgctxt "translate.picker.sameLanguage"
 msgid "Same language: spelling and grammar are corrected instead."
 msgstr "Aynı dil: yazım ve dilbilgisi düzeltülür."
 
-#. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language but the on-device language model that does the correcting cannot run here (switched off in Settings, or no capable GPU).
+#. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the GPU model can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
+#: client/components/TranslationPanel.vue
 msgctxt "translate.picker.sameLanguageNeedsGpu"
-msgid "Correcting a message needs the GPU model, which is off or not available on this device."
-msgstr "Mesajı düzeltmek için GPU modeli gerekir, bu cihazda kapalı ya da mevcut değildir."
+msgid "Correcting a message needs the GPU model."
+msgstr "Bir mesajı düzeltmek için GPU modeli gerekir."
 
 #. Button that translates the draft into the language picked in the composer's translate-into dialog.
 #: client/components/SourceLanguagePicker.vue
@@ -13710,11 +13743,91 @@ msgctxt "translate.topic.showTranslation"
 msgid "Show the translated topic"
 msgstr "Çeviri konusunu göster"
 
+#. Lead sentence of the per-channel translation panel's notice, and the channel header translate button's label, when no translation engine can run (both switched off, or a device that runs neither); the reason follows as a sentence of its own.
+#: client/components/TranslationPanel.vue
+#: client/components/Chat.vue
+msgctxt "translate.unavailable.lead"
+msgid "Translation can't run here right now."
+msgstr "Çeviri şu anda burada çalışamıyor."
+
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"
 msgid "the line came back unchanged"
 msgstr "Satır aynı kalıbı geldi"
+
+#. Reason nothing can translate: the user turned off both engine switches. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.allOff"
+msgid "Both the GPU model and the CPU models are switched off in Settings → Translation."
+msgstr "Hem GPU modeli hem de CPU modelleri Ayarlar → Çeviri bölümünde kapalı."
+
+#. Reason a translation cannot run: the user turned off the 'Use the CPU models' switch. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.cpuOff"
+msgid "The CPU models are switched off in Settings → Translation."
+msgstr "CPU modelleri Ayarlar → Çeviri bölümünde kapalı."
+
+#. Reason a translation cannot run: the one model that serves it failed to load earlier in this session and is skipped until the page is reloaded. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.down"
+msgid "The model for this failed to load earlier; reload the page to try it again."
+msgstr "Bunun için gereken model daha önce yüklenemedi; yeniden denemek için sayfayı yeniden yükleyin."
+
+#. Reason a GPU translation model cannot run: the page is plain HTTP. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebGPU', 'HTTPS' and 'localhost'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.insecureOrigin"
+msgid "WebGPU needs the app served over HTTPS (or from localhost), so the GPU models can't run here."
+msgstr "WebGPU, uygulamanın HTTPS üzerinden (ya da localhost'tan) sunulmasını gerektirir; bu yüzden GPU modelleri burada çalışamaz."
+
+#. Reason a translation cannot run: the user turned off the 'Use the GPU model' switch. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.llmOff"
+msgid "The GPU model is switched off in Settings → Translation."
+msgstr "GPU modeli Ayarlar → Çeviri bölümünde kapalı."
+
+#. Reason a GPU translation model cannot run: WebGPU exists but returned no graphics adapter. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noAdapter"
+msgid "This browser has WebGPU but found no GPU it can use."
+msgstr "Bu tarayıcıda WebGPU var ama kullanabileceği bir GPU bulamadı."
+
+#. Reason a GPU translation model cannot run: the graphics card lacks half-precision (16-bit floating point) shader support. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noF16"
+msgid "This GPU has no 16-bit float shaders, which the GPU models need."
+msgstr "Bu GPU'da GPU modellerinin ihtiyaç duyduğu 16 bit kayan noktalı shader'lar yok."
+
+#. Reason the CPU translation models cannot run. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebAssembly SIMD'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noWasmSimd"
+msgid "This browser has no WebAssembly SIMD, which the CPU models need."
+msgstr "Bu tarayıcıda CPU modellerinin ihtiyaç duyduğu WebAssembly SIMD yok."
+
+#. Reason a GPU translation model cannot run. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'WebGPU' is a browser API name, keep it.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noWebgpu"
+msgid "This browser has no WebGPU, which the GPU models need."
+msgstr "Bu tarayıcıda GPU modellerinin ihtiyaç duyduğu WebGPU yok."
+
+#. Reason nothing can translate: the app's check of the device's GPU and CPU features threw an error. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.probeFailed"
+msgid "Checking what this device can run failed, so translation is off."
+msgstr "Bu cihazın neleri çalıştırabileceği denetlenemedi, bu yüzden çeviri kapalı."
+
+#. Shown while the app is still checking the device's GPU and CPU features, before any translation model can be judged; also the status line of each model row in Settings → Translation meanwhile.
+#: client/js/helpers/translateWhy.ts
+#: client/components/Settings/Translation.vue
+msgctxt "translate.why.probing"
+msgid "Still checking what this device can run…"
+msgstr "Bu cihazın neleri çalıştırabileceği hâlâ denetleniyor…"
+
+#. Reason a translation cannot run: no installed translation model translates between the two languages asked for. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.unserved"
+msgid "No model on this device covers this pair of languages."
+msgstr "Bu cihazdaki hiçbir model bu dil çiftini kapsamıyor."
 
 #. Translation panel, channel languages field. {channel} is the channel's name (#seance).
 #: client/components/TranslationPanel.vue

@@ -32,6 +32,8 @@ import {type Detection, LanguagePrior, detectLanguage, detectionSkip, sourceFor}
 import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} from "./eligibility";
 import {namesFor} from "./names";
 import {fromLocaleTag} from "./languages";
+import {type EngineSwitches, type ModelBlock, selectLlm} from "./models";
+import {type RouteVerdict, explainRoute, routeInput, translationBlock} from "./router";
 import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
@@ -160,6 +162,56 @@ export function translationAvailable(): boolean {
 	const tier = store.state.translation.capability?.tier;
 
 	return translateService().enabled && tier !== undefined && tier !== "none";
+}
+
+/** The catalog as the service runs it: the GPU model the setting and the probe resolve to. */
+function liveCatalog() {
+	return selectLlm(
+		translateService().catalog,
+		store.state.settings.translateLlmModel,
+		store.state.translation.capability
+	);
+}
+
+function switches(): EngineSwitches {
+	return {llm: !!store.state.settings.translateLlm, cpu: !!store.state.settings.translateCpu};
+}
+
+/**
+ * Whether anything can translate here right now, and if not why (router.ts
+ * `translationBlock`): the deploy, the probe, the device, the user's two
+ * switches. Null once an engine runs. Reactive through the store reads, so
+ * a component's computed follows the switches and the probe.
+ */
+export function currentTranslationBlock(): ModelBlock | null {
+	return translationBlock(
+		liveCatalog(),
+		store.state.translation.capability,
+		switches(),
+		translateService().enabled
+	);
+}
+
+/**
+ * Whether `from` → `to` can be translated here, and if not why (router.ts
+ * `explainRoute`, the router's own test). `from` null is a line the
+ * detector will place before the request goes, so the CPU models count;
+ * `from` equal to `to` is the cleanup pass (`polish` in the verdict).
+ */
+export function pairVerdict(from: string | null, to: string): RouteVerdict {
+	const service = translateService();
+	const capability = store.state.translation.capability;
+	const input = routeInput(capability, switches(), {from, to, sourceLater: from === null});
+
+	if (!service.enabled || !capability) {
+		return {
+			route: null,
+			why: service.enabled ? {kind: "probing"} : {kind: "disabled"},
+			polish: from !== null && from === to,
+		};
+	}
+
+	return explainRoute(service.routeTable, liveCatalog(), input);
 }
 
 function priorFor(network: ClientNetwork, channel: ClientChan): LanguagePrior {

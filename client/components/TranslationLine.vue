@@ -19,6 +19,7 @@
 			:anchor="chip"
 			:selected="entry.from"
 			:candidates="entry.candidates"
+			:to="entry.to"
 			@pick="pickSource"
 			@close="pickerOpen = false"
 		/>
@@ -43,6 +44,7 @@
 			:anchor="chip"
 			:selected="entry.from"
 			:candidates="entry.candidates"
+			:to="entry.to"
 			@pick="pickSource"
 			@close="pickerOpen = false"
 		/>
@@ -98,7 +100,14 @@ import {devtoolsAvailable} from "../js/devtools";
 import eventbus from "../js/eventbus";
 import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
-import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
+import {
+	pairVerdict,
+	readingLanguage,
+	retranslate,
+	retryTranslation,
+	showOriginal,
+} from "../js/translate/reader";
+import {translateWhyText} from "../js/helpers/translateWhy";
 import {ANSWERED, DEGENERATE, NARRATION, UNCHANGED} from "../js/translate/outgoing";
 import {languageName} from "../js/translate/languages";
 import {directionText} from "../js/translate/labels";
@@ -144,7 +153,12 @@ export default defineComponent({
 				return t("translate.reason.degenerate");
 			}
 
-			return translateErrorText(error);
+			return translateErrorText(error, () => {
+				const line = entry.value;
+				const verdict = line ? pairVerdict(line.from || null, line.to) : null;
+
+				return verdict && !verdict.route ? translateWhyText(verdict.why) : "";
+			});
 		});
 		// Every language the line names is named in the language its reader
 		// reads (the channel's reading language, else the global one), not

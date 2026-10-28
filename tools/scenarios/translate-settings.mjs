@@ -21,7 +21,7 @@
 
 import {readFileSync} from "node:fs";
 
-const BASE = "http://localhost:8021/";
+const BASE = process.env.SEANCE_HTTP || "http://localhost:8021/";
 
 // The English copy the tab renders, read from the compiled catalog rather
 // than spelled out here: client/locales/messages.pot is the only source of

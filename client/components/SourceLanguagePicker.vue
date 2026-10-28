@@ -48,13 +48,15 @@
 				/>
 				{{ t("translate.picker.thisMessageOnly") }}
 			</label>
-			<p v-if="sameLanguage" class="source-language-picker-hint">
-				{{
-					polishAvailable
-						? t("translate.picker.sameLanguage")
-						: t("translate.picker.sameLanguageNeedsGpu")
-				}}
-			</p>
+			<!-- Live: the reason appears and changes as the selects do. The
+			     lead and the reason are two whole sentences. -->
+			<div :id="hintId" class="source-language-picker-hint" aria-live="polite">
+				<template v-if="blockedLead">
+					<p class="source-language-picker-blocked">{{ blockedLead }}</p>
+					<p class="source-language-picker-why">{{ blockedWhy }}</p>
+				</template>
+				<p v-else-if="sameLanguage">{{ t("translate.picker.sameLanguage") }}</p>
+			</div>
 			<div class="source-language-picker-actions">
 				<button
 					type="button"
@@ -66,7 +68,8 @@
 				<button
 					type="button"
 					class="btn btn-sm source-language-picker-confirm"
-					:disabled="sameLanguage && !polishAvailable"
+					:disabled="!!blockedLead"
+					:aria-describedby="blockedLead ? hintId : undefined"
 					@click="confirm"
 				>
 					{{ confirmLabel }}
@@ -82,7 +85,10 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
 import {collator} from "../js/i18n/collation";
 import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
-import {readingLanguage} from "../js/translate/reader";
+import {pairVerdict, readingLanguage} from "../js/translate/reader";
+import {translateWhyText} from "../js/helpers/translateWhy";
+
+let pickers = 0;
 
 /** Gap between the chip and the popover, and the margin it keeps off screen edges. */
 const GAP = 6;
@@ -107,8 +113,12 @@ export default defineComponent({
 		purpose: {type: String as PropType<"source" | "target">, default: "source"},
 		/** `target` only: the source preselected -- the language the user reads. */
 		selectedFrom: {type: String, default: ""},
-		/** `target` only: whether a same-language pick (a cleanup pass) can run here. */
-		polishAvailable: {type: Boolean, default: false},
+		/**
+		 * `source` only: the language the line is translated into, so the
+		 * dialog can say when the picked source has no engine here. Empty:
+		 * not checked.
+		 */
+		to: {type: String, default: ""},
 		/** `target` only: a draft is there, so "This message only" is on offer. */
 		onceOffered: {type: Boolean, default: false},
 	},
@@ -144,6 +154,42 @@ export default defineComponent({
 		const sameLanguage = computed(
 			() => props.purpose === "target" && from.value !== "" && from.value === choice.value
 		);
+
+		// The pair the confirm would ask for, through the router's own rule
+		// (reader.ts `pairVerdict`): a pair nothing here can serve -- the
+		// cleanup pass without the GPU model, both engines switched off --
+		// is offered disabled with its reason, never left to fail later.
+		const verdict = computed(() => {
+			if (props.purpose === "target") {
+				return pairVerdict(from.value || null, choice.value);
+			}
+
+			return props.to ? pairVerdict(choice.value, props.to) : null;
+		});
+		const hintId = `source-language-picker-hint-${++pickers}`;
+		const blockedLead = computed(() => {
+			const v = verdict.value;
+
+			if (!v || v.route) {
+				return "";
+			}
+
+			if (v.polish) {
+				return t("translate.picker.sameLanguageNeedsGpu");
+			}
+
+			const pairFrom = props.purpose === "target" ? from.value : choice.value;
+			const pairTo = props.purpose === "target" ? choice.value : props.to;
+
+			return pairFrom
+				? t("translate.pair.unavailable", {from: name(pairFrom), to: name(pairTo)})
+				: t("translate.pair.unavailableInto", {to: name(pairTo)});
+		});
+		const blockedWhy = computed(() => {
+			const v = verdict.value;
+
+			return v && !v.route ? translateWhyText(v.why) : "";
+		});
 
 		// A target that is the source is a cleanup pass, not a translation:
 		// the button says what it will do (writer.ts, the strip's chip).
@@ -287,6 +333,9 @@ export default defineComponent({
 			from,
 			once,
 			sameLanguage,
+			hintId,
+			blockedLead,
+			blockedWhy,
 			name,
 			phone,
 			flipped,

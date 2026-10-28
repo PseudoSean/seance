@@ -26,6 +26,18 @@
 			</div>
 
 			<div class="translation-panel-body">
+				<!-- Nothing here can translate (the engines switched off, a
+				     device that runs neither): said first, as two sentences,
+				     with the Settings link below. -->
+				<div
+					v-if="blockedWhy"
+					id="translation-panel-blocked"
+					class="translation-panel-blocked"
+					role="status"
+				>
+					<p>{{ t("translate.unavailable.lead") }}</p>
+					<p>{{ blockedWhy }}</p>
+				</div>
 				<section class="translation-panel-section">
 					<h3>{{ t("translate.panel.reading") }}</h3>
 					<!-- The reading language is not chosen here: it is the
@@ -47,6 +59,12 @@
 								role="radio"
 								class="translation-panel-segment"
 								:aria-checked="state.read === option.value"
+								:disabled="option.value && !state.read && !!blockedWhy"
+								:aria-describedby="
+									option.value && blockedWhy
+										? 'translation-panel-blocked'
+										: undefined
+								"
 								@click="setRead(option.value)"
 							>
 								{{ option.label }}
@@ -115,17 +133,34 @@
 						<select
 							name="translateWrite"
 							class="input translation-panel-control"
+							:aria-describedby="
+								writeNote ? 'translation-panel-write-note' : undefined
+							"
 							:value="state.write ?? ''"
 							@change="onWrite"
 						>
 							<option value="">{{ t("translate.panel.off") }}</option>
-							<option v-for="code in languages" :key="code" :value="code">
+							<!-- A language nothing here can write in is on the list,
+							     disabled; the note under the select says why. -->
+							<option
+								v-for="code in languages"
+								:key="code"
+								:value="code"
+								:disabled="writeBlocked(code)"
+							>
 								{{ name(code) }}
 							</option>
 						</select>
 						<span v-if="limited(state.write)" class="translation-panel-limited">{{
 							t("translate.limitedLanguage")
 						}}</span>
+						<span
+							v-if="writeNote"
+							id="translation-panel-write-note"
+							class="translation-panel-why"
+							><span class="translation-panel-why-lead">{{ writeNote.lead }}</span>
+							<span>{{ writeNote.why }}</span></span
+						>
 						<span class="translation-panel-hint">{{
 							t("translate.panel.writeHint")
 						}}</span>
@@ -210,10 +245,13 @@ import {useI18n} from "../js/i18n";
 import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
 import {
 	channelTranslation,
+	currentTranslationBlock,
+	pairVerdict,
 	readingLanguage,
 	setChannelOptions,
 	setReading,
 } from "../js/translate/reader";
+import {translateWhyText} from "../js/helpers/translateWhy";
 import {isLimitedLanguage} from "../js/translate/routes.default";
 import {translateService} from "../js/translate";
 import {llmChoice} from "../js/translate/models";
@@ -320,6 +358,44 @@ export default defineComponent({
 
 		const removeLabel = (code: string) => t("translation.panel.remove", {language: name(code)});
 
+		// Nothing here can translate at all: the banner's reason (router.ts
+		// `translationBlock`), and the reading switch's On is disabled.
+		const blockedWhy = computed(() => {
+			const block = currentTranslationBlock();
+
+			return block ? translateWhyText(block) : "";
+		});
+
+		// Writing in `code` is a translation from the language the user reads
+		// (or, the same language, the cleanup pass): the router's own verdict.
+		const writeVerdict = (code: string) => pairVerdict(readingLanguage(), code);
+		const writeBlocked = (code: string) => !writeVerdict(code).route;
+
+		// Why a language is greyed: the one chosen, when it no longer runs,
+		// else the cleanup pass (the user's own language), which is the one a
+		// GPU-less device greys while every other stays on offer.
+		const writeNote = computed(() => {
+			if (blockedWhy.value) {
+				return null;
+			}
+
+			const reading = readingLanguage();
+			const code =
+				state.value.write && writeBlocked(state.value.write) ? state.value.write : reading;
+			const verdict = writeVerdict(code);
+
+			if (verdict.route) {
+				return null;
+			}
+
+			return {
+				lead: verdict.polish
+					? t("translate.picker.sameLanguageNeedsGpu")
+					: t("translate.pair.unavailable", {from: name(reading), to: name(code)}),
+				why: translateWhyText(verdict.why),
+			};
+		});
+
 		const onWrite = (event: Event) => {
 			// A strip already up was translated for the old target: it must not
 			// survive the change, finished or not.
@@ -382,6 +458,9 @@ export default defineComponent({
 
 		return {
 			t,
+			blockedWhy,
+			writeBlocked,
+			writeNote,
 			panel,
 			phone,
 			state,

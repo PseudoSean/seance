@@ -14,7 +14,7 @@ import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
 import {EngineName, LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
 import {ABORTED} from "./outgoing";
 import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
-import {Route, RouteTable, mergeRoutes, resolveRoute} from "./router";
+import {Route, RouteTable, mergeRoutes, resolveRoute, routeInput} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
 
 /** A loaded GPU model with no request for this long gives its memory back. */
@@ -152,6 +152,14 @@ export class TranslateService {
 	/** The catalog as it stands: `catalog.llm` is the selected GPU model. */
 	get catalog(): ModelCatalog {
 		return this.options.catalog;
+	}
+
+	/**
+	 * The route table for the selected GPU model, deploy overrides merged:
+	 * what the UI asks `explainRoute` against before it offers an action.
+	 */
+	get routeTable(): RouteTable {
+		return this.table;
 	}
 
 	/**
@@ -380,13 +388,7 @@ export class TranslateService {
 		}
 
 		return resolveRoute(this.table, this.options.catalog, {
-			from,
-			hint,
-			to,
-			tier: capability.tier,
-			allowLlm: this.settings.llm,
-			allowCpu: this.settings.cpu,
-			down: this.down,
+			...routeInput(capability, this.settings, {from, to, hint}, this.down),
 			cached: (ref: ModelRef) => this.views.get(ref.id)?.cached === true,
 		});
 	}

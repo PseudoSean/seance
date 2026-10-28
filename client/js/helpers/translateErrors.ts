@@ -10,7 +10,13 @@ import {WORKER_DISPOSED} from "../translate/client";
 import {ABORTED, TIMED_OUT} from "../translate/outgoing";
 import {TRANSLATION_UNAVAILABLE} from "../translate/service";
 
-export function translateErrorText(error: string): string {
+/**
+ * `explain` answers a bare "no engine can take this request" with why, as
+ * it stands now (translateWhy.ts over reader.ts `pairVerdict`): the CPU
+ * models switched off, a device without the GPU model. Empty when the pair
+ * would route now, and the generic phrase stays.
+ */
+export function translateErrorText(error: string, explain?: () => string): string {
 	if (error === TIMED_OUT) {
 		return t("translate.error.timedOut");
 	}
@@ -24,7 +30,7 @@ export function translateErrorText(error: string): string {
 	}
 
 	if (error === TRANSLATION_UNAVAILABLE) {
-		return t("translate.error.unavailable");
+		return explain?.() || t("translate.error.unavailable");
 	}
 
 	// The service appends the last load error to the same code when it has

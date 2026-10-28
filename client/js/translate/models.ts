@@ -3,8 +3,8 @@
 // and the cache API the worker answers "is it downloaded" / "delete it"
 // with. A router candidate names a catalog entry, never a URL.
 
-import {ModelRef} from "./engine";
-import type {Tier} from "./capability";
+import {EngineName, ModelRef} from "./engine";
+import type {Capability, CapabilityReason, Tier} from "./capability";
 
 /** What the route table lists: the LLM, NLLB, or an OPUS-MT pair. */
 export type Candidate = "llm" | "nllb" | `opus:${string}`;
@@ -134,6 +134,95 @@ export const LLM_MIN_BUFFER_BYTES = Math.min(
  */
 export function llmFits(ref: ModelRef, maxBufferBytes: number): boolean {
 	return ref.engine !== "llm" || (ref.largestBufferBytes ?? 0) <= maxBufferBytes;
+}
+
+/**
+ * The device codes that keep a model from running: everything the probe can
+ * report but SMALL_BUFFER, which is per model and becomes a `buffer` block
+ * with that model's own numbers.
+ */
+export type DeviceReason = Exclude<CapabilityReason, "SMALL_BUFFER">;
+
+/**
+ * Why a model cannot run here, in the order a user can do something about
+ * it last: the deploy switched translation off, the probe has not answered
+ * yet, the device cannot (a capability code), the GPU binds too little for
+ * this model (with both numbers), or the user switched its engine off in
+ * Settings. A model the device cannot run is never reported as switched off:
+ * turning the setting on would change nothing.
+ */
+export type ModelBlock =
+	| {kind: "disabled"}
+	| {kind: "probing"}
+	| {kind: "device"; reason: DeviceReason}
+	| {kind: "buffer"; needed: number; limit: number}
+	/** `all`: both switches (router.ts `translationBlock`; never one model's). */
+	| {kind: "off"; engine: EngineName | "all"};
+
+/** The user's two engine switches (`translateLlm`, `translateCpu`; service.ts `ServiceSettings`). */
+export interface EngineSwitches {
+	llm: boolean;
+	cpu: boolean;
+}
+
+/** The GPU codes, most fundamental first: the first one the probe lists is the one named. */
+const GPU_REASONS: readonly DeviceReason[] = [
+	"PROBE_FAILED",
+	"INSECURE_ORIGIN",
+	"NO_WEBGPU",
+	"NO_ADAPTER",
+	"NO_F16",
+];
+
+/**
+ * What keeps `ref` from running on this device, or null when it can. The
+ * one rule Settings' model rows, the router's explanations (router.ts
+ * `explainRoute`) and the disabled translation actions all read. `capability`
+ * is the probe (store `translationCapability`), null while it runs; `enabled`
+ * is the deploy's `translation.enabled`.
+ */
+export function modelBlock(
+	ref: ModelRef,
+	capability: Capability | null,
+	switches: EngineSwitches,
+	enabled = true
+): ModelBlock | null {
+	if (!enabled) {
+		return {kind: "disabled"};
+	}
+
+	if (!capability) {
+		return {kind: "probing"};
+	}
+
+	if (ref.engine === "llm") {
+		const reason = GPU_REASONS.find((code) => capability.reasons.includes(code));
+
+		if (reason) {
+			return {kind: "device", reason};
+		}
+
+		// The gpu tier's floor is the smallest shipped model's need, so a
+		// deploy model of unknown size on a device below it is held to that.
+		const needed =
+			ref.largestBufferBytes ?? (capability.tier === "gpu" ? 0 : LLM_MIN_BUFFER_BYTES);
+
+		if (capability.tier !== "gpu" || needed > capability.maxBufferBytes) {
+			return {kind: "buffer", needed, limit: capability.maxBufferBytes};
+		}
+
+		return switches.llm ? null : {kind: "off", engine: "llm"};
+	}
+
+	if (capability.reasons.includes("PROBE_FAILED")) {
+		return {kind: "device", reason: "PROBE_FAILED"};
+	}
+
+	if (capability.tier === "none" || capability.reasons.includes("NO_WASM_SIMD")) {
+		return {kind: "device", reason: "NO_WASM_SIMD"};
+	}
+
+	return switches.cpu ? null : {kind: "off", engine: "seq2seq"};
 }
 
 /** What the default GPU model is decided from (capability.ts `Capability`). */

@@ -125,11 +125,12 @@
 			</div>
 			<ul class="translate-models">
 				<li
-					v-for="view in models"
+					v-for="(view, index) in models"
 					:key="view.ref.id"
 					class="translate-model"
 					:data-model="view.ref.id"
 					:data-status="view.status"
+					:data-runs="runsState(view.ref)"
 				>
 					<span class="translate-model-name"
 						>{{ modelLabel(view.ref) }}
@@ -141,12 +142,17 @@
 					>
 					<span class="translate-model-size">{{ size(view.ref.sizeBytes) }}</span>
 					<span class="translate-model-state">{{ stateLabel(view) }}</span>
-					<span v-if="tooLarge(view.ref)" class="translate-model-needs">{{
-						t("translate.model.needsBuffer", {
-							needed: size(view.ref.largestBufferBytes ?? 0),
-							limit: size(capability?.maxBufferBytes ?? 0),
-						})
-					}}</span>
+					<!-- Whether it can run here, and if not why: the verdict and
+					     the reason are two whole sentences, never one spliced
+					     into the other. The reason is the Download button's
+					     description, so a screen reader hears why it is off. -->
+					<span class="translate-model-runs">{{ runsLabel(view.ref) }}</span>
+					<span
+						v-if="whyLabel(view.ref)"
+						:id="'translate-model-why-' + index"
+						class="translate-model-why"
+						>{{ whyLabel(view.ref) }}</span
+					>
 					<span v-if="view.status === 'downloading'" class="translate-model-track">
 						<span
 							class="translate-model-fill"
@@ -158,6 +164,9 @@
 						type="button"
 						class="btn translate-model-download"
 						:disabled="!allowed(view.ref)"
+						:aria-describedby="
+							whyLabel(view.ref) ? 'translate-model-why-' + index : undefined
+						"
 						@click.prevent="download(view.ref)"
 					>
 						{{ t("translate.model.download") }}
@@ -240,6 +249,14 @@
 	justify-self: end;
 }
 
+/* A model this device cannot run: the button reads as off, not as the
+   filled look .btn:disabled gives a primary action. */
+.translate-model-download:disabled {
+	background: none;
+	color: var(--body-color-muted);
+	cursor: default;
+}
+
 .translate-model-size,
 .translate-model-state {
 	color: var(--body-color-muted);
@@ -251,9 +268,18 @@
 	color: var(--error-fg, #c33);
 }
 
-/* What a GPU model needs against what this GPU binds: a row of its own. */
-.translate-model-needs {
+/* Whether the model can run here, and why not: rows of their own. */
+.translate-model-runs,
+.translate-model-why {
 	grid-column: 1 / -1;
+}
+
+.translate-model[data-runs="cannot"] .translate-model-runs {
+	color: var(--error-fg, #c33);
+}
+
+.translate-model[data-runs="off"] .translate-model-runs,
+.translate-model-why {
 	color: var(--body-color-muted);
 }
 
@@ -314,7 +340,8 @@ import {modelLabel} from "../../js/helpers/modelLabel";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
-import {LLM_MIN_BUFFER_BYTES, llmChoice, llmFits, llmName} from "../../js/translate/models";
+import {LLM_MIN_BUFFER_BYTES, llmChoice, llmName, modelBlock} from "../../js/translate/models";
+import {translateWhyText} from "../../js/helpers/translateWhy";
 import {isLimitedLanguage} from "../../js/translate/routes.default";
 import {readingLanguage} from "../../js/translate/reader";
 import type {CapabilityReason} from "../../js/translate/capability";
@@ -428,24 +455,57 @@ export default defineComponent({
 			}
 		};
 
-		const allowed = (modelRef: ModelRef) => {
-			const cap = capability.value;
+		// What keeps a model from running here (models.ts `modelBlock`, the
+		// rule the router and every translation action read too).
+		const blockOf = (modelRef: ModelRef) =>
+			modelBlock(
+				modelRef,
+				capability.value,
+				{
+					llm: !!store.state.settings.translateLlm,
+					cpu: !!store.state.settings.translateCpu,
+				},
+				enabled
+			);
 
-			if (!cap) {
-				return false;
-			}
+		// `runs`, `off` (switched off above: it would run) or `cannot`.
+		const runsState = (modelRef: ModelRef) => {
+			const block = blockOf(modelRef);
 
-			return modelRef.engine === "llm"
-				? cap.tier === "gpu" && llmFits(modelRef, cap.maxBufferBytes)
-				: cap.tier !== "none";
+			return !block ? "runs" : block.kind === "off" ? "off" : "cannot";
 		};
 
-		// A GPU model this device's GPU cannot bind (models.ts llmFits) says
-		// how much it needs; on a device with no GPU tier the verdict says it.
-		const tooLarge = (modelRef: ModelRef) => {
-			const cap = capability.value;
+		const runsLabel = (modelRef: ModelRef) => {
+			const block = blockOf(modelRef);
 
-			return !!cap && cap.tier === "gpu" && !llmFits(modelRef, cap.maxBufferBytes);
+			if (!block) {
+				return t("translate.model.runsHere");
+			}
+
+			if (block.kind === "off") {
+				return t("translate.model.switchedOff");
+			}
+
+			return block.kind === "probing"
+				? t("translate.why.probing")
+				: t("translate.model.cantRun");
+		};
+
+		// The reason under "Can't run on this device"; none for the others.
+		const whyLabel = (modelRef: ModelRef) => {
+			const block = blockOf(modelRef);
+
+			return block && block.kind !== "off" && block.kind !== "probing"
+				? translateWhyText(block)
+				: "";
+		};
+
+		// A switched-off model can still be downloaded ahead of use; one the
+		// device cannot run, or before the probe has answered, cannot.
+		const allowed = (modelRef: ModelRef) => {
+			const block = blockOf(modelRef);
+
+			return !block || block.kind === "off";
 		};
 
 		// The ref comes off a reactive `v-for` row (store.state.translation.models);
@@ -467,7 +527,9 @@ export default defineComponent({
 			t,
 			modelLabel,
 			reasonText,
-			tooLarge,
+			runsState,
+			runsLabel,
+			whyLabel,
 			store,
 			enabled,
 			models,

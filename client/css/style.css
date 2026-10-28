@@ -2161,6 +2161,11 @@ textarea.input {
 	border-radius: 0.25rem;
 }
 
+/* Nothing here can translate: dimmed, and a click opens the panel's reason. */
+#chat button.translate.unavailable {
+	opacity: 0.5;
+}
+
 /* The per-channel translation choices, in two layouts from one markup: on a
    pointer machine a column anchored under the header, on a touch device (or a
    window as narrow as the phone's chat layout) a full-screen sheet that is
@@ -2256,6 +2261,44 @@ textarea.input {
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
 	font-style: italic;
+}
+
+/* Why nothing here can translate: first in the panel, two sentences. */
+.translation-panel-blocked {
+	margin-block-end: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	border-inline-start: 0.1875rem solid var(--error-fg, #c33);
+	border-radius: 0.25rem;
+	background: rgb(128 128 128 / 10%);
+	font-size: 0.875rem;
+}
+
+.translation-panel-blocked p {
+	margin: 0;
+}
+
+.translation-panel-blocked p + p {
+	margin-block-start: 0.25rem;
+	color: var(--body-color-muted);
+}
+
+/* Why a language under "Send my messages in" is greyed: shown wherever the
+   panel is, like the limited-language note. */
+.translation-panel-why {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+.translation-panel-why-lead {
+	color: var(--body-color);
+}
+
+.translation-panel-segment:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 .translation-panel-control {
@@ -2551,11 +2594,34 @@ textarea.input {
 	margin: 0;
 }
 
-/* One line of prose under the selects: what a same-language pick does. */
+/* Prose under the selects: what a same-language pick does, or why the
+   pair cannot run here (a lead and its reason, two sentences, which the
+   disabled confirm button is described by). Empty, it takes no gap. */
 .source-language-picker-hint {
 	margin: 0;
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
+}
+
+.source-language-picker-hint:empty {
+	display: none;
+}
+
+.source-language-picker-hint p {
+	margin: 0;
+}
+
+.source-language-picker-hint p + p {
+	margin-block-start: 0.25rem;
+}
+
+.source-language-picker-blocked {
+	color: var(--body-color);
+}
+
+.source-language-picker--sheet .source-language-picker-hint {
+	padding: 0 1rem 1rem;
+	font-size: 0.875rem;
 }
 
 .source-language-picker-actions {
@@ -7557,6 +7623,18 @@ html[data-reduce-motion] #chat .msg-copied {
 	background: rgb(128 128 128 / 15%);
 	color: var(--body-color);
 	outline: 0;
+}
+
+/* Translate when nothing here can translate: on offer, dimmed, its reason
+ * the tooltip and the button's description (MessageActions.vue). */
+#chat .msg-action:disabled {
+	opacity: 0.45;
+	cursor: default;
+}
+
+#chat .msg-action:disabled:hover {
+	background: transparent;
+	color: var(--body-color-muted);
 }
 
 #chat .msg-action-divider {

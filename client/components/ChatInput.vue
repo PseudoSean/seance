@@ -211,7 +211,6 @@
 				:anchor="translateOnceButton"
 				:selected="translateOncePreselected"
 				:selected-from="translateOnceFrom"
-				:polish-available="polishAvailable"
 				:once-offered="canTranslateOnce"
 				purpose="target"
 				@pick="translateOnce"
@@ -296,10 +295,16 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
 import {languageName} from "../js/translate/languages";
 import {draftGate} from "../js/translate/outgoing";
-import {readingLanguage, setChannelOptions, translationAvailable} from "../js/translate/reader";
+import {
+	pairVerdict,
+	readingLanguage,
+	setChannelOptions,
+	translationAvailable,
+} from "../js/translate/reader";
 import SourceLanguagePicker from "./SourceLanguagePicker.vue";
 import {loadNoteText} from "../js/helpers/modelLabel";
 import {translateErrorText} from "../js/helpers/translateErrors";
+import {translateWhyText} from "../js/helpers/translateWhy";
 import {loadNote} from "../js/translate/service";
 import {
 	cancelOutgoing,
@@ -720,7 +725,14 @@ export default defineComponent({
 				return "";
 			}
 
-			const text = translateErrorText(error).replace(/\s+/g, " ").trim();
+			const text = translateErrorText(error, () => {
+				const entry = outgoing.value;
+				const verdict = entry ? pairVerdict(entry.from, entry.to) : null;
+
+				return verdict && !verdict.route ? translateWhyText(verdict.why) : "";
+			})
+				.replace(/\s+/g, " ")
+				.trim();
 
 			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
 		};
@@ -1224,13 +1236,8 @@ export default defineComponent({
 		};
 
 		// A same-language pick is a cleanup pass on the GPU model
-		// (writer.ts, router.ts): the dialog says so, and says when the
-		// model is off or the device has none.
-		const polishAvailable = computed(
-			() =>
-				store.state.translation.capability?.tier === "gpu" &&
-				!!store.state.settings.translateLlm
-		);
+		// (writer.ts, router.ts): the dialog asks the router's own rule
+		// (reader.ts `pairVerdict`) and says why when it cannot run.
 
 		const translateOnce = (to: string, from: string | null = null, once = false) => {
 			translateOncePickerOpen.value = false;
@@ -1604,7 +1611,6 @@ export default defineComponent({
 			translateOncePreselected,
 			translateOnceFrom,
 			sendTarget,
-			polishAvailable,
 			openTranslateOnce,
 			translateOnce,
 		};

@@ -190,6 +190,49 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   "Translations into and out of this language are often wrong." when one is
   chosen — the selected GPU model's list.
 
+### What runs here, and why not
+
+One Vue-free rule answers "can this run on this device, and if not why" for
+every surface, so nothing is offered that the router would refuse and
+nothing the router would take is hidden:
+
+- **Per model** -- `models.ts` `modelBlock(ref, capability, switches, enabled)` returns null or a reason, in the order the user can do least
+  about first: `disabled` (the deploy), `probing` (no probe answer yet),
+  `device` (a capability code: for a GPU model the first of PROBE_FAILED,
+  INSECURE_ORIGIN, NO_WEBGPU, NO_ADAPTER, NO_F16; for a CPU model
+  NO_WASM_SIMD), `buffer` (`{needed, limit}`: the model's largest tensor
+  against the adapter's binding, given to every GPU row, on a cpu-tier
+  SMALL_BUFFER device too, and never when f16 is missing), then `off` (its
+  engine switched off in Settings). A model the device cannot run is never
+  reported as switched off.
+- **Per pair** -- `router.ts` `explainRoute(table, catalog, input)` is the
+  router: `resolveRoute` is `explainRoute(...).route`. With no route it
+  gives the reason (a candidate's `modelBlock`, `down` for one that failed
+  this session, `unserved`) and `polish` for a one-language request. Of
+  several candidates' reasons a switch the user turned off wins (both off
+  is `engine: "all"`), else the best class's. `routeInput(capability, switches, pair)` builds the input from the probe for the service and the
+  UI alike, including WebAssembly SIMD on a gpu-tier device; a UI question
+  with no source yet (`sourceLater`) counts the CPU models as the detector
+  will name one.
+- **At all** -- `router.ts` `translationBlock` (the GPU model in use and
+  the CPU models): null while either runs.
+
+`reader.ts` `pairVerdict(from, to)` and `currentTranslationBlock()` are the
+store glue, `helpers/translateWhy.ts` the words (one whole sentence per
+reason, shown under a lead sentence, never spliced into it). Where it
+shows: Settings -> Translation's model rows ("Can run on this device" /
+"Can't run on this device" with the reason, "Switched off above"; Download
+disabled and described by the reason); the composer's translate dialog and
+the chips' "Retranslate from…" (the confirm disabled, the reason in a polite
+live region that describes it); the panel (a notice when nothing runs, the
+reading switch's On disabled, languages nothing can write in greyed under
+"Send my messages in" with the reason); the header button (dimmed, its
+click opens the panel); the message toolbar's Translate (disabled, the
+reason as its tooltip and description); and a line or strip that failed for
+want of an engine names why. Tests: `test/translate/availability.ts`;
+browser check `tools/scenarios/translate-capability.mjs` (five stubbed
+adapters, also `--mobile`).
+
 ## Reading a channel
 
 The translate button in a channel's header switches translation on for that
