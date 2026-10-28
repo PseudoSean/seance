@@ -12265,7 +12265,7 @@ msgstr "Varning"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.aliases"
 msgid "Aliases"
-msgstr "Aliaser"
+msgstr "Alias"
 
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
 #: client/components/Settings/Navigation.vue
@@ -12299,7 +12299,7 @@ msgstr "Nätverk"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.notifications"
 msgid "Notifications"
-msgstr "Notifikationer"
+msgstr "Aviseringar"
 
 #. Name of the Translation tab in the Settings tab strip: on-device translation of messages.
 #: client/components/Settings/Navigation.vue
@@ -12906,34 +12906,34 @@ msgstr "kunde inte översätta"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
-msgstr "som det ursprungliga"
+msgstr "Som originalet"
 
 #. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.formality.autoShort"
 msgid "As written"
-msgstr "som skrivet"
+msgstr "Som det är skrivet"
 
 #. Choice for how formally a translation addresses people: always use the familiar form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "försiktigt"
+msgstr "Ledigt"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.formal"
 msgid "Formally"
-msgstr "formellt"
+msgstr "Formellt"
 
 #. Label of the control that chooses how formally the translation addresses people, in the translation panel and in Settings.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "adressera människor"
+msgstr "Tilltal"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
@@ -13090,7 +13090,7 @@ msgstr "Ladda ner"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.downloaded"
 msgid "Downloaded"
-msgstr "Laddad ned"
+msgstr "Nedladdad"
 
 #. State of a model row in Settings → Translation after a download failed. {error} is the library's own untranslated message.
 #: client/components/Settings/Translation.vue
@@ -13133,7 +13133,7 @@ msgstr "NLLB-200 600M (CPU, 200 språk)"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
-msgstr "Har inte laddats ner"
+msgstr "Inte nedladdad"
 
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
 #: client/js/helpers/modelLabel.ts
@@ -13182,7 +13182,7 @@ msgstr "Inget på den här enheten kan översätta till {to}."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.addLanguage"
 msgid "Add a language…"
-msgstr "Lägg till ett språk..."
+msgstr "Lägg till ett språk…"
 
 #. Tooltip and aria-label of the ✕ button that closes the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13194,7 +13194,7 @@ msgstr "Stäng"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.heading"
 msgid "Translation"
-msgstr "Överföring"
+msgstr "Översättning"
 
 #. Explanatory note under the list of languages spoken in this conversation, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13230,13 +13230,13 @@ msgstr "Texter som andra skickar visas med en översättning under."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readIn"
 msgid "Read messages in {language}"
-msgstr "Läs meddelanden i {language}"
+msgstr "Läs meddelanden på {language}"
 
 #. Heading of the translation panel's section about incoming messages, and the label of the on/off control in it.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.reading"
 msgid "Reading"
-msgstr "Läsande"
+msgstr "Läsa"
 
 #. Link at the foot of the translation panel; it opens the application's Translation settings page.
 #: client/components/TranslationPanel.vue
@@ -13254,7 +13254,7 @@ msgstr "Översättning för {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "Varians"
+msgstr "Språkvariant"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13278,13 +13278,13 @@ msgstr "Enter visar översättningen först; Enter igen skickar den."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeLabel"
 msgid "Send my messages in"
-msgstr "Skicka mina meddelanden i"
+msgstr "Skicka mina meddelanden på"
 
 #. Heading of the translation panel's section about the messages the user sends.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writing"
 msgid "Writing"
-msgstr "Skrivning"
+msgstr "Skriva"
 
 #. Button that closes the retranslate-from dialog without doing anything.
 #: client/components/SourceLanguagePicker.vue
@@ -13302,13 +13302,13 @@ msgstr "Översätt"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.dialog"
 msgid "Retranslate from another language"
-msgstr "Översätt från en annan språk"
+msgstr "Översätt på nytt från ett annat språk"
 
 #. First option of the source-language picker in the composer's translate-into dialog: the draft's language is detected rather than named.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromAuto"
 msgid "Detect automatically"
-msgstr "Upptäck automatiskt"
+msgstr "Identifiera automatiskt"
 
 #. Label of the source-language picker in the dialog the composer's translate button opens; preselected to the language the user reads.
 #: client/components/SourceLanguagePicker.vue
@@ -13320,7 +13320,7 @@ msgstr "Översätt från"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
-msgstr "Översätt denna rad från"
+msgstr "Översätt den här raden från"
 
 #. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
 #: client/components/SourceLanguagePicker.vue
@@ -13351,7 +13351,7 @@ msgstr "Rätta"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"
 msgid "Translate this message into a language"
-msgstr "Översätt detta meddelande till ett språk"
+msgstr "Översätt det här meddelandet till ett språk"
 
 #. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
 #: client/components/SourceLanguagePicker.vue
@@ -13363,7 +13363,7 @@ msgstr "Översätt till"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.thisMessageOnly"
 msgid "This message only"
-msgstr "Denna meddelande bara"
+msgstr "Bara det här meddelandet"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -13399,7 +13399,7 @@ msgstr "Översättning är inaktiverad i detta utgåva."
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuAutomatic"
 msgid "Automatic — best for this device"
-msgstr "Automatisk – bästa för detta enhet"
+msgstr "Automatiskt – bäst för den här enheten"
 
 #. Label of the picker in Settings → Translation that chooses which large graphics-processor model to use. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
@@ -13423,7 +13423,7 @@ msgstr "Översättning"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.inUse"
 msgid "In use"
-msgstr "I användning"
+msgstr "Används"
 
 #. Label of the language select in Settings > Translation when the deployment has translation turned off: there it only chooses the language the interface is written in.
 #: client/components/Settings/Translation.vue
@@ -13447,7 +13447,7 @@ msgstr "Språket som gränssnittet skrivs i och meddelandena översätts till �
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageLabel"
 msgid "Interface and reading language"
-msgstr "Gränssnitt och läsningsspråk"
+msgstr "Språk för gränssnitt och läsning"
 
 #. One option of the GPU model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
 #: client/components/Settings/Translation.vue
@@ -13465,13 +13465,13 @@ msgstr "Modeller"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
 msgid "Use the CPU models where they are the better choice"
-msgstr "Använd CPU-modeller där de är bästa valen"
+msgstr "Använd CPU-modellerna där de är det bättre valet"
 
 #. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
-msgstr "Använd GPU-modellen där den är bästa valen"
+msgstr "Använd GPU-modellen där den är det bättre valet"
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
 #: client/components/Settings/Translation.vue

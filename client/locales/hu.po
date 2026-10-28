@@ -12120,7 +12120,7 @@ msgstr "Vesszővel elválasztott, például: szó, még több szó, egyéb szó"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "Emeltsd ki azokat a üzeneteket, amelyek téged említik"
+msgstr "A téged említő üzenetek kiemelése"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
@@ -12138,7 +12138,7 @@ msgstr "Ha egy üzenetben van bármely ezek közül egyik ezek közül szereplo 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "A szövegek, amelyek téged vagy egy custom hangsúlyt említik, vagy megegyeznek egy custom hangsúlynal, színes háttéget és keretet kapnak a csatornában."
+msgstr "A téged említő vagy egyéni kiemelésnek megfelelő üzenetek színes hátteret és keretet kapnak a csatornában."
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
@@ -12265,20 +12265,20 @@ msgstr "Figyelmeztetés"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.aliases"
 msgid "Aliases"
-msgstr "Állító nevek"
+msgstr "Aliasok"
 
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
-msgstr "Színzárás"
+msgstr "Megjelenés"
 
 #. aria-label of the row of tab buttons across the top of the settings window, used to switch between its pages.
 #: client/components/Settings/Navigation.vue
 msgctxt "settings.tabs.aria"
 msgid "Settings tabs"
-msgstr "Beállítások lapok"
+msgstr "Beállítások lapjai"
 
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
 #: client/components/Settings/Navigation.vue
@@ -12906,34 +12906,34 @@ msgstr "nem fordítható"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
-msgstr "az eredeti mintájának"
+msgstr "Ahogy az eredeti"
 
 #. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.formality.autoShort"
 msgid "As written"
-msgstr "így van megfogalmazva"
+msgstr "Ahogy írták"
 
 #. Choice for how formally a translation addresses people: always use the familiar form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "szabadkozóan"
+msgstr "Közvetlenül"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.formal"
 msgid "Formally"
-msgstr "szigorúan"
+msgstr "Hivatalosan"
 
 #. Label of the control that chooses how formally the translation addresses people, in the translation panel and in Settings.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "szólítsd a személyeket"
+msgstr "Megszólítás"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
@@ -13078,7 +13078,7 @@ msgstr "Nem fut ezen az eszközön"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
 msgid "Delete"
-msgstr "Törölni"
+msgstr "Törlés"
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
@@ -13133,7 +13133,7 @@ msgstr "NLLB-200 600M (CPU, 200 nyelv)"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
-msgstr "Nem letöltve"
+msgstr "Nincs letöltve"
 
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
 #: client/js/helpers/modelLabel.ts
@@ -13206,13 +13206,13 @@ msgstr "Ezeknek a nyelveknek a sorok is felismerhetők, bár rövidek vagy hason
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.off"
 msgid "Off"
-msgstr "Kikapcsolt"
+msgstr "Ki"
 
 #. The on choice of the segmented switch for translating incoming messages, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
-msgstr "Felvett"
+msgstr "Be"
 
 #. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
 #: client/components/TranslationPanel.vue
@@ -13242,7 +13242,7 @@ msgstr "Olvasás"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.settingsLink"
 msgid "Language and models in Settings"
-msgstr "Nyelv és modellek beállításokban"
+msgstr "Nyelv és modellek a Beállításokban"
 
 #. aria-label of the translation panel, a dialog of translation settings for one conversation. {channel} is the channel name or nickname.
 #: client/components/TranslationPanel.vue
@@ -13254,7 +13254,7 @@ msgstr "Fordítás {channel}-re"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "Változat"
+msgstr "Nyelvváltozat"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13278,7 +13278,7 @@ msgstr "Beírás a fordítást mutatja először; beírás újra küldi."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeLabel"
 msgid "Send my messages in"
-msgstr "Üzeneteimet küldöm"
+msgstr "Üzeneteim küldése ezen a nyelven"
 
 #. Heading of the translation panel's section about the messages the user sends.
 #: client/components/TranslationPanel.vue
@@ -13290,7 +13290,7 @@ msgstr "Írás"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.cancel"
 msgid "Cancel"
-msgstr "Balesz"
+msgstr "Mégse"
 
 #. Button that translates the message again from the language picked in the retranslate-from dialog.
 #: client/components/SourceLanguagePicker.vue
@@ -13302,25 +13302,25 @@ msgstr "Fordítás"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.dialog"
 msgid "Retranslate from another language"
-msgstr "Fordítás egy másik nyelvből"
+msgstr "Újrafordítás másik nyelvről"
 
 #. First option of the source-language picker in the composer's translate-into dialog: the draft's language is detected rather than named.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromAuto"
 msgid "Detect automatically"
-msgstr "Automatikusan felismer"
+msgstr "Automatikus felismerés"
 
 #. Label of the source-language picker in the dialog the composer's translate button opens; preselected to the language the user reads.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromLabel"
 msgid "Translate from"
-msgstr "Fordítás forrás nyelvől"
+msgstr "Fordítás erről"
 
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
-msgstr "Ez a sor fordításra"
+msgstr "A sor fordítása erről a nyelvről"
 
 #. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
 #: client/components/SourceLanguagePicker.vue
@@ -13339,7 +13339,7 @@ msgstr "Az üzenet javításához a GPU-modell szükséges."
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirm"
 msgid "Translate"
-msgstr "Fordítsd le ezt a üzenetet…"
+msgstr "Fordítás"
 
 #. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
 #: client/components/SourceLanguagePicker.vue
@@ -13351,19 +13351,19 @@ msgstr "Javítás"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"
 msgid "Translate this message into a language"
-msgstr "Ezt a üzenetet egy nyelvre fordítsa"
+msgstr "Üzenet fordítása egy nyelvre"
 
 #. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetLabel"
 msgid "Translate into"
-msgstr "Fordítsa le"
+msgstr "Fordítás erre"
 
 #. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.thisMessageOnly"
 msgid "This message only"
-msgstr "Ez a üzenet csak így"
+msgstr "Csak ez az üzenet"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -13399,13 +13399,13 @@ msgstr "Ez a fordítás kikapcsolva van ezen a kiadásnál."
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuAutomatic"
 msgid "Automatic — best for this device"
-msgstr "Automatikus – a legjobb ezen a eszközön"
+msgstr "Automatikus – a legjobb ehhez az eszközhöz"
 
 #. Label of the picker in Settings → Translation that chooses which large graphics-processor model to use. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModel"
 msgid "GPU model"
-msgstr "GPU modell"
+msgstr "GPU-modell"
 
 #. Explanatory note under the GPU model picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
@@ -13447,7 +13447,7 @@ msgstr "Az felület nyelve és a fordítás nyelve – egy vezérlő. Automatiku
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageLabel"
 msgid "Interface and reading language"
-msgstr "Felület és olvasási nyelv"
+msgstr "A felület és az olvasás nyelve"
 
 #. One option of the GPU model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
 #: client/components/Settings/Translation.vue
@@ -13459,19 +13459,19 @@ msgstr "{name} · {size}"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.models"
 msgid "Models"
-msgstr "Modell"
+msgstr "Modellek"
 
 #. Label of the checkbox in Settings → Translation that allows the smaller main-processor models. CPU is the usual abbreviation for the main processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
 msgid "Use the CPU models where they are the better choice"
-msgstr "Használja a CPU modelljeit, ahol ezek a jobb választás."
+msgstr "A CPU-modellek használata, ahol azok a jobb választás"
 
 #. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
-msgstr "Használja a GPU modellt, ha ez a jobb választás"
+msgstr "A GPU-modell használata, ahol az a jobb választás"
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
 #: client/components/Settings/Translation.vue
@@ -13574,7 +13574,7 @@ msgstr "Mutassd meg a lefordított témát"
 #: client/components/Chat.vue
 msgctxt "translate.unavailable.lead"
 msgid "Translation can't run here right now."
-msgstr "A fordítás most nem futhat itt."
+msgstr "A fordítás most itt nem futtatható."
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue

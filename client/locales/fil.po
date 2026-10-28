@@ -12120,7 +12120,7 @@ msgstr "Naka-sepate ng komma, hal: salita, mas marami salita, iba pang salita"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "Hugot ang mga mensahe na nagpapakita sa iyo"
+msgstr "I-highlight ang mga mensaheng bumabanggit sa iyo"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
@@ -12138,7 +12138,7 @@ msgstr "Kung ang isang mensahe ay may anumang mga iyon na naka-sepilado ng komma
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "Ang mga mensahe na nagpapakita sa iyo o nagmumugot sa custom na hugot ay may kulay at border sa channel."
+msgstr "Ang mga mensaheng bumabanggit sa iyo o tumutugma sa custom na highlight ay may kulay na background at border sa channel."
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
@@ -12265,20 +12265,20 @@ msgstr "Diwa"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.aliases"
 msgid "Aliases"
-msgstr "Aliwaliw"
+msgstr "Mga alias"
 
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
-msgstr "Pagkaugnay"
+msgstr "Hitsura"
 
 #. aria-label of the row of tab buttons across the top of the settings window, used to switch between its pages.
 #: client/components/Settings/Navigation.vue
 msgctxt "settings.tabs.aria"
 msgid "Settings tabs"
-msgstr "Pahina ng mga setting"
+msgstr "Mga tab ng settings"
 
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
 #: client/components/Settings/Navigation.vue
@@ -12292,20 +12292,20 @@ msgstr "Pangkalahatan"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.networks"
 msgid "Networks"
-msgstr "Network"
+msgstr "Mga network"
 
 #. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.notifications"
 msgid "Notifications"
-msgstr "Notifikasyon"
+msgstr "Mga notification"
 
 #. Name of the Translation tab in the Settings tab strip: on-device translation of messages.
 #: client/components/Settings/Navigation.vue
 msgctxt "settings.tabs.translation"
 msgid "Translation"
-msgstr "Pag-translasyon"
+msgstr "Pagsasalin"
 
 #. Tooltip of the developer badge next to the sidebar logo, shown only in development builds; {app} is the app's display name.
 #: client/components/Sidebar.vue:8
@@ -12906,34 +12906,34 @@ msgstr "Wala na mag-translate"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
-msgstr "tulad ng orihinal"
+msgstr "Gaya ng orihinal"
 
 #. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.formality.autoShort"
 msgid "As written"
-msgstr "tulad ng nagsulat"
+msgstr "Gaya ng pagkakasulat"
 
 #. Choice for how formally a translation addresses people: always use the familiar form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "kasalanan"
+msgstr "Kaswal"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.formal"
 msgid "Formally"
-msgstr "mapagmali"
+msgstr "Pormal"
 
 #. Label of the control that chooses how formally the translation addresses people, in the translation panel and in Settings.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "mag-angat sa tao"
+msgstr "Paraan ng pakikipag-usap"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
@@ -13072,13 +13072,13 @@ msgstr ""
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.cantRun"
 msgid "Can't run on this device"
-msgstr "Hindi tatakbo sa device na ito"
+msgstr "Hindi kayang tumakbo sa device na ito"
 
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
 msgid "Delete"
-msgstr "I-delete"
+msgstr "Burahin"
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
@@ -13090,7 +13090,7 @@ msgstr "I-download"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.downloaded"
 msgid "Downloaded"
-msgstr "Nainom na"
+msgstr "Na-download na"
 
 #. State of a model row in Settings → Translation after a download failed. {error} is the library's own untranslated message.
 #: client/components/Settings/Translation.vue
@@ -13133,7 +13133,7 @@ msgstr "NLLB-200 600M (CPU, 200 laan)"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
-msgstr "Wala na i-download"
+msgstr "Hindi pa na-download"
 
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
 #: client/js/helpers/modelLabel.ts
@@ -13151,7 +13151,7 @@ msgstr "{percent}%"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.runsHere"
 msgid "Can run on this device"
-msgstr "Tatakbo sa device na ito"
+msgstr "Kayang tumakbo sa device na ito"
 
 #. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
 #: client/components/Settings/Translation.vue
@@ -13182,19 +13182,19 @@ msgstr "Walang makapagsasalin sa device na ito papuntang {to}."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.addLanguage"
 msgid "Add a language…"
-msgstr "Ibabaw na laan..."
+msgstr "Magdagdag ng wika…"
 
 #. Tooltip and aria-label of the ✕ button that closes the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.close"
 msgid "Close"
-msgstr "Ibabaw"
+msgstr "Isara"
 
 #. Heading of the translation panel, a dialog of translation settings for one conversation; the conversation's name is shown next to it.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.heading"
 msgid "Translation"
-msgstr "Pagbabahagi"
+msgstr "Pagsasalin"
 
 #. Explanatory note under the list of languages spoken in this conversation, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13206,13 +13206,13 @@ msgstr "Ang mga linya sa mga wika na ito ay nakikilala kahit pa ito ay maliit o 
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.off"
 msgid "Off"
-msgstr "Ibabaw"
+msgstr "Naka-off"
 
 #. The on choice of the segmented switch for translating incoming messages, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
-msgstr "Ibabaw"
+msgstr "Naka-on"
 
 #. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
 #: client/components/TranslationPanel.vue
@@ -13236,13 +13236,13 @@ msgstr "Basahin ang mga mensahe sa {language}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.reading"
 msgid "Reading"
-msgstr "Nangungungo"
+msgstr "Pagbasa"
 
 #. Link at the foot of the translation panel; it opens the application's Translation settings page.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.settingsLink"
 msgid "Language and models in Settings"
-msgstr "Wika at modelo sa Pag-setting"
+msgstr "Wika at mga modelo sa Settings"
 
 #. aria-label of the translation panel, a dialog of translation settings for one conversation. {channel} is the channel name or nickname.
 #: client/components/TranslationPanel.vue
@@ -13254,7 +13254,7 @@ msgstr "Pagbabahagi para sa {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "Wika"
+msgstr "Bersyon ng wika"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13278,49 +13278,49 @@ msgstr "Ibaon an mga pagbabahagi nang unang pagbabahagi; ibaon uli para i-sent."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeLabel"
 msgid "Send my messages in"
-msgstr "Ibabahagi ang aking mga mensahe sa"
+msgstr "Ipadala ang mga mensahe ko sa"
 
 #. Heading of the translation panel's section about the messages the user sends.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writing"
 msgid "Writing"
-msgstr "Pagbabahagi"
+msgstr "Pagsulat"
 
 #. Button that closes the retranslate-from dialog without doing anything.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.cancel"
 msgid "Cancel"
-msgstr "Ibabawas"
+msgstr "Kanselahin"
 
 #. Button that translates the message again from the language picked in the retranslate-from dialog.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.confirm"
 msgid "Translate"
-msgstr "Ibabahagi ang pagbabahagi"
+msgstr "Isalin"
 
 #. aria-label of the small dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.dialog"
 msgid "Retranslate from another language"
-msgstr "Ibabahagi ulit mula sa iba't ibang wika"
+msgstr "Isalin muli mula sa ibang wika"
 
 #. First option of the source-language picker in the composer's translate-into dialog: the draft's language is detected rather than named.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromAuto"
 msgid "Detect automatically"
-msgstr "Ibigay ang pagkakaiba-iba"
+msgstr "Awtomatikong tukuyin"
 
 #. Label of the source-language picker in the dialog the composer's translate button opens; preselected to the language the user reads.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromLabel"
 msgid "Translate from"
-msgstr "I-translate mula sa"
+msgstr "Isalin mula sa"
 
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
-msgstr "Ibabahagi ang linya iyon mula sa"
+msgstr "Isalin ang linyang ito mula sa"
 
 #. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
 #: client/components/SourceLanguagePicker.vue
@@ -13339,7 +13339,7 @@ msgstr "Kailangan ng modelo ng GPU para iwasto ang isang mensahe."
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirm"
 msgid "Translate"
-msgstr "Ibigay ito sa Filipino..."
+msgstr "Isalin"
 
 #. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
 #: client/components/SourceLanguagePicker.vue
@@ -13351,19 +13351,19 @@ msgstr "Iwasto"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"
 msgid "Translate this message into a language"
-msgstr "Ibigay ito na mensahe sa isang wika"
+msgstr "Isalin ang mensaheng ito sa isang wika"
 
 #. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetLabel"
 msgid "Translate into"
-msgstr "Ibigay ito sa wika"
+msgstr "Isalin sa"
 
 #. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.thisMessageOnly"
 msgid "This message only"
-msgstr "Ang mensahe na ito lamang"
+msgstr "Ang mensaheng ito lang"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -13399,13 +13399,13 @@ msgstr "Ang pagbabahagi ay nagsimula sa pag-una sa pagbabahagi."
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuAutomatic"
 msgid "Automatic — best for this device"
-msgstr "Automatic — pinakmaaangay para sa device na ito"
+msgstr "Awtomatiko — pinakamainam para sa device na ito"
 
 #. Label of the picker in Settings → Translation that chooses which large graphics-processor model to use. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModel"
 msgid "GPU model"
-msgstr "GPU modelo"
+msgstr "Modelo ng GPU"
 
 #. Explanatory note under the GPU model picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
@@ -13417,13 +13417,13 @@ msgstr "Ang mas malaking modelo ay mas maayos sa pagbabahagi, kailangan ito ng 3
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.heading"
 msgid "Translation"
-msgstr "Pagbabahagi"
+msgstr "Pagsasalin"
 
 #. Badge next to the model row in Settings → Translation that the GPU model picker currently selects.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.inUse"
 msgid "In use"
-msgstr "Nagsimula ito"
+msgstr "Ginagamit"
 
 #. Label of the language select in Settings > Translation when the deployment has translation turned off: there it only chooses the language the interface is written in.
 #: client/components/Settings/Translation.vue
@@ -13447,7 +13447,7 @@ msgstr "Ang wika kung saan nagsisimula ang interface at ang mga mensahe ay nagsi
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageLabel"
 msgid "Interface and reading language"
-msgstr "Interface at wika ng pagbabahagi"
+msgstr "Wika ng interface at pagbasa"
 
 #. One option of the GPU model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
 #: client/components/Settings/Translation.vue
@@ -13459,19 +13459,19 @@ msgstr "{name} · {size}"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.models"
 msgid "Models"
-msgstr "Modelos"
+msgstr "Mga modelo"
 
 #. Label of the checkbox in Settings → Translation that allows the smaller main-processor models. CPU is the usual abbreviation for the main processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
 msgid "Use the CPU models where they are the better choice"
-msgstr "Gamitin ang modelo ng CPU kung saan sila ang mas mahusay"
+msgstr "Gamitin ang mga modelo ng CPU kung sila ang mas mabuting piliin"
 
 #. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
-msgstr "Gamitin ang modelo ng GPU kung saan ito ang mas mahusay"
+msgstr "Gamitin ang modelo ng GPU kung ito ang mas mabuting piliin"
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
 #: client/components/Settings/Translation.vue
@@ -13574,7 +13574,7 @@ msgstr "Ipakita ang napakalat na tema"
 #: client/components/Chat.vue
 msgctxt "translate.unavailable.lead"
 msgid "Translation can't run here right now."
-msgstr "Hindi makakatakbo ang pagsasalin dito ngayon."
+msgstr "Hindi gumagana ang pagsasalin dito ngayon."
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue

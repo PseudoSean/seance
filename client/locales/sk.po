@@ -12178,7 +12178,7 @@ msgstr "Rozdelené čiarkami, napr.: slovo, ďalšie slová, iné slovo"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "Zvýrazniť zprávy, ktoré pomeriaš"
+msgstr "Zvýrazňovať správy, ktoré vás spomínajú"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
@@ -12196,7 +12196,7 @@ msgstr "Ak zpráva obsahuje žiadnu z týchto čárkovaných výrazov, nezvedie�
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "Zprávy, ktoré pomeriaš alebo sa shodujú s vlastným zvýraznením, získajú farbený pozadie a okraj v kanále."
+msgstr "Správy, ktoré vás spomínajú alebo zodpovedajú vlastnému zvýrazneniu, dostanú v kanáli farebné pozadie a okraj."
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
@@ -12336,14 +12336,14 @@ msgstr "Vzhľad"
 #: client/components/Settings/Navigation.vue
 msgctxt "settings.tabs.aria"
 msgid "Settings tabs"
-msgstr "Nastavenia kart"
+msgstr "Karty nastavení"
 
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.general"
 msgid "General"
-msgstr "Obecné"
+msgstr "Všeobecné"
 
 #. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
 #: client/components/Settings/Navigation.vue
@@ -12966,34 +12966,34 @@ msgstr "nemohol byť prevedený"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
-msgstr "ako pôvodný"
+msgstr "Ako originál"
 
 #. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.formality.autoShort"
 msgid "As written"
-msgstr "ako napísaný"
+msgstr "Ako je napísané"
 
 #. Choice for how formally a translation addresses people: always use the familiar form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "formálne"
+msgstr "Neformálne"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.formal"
 msgid "Formally"
-msgstr "formálne"
+msgstr "Formálne"
 
 #. Label of the control that chooses how formally the translation addresses people, in the translation panel and in Settings.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "adresovať ľudí"
+msgstr "Oslovenie"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
@@ -13132,13 +13132,13 @@ msgstr ""
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.cantRun"
 msgid "Can't run on this device"
-msgstr "Na tomto zariadení nepobeží"
+msgstr "Na tomto zariadení nebeží"
 
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
 msgid "Delete"
-msgstr "Vymaž"
+msgstr "Odstrániť"
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
@@ -13193,7 +13193,7 @@ msgstr "NLLB-200 600M (CPU, 200 jazykov)"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
-msgstr "Nevyťažené"
+msgstr "Nestiahnuté"
 
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
 #: client/js/helpers/modelLabel.ts
@@ -13211,7 +13211,7 @@ msgstr "{percent}%"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.runsHere"
 msgid "Can run on this device"
-msgstr "Na tomto zariadení pobeží"
+msgstr "Na tomto zariadení beží"
 
 #. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
 #: client/components/Settings/Translation.vue
@@ -13248,7 +13248,7 @@ msgstr "Pridať jazyk…"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.close"
 msgid "Close"
-msgstr "Zatvoriť"
+msgstr "Zavrieť"
 
 #. Heading of the translation panel, a dialog of translation settings for one conversation; the conversation's name is shown next to it.
 #: client/components/TranslationPanel.vue
@@ -13266,13 +13266,13 @@ msgstr "Riadky v týchto jazykoch sú poznaté aj keď sú krátke alebo vyzeral
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.off"
 msgid "Off"
-msgstr "Vypnútené"
+msgstr "Vypnuté"
 
 #. The on choice of the segmented switch for translating incoming messages, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
-msgstr "Zapnúte"
+msgstr "Zapnuté"
 
 #. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
 #: client/components/TranslationPanel.vue
@@ -13314,7 +13314,7 @@ msgstr "Preklad pre {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "Regionálny variant"
+msgstr "Jazykový variant"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13338,7 +13338,7 @@ msgstr "Zobrazí sa najskôr preklad; stlačíme znovu, aby sa poslal."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeLabel"
 msgid "Send my messages in"
-msgstr "Odoslať moje správy do"
+msgstr "Posielať moje správy v jazyku"
 
 #. Heading of the translation panel's section about the messages the user sends.
 #: client/components/TranslationPanel.vue
@@ -13356,31 +13356,31 @@ msgstr "Zrušiť"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.confirm"
 msgid "Translate"
-msgstr "Prekladať"
+msgstr "Preložiť"
 
 #. aria-label of the small dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.dialog"
 msgid "Retranslate from another language"
-msgstr "Prevedieť znovu z iného jazyka"
+msgstr "Preložiť znova z iného jazyka"
 
 #. First option of the source-language picker in the composer's translate-into dialog: the draft's language is detected rather than named.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromAuto"
 msgid "Detect automatically"
-msgstr "automaticky detekuj"
+msgstr "Rozpoznať automaticky"
 
 #. Label of the source-language picker in the dialog the composer's translate button opens; preselected to the language the user reads.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromLabel"
 msgid "Translate from"
-msgstr "preklad z"
+msgstr "Preložiť z"
 
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
-msgstr "Prevedieť túto riadok z"
+msgstr "Preložiť tento riadok z"
 
 #. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
 #: client/components/SourceLanguagePicker.vue
@@ -13399,7 +13399,7 @@ msgstr "Oprava správy vyžaduje model GPU."
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirm"
 msgid "Translate"
-msgstr "Prevedenéto"
+msgstr "Preložiť"
 
 #. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
 #: client/components/SourceLanguagePicker.vue
@@ -13411,19 +13411,19 @@ msgstr "Opraviť"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"
 msgid "Translate this message into a language"
-msgstr "Prevedzte túto zprávu na jazyk"
+msgstr "Preložiť túto správu do jazyka"
 
 #. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetLabel"
 msgid "Translate into"
-msgstr "Prevedzte na"
+msgstr "Preložiť do"
 
 #. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.thisMessageOnly"
 msgid "This message only"
-msgstr "Táto správa len"
+msgstr "Len túto správu"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -13459,7 +13459,7 @@ msgstr "Preklad je vypnutý v tomto nasadení."
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuAutomatic"
 msgid "Automatic — best for this device"
-msgstr "Automaticky – najlepšie pre tento zariadenie"
+msgstr "Automaticky — najlepší pre toto zariadenie"
 
 #. Label of the picker in Settings → Translation that chooses which large graphics-processor model to use. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
@@ -13483,7 +13483,7 @@ msgstr "Preklad"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.inUse"
 msgid "In use"
-msgstr "V používaní"
+msgstr "Používa sa"
 
 #. Label of the language select in Settings > Translation when the deployment has translation turned off: there it only chooses the language the interface is written in.
 #: client/components/Settings/Translation.vue
@@ -13525,13 +13525,13 @@ msgstr "Modely"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
 msgid "Use the CPU models where they are the better choice"
-msgstr "Použij CPU modely, kde sú lepšie výber"
+msgstr "Použiť modely CPU, kde sú lepšou voľbou"
 
 #. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
-msgstr "Použij model GPU, kde je lepšie výber"
+msgstr "Použiť model GPU, kde je lepšou voľbou"
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
 #: client/components/Settings/Translation.vue

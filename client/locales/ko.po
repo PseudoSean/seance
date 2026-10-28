@@ -12062,7 +12062,7 @@ msgstr "쉼표로 구분, 예: 단어, 더 많은 단어, 다른단어"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "당신을 언급하는 메시지를 강조하세요."
+msgstr "나를 언급한 메시지 강조"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
@@ -12080,7 +12080,7 @@ msgstr "메시지에 쉼표로 구분된 이 표현 중 하나라도 있으면, 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "메시지가 당신이나 custom highlight와 일치하면 채널에서 색상 배경과 테두리가 있습니다."
+msgstr "나를 언급하거나 사용자 지정 강조 단어와 일치하는 메시지는 채널에서 색 배경과 테두리로 표시됩니다."
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
@@ -12214,7 +12214,7 @@ msgstr "별칭"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
-msgstr "외형"
+msgstr "모양"
 
 #. aria-label of the row of tab buttons across the top of the settings window, used to switch between its pages.
 #: client/components/Settings/Navigation.vue
@@ -12846,34 +12846,34 @@ msgstr "번역할 수 없었습니다"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
-msgstr "원래대로"
+msgstr "원문대로"
 
 #. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.formality.autoShort"
 msgid "As written"
-msgstr "쓰인 대로"
+msgstr "쓴 그대로"
 
 #. Choice for how formally a translation addresses people: always use the familiar form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "친근하게"
+msgstr "편하게"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.formal"
 msgid "Formally"
-msgstr "공식적으로"
+msgstr "격식 있게"
 
 #. Label of the control that chooses how formally the translation addresses people, in the translation panel and in Settings.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "사람들을 주소하라"
+msgstr "말투"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
@@ -13030,7 +13030,7 @@ msgstr "다운로드"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.downloaded"
 msgid "Downloaded"
-msgstr "다운로드 완료"
+msgstr "다운로드됨"
 
 #. State of a model row in Settings → Translation after a download failed. {error} is the library's own untranslated message.
 #: client/components/Settings/Translation.vue
@@ -13073,7 +13073,7 @@ msgstr "NLLB-200 600M (CPU, 200 언어)"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
-msgstr "다운로드되지 않음"
+msgstr "다운로드 안 됨"
 
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
 #: client/js/helpers/modelLabel.ts
@@ -13146,13 +13146,13 @@ msgstr "이러한 언어의 줄들은 짧거나 유사해도 인식됩니다."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.off"
 msgid "Off"
-msgstr "꺼짐"
+msgstr "끄기"
 
 #. The on choice of the segmented switch for translating incoming messages, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
-msgstr "켜짐"
+msgstr "켜기"
 
 #. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
 #: client/components/TranslationPanel.vue
@@ -13170,7 +13170,7 @@ msgstr "다른 사람의 줄은 번역이 있는 아래에 표시됩니다."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readIn"
 msgid "Read messages in {language}"
-msgstr "{language}를 읽는다"
+msgstr "{language}(으)로 메시지 읽기"
 
 #. Heading of the translation panel's section about incoming messages, and the label of the on/off control in it.
 #: client/components/TranslationPanel.vue
@@ -13182,7 +13182,7 @@ msgstr "읽기"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.settingsLink"
 msgid "Language and models in Settings"
-msgstr "설정에서 언어 및 모델"
+msgstr "설정의 언어 및 모델"
 
 #. aria-label of the translation panel, a dialog of translation settings for one conversation. {channel} is the channel name or nickname.
 #: client/components/TranslationPanel.vue
@@ -13218,7 +13218,7 @@ msgstr "엔터는 번역을 먼저 보여주고, 다시 엔터를 누르면 보�
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeLabel"
 msgid "Send my messages in"
-msgstr "내 메시지를"
+msgstr "내 메시지를 보낼 언어"
 
 #. Heading of the translation panel's section about the messages the user sends.
 #: client/components/TranslationPanel.vue
@@ -13242,25 +13242,25 @@ msgstr "번역"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.dialog"
 msgid "Retranslate from another language"
-msgstr "다른 언어에서 재번역"
+msgstr "다른 언어에서 다시 번역"
 
 #. First option of the source-language picker in the composer's translate-into dialog: the draft's language is detected rather than named.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromAuto"
 msgid "Detect automatically"
-msgstr "자동으로 감지"
+msgstr "자동 감지"
 
 #. Label of the source-language picker in the dialog the composer's translate button opens; preselected to the language the user reads.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromLabel"
 msgid "Translate from"
-msgstr "번역 시작"
+msgstr "원본 언어"
 
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
-msgstr "이 줄을 다음 언어로 번역"
+msgstr "이 줄의 원본 언어"
 
 #. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
 #: client/components/SourceLanguagePicker.vue
@@ -13279,25 +13279,25 @@ msgstr "메시지를 교정하려면 GPU 모델이 필요합니다."
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirm"
 msgid "Translate"
-msgstr "번역하세요"
+msgstr "번역"
 
 #. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirmCorrect"
 msgid "Correct"
-msgstr "교정하기"
+msgstr "교정"
 
 #. aria-label of the small dialog the composer's translate button opens: pick the language the draft is translated into, this once.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"
 msgid "Translate this message into a language"
-msgstr "이 메시지를 언어로 번역하세요"
+msgstr "이 메시지를 번역할 언어"
 
 #. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetLabel"
 msgid "Translate into"
-msgstr "번역하세요"
+msgstr "번역할 언어"
 
 #. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
 #: client/components/SourceLanguagePicker.vue
@@ -13339,7 +13339,7 @@ msgstr "이 배포에서는 번역이 꺼져 있습니다."
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuAutomatic"
 msgid "Automatic — best for this device"
-msgstr "자동 — 이 기기에게 가장 적합합니다."
+msgstr "자동 — 이 기기에 가장 적합"
 
 #. Label of the picker in Settings → Translation that chooses which large graphics-processor model to use. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
@@ -13399,19 +13399,19 @@ msgstr "{name} · {size}"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.models"
 msgid "Models"
-msgstr "모델들"
+msgstr "모델"
 
 #. Label of the checkbox in Settings → Translation that allows the smaller main-processor models. CPU is the usual abbreviation for the main processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
 msgid "Use the CPU models where they are the better choice"
-msgstr "CPU 모델을 사용하는 것이 더 좋은 선택입니다."
+msgstr "CPU 모델이 더 나을 때 CPU 모델 사용"
 
 #. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
-msgstr "GPU 모델을 사용하는 것이 더 좋은 선택입니다."
+msgstr "GPU 모델이 더 나을 때 GPU 모델 사용"
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
 #: client/components/Settings/Translation.vue

@@ -12352,7 +12352,7 @@ msgstr "مُفصَّلة بفاصلة ممولة، مثال: كلمة، كلما
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "تجاهل الرسائل التي تذكرك"
+msgstr "إبراز الرسائل التي تذكرك"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
@@ -12370,7 +12370,7 @@ msgstr "إذا كان الرسالة تحتوي على أي من هذه التع
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "الرسائل التي تذكرك أو تتطابق مع إشعار مخصص تُظهر خلفية وحدها وحدها في القناة."
+msgstr "الرسائل التي تذكرك أو تطابق إبرازًا مخصصًا تظهر بخلفية وحدّ ملوّنين في القناة."
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
