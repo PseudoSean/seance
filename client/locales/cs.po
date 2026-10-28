@@ -113,9 +113,9 @@ msgstr ""
 msgctxt "chat.mentionsUnread"
 msgid "Open your mentions, {count} unread"
 msgid_plural "Open your mentions, {count} unread"
-msgstr[0] "Otevřít zmínky, {count} nepřečtená"
-msgstr[1] "Otevřít zmínky, {count} nepřečtené"
-msgstr[2] "Otevřít zmínky, {count} nepřečtených"
+msgstr[0] "Otevřít zmínky, nepřečtené: {count}"
+msgstr[1] "Otevřít zmínky, nepřečtené: {count}"
+msgstr[2] "Otevřít zmínky, nepřečtené: {count}"
 
 #. aria-label of the save control at the right end of the topic editor, shown while the channel topic is being edited; clicking saves the new topic.
 #: client/components/Chat.vue:35
@@ -417,7 +417,7 @@ msgstr "Zrušit"
 #: client/components/ChatInput.vue:68
 msgctxt "composer.cancelEscape"
 msgid "Cancel (Escape)"
-msgstr "Zrušit (Ukázkový)"
+msgstr "Zrušit (Esc)"
 
 #. Tooltip and aria-label of the ✕ button on the upload progress bar above the message input; clicking it aborts the upload in progress.
 #: client/components/ChatInput.vue:45
@@ -435,19 +435,19 @@ msgstr "Připojit"
 #: client/components/ChatInput.vue:19
 msgctxt "composer.connectNow"
 msgid "Connect now"
-msgstr "Připojit teď"
+msgstr "Připojit hned"
 
 #. Text of the connection bar shown above the message input while the dial to the chat network is in flight (a spinner turns beside it). {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:344
 msgctxt "composer.connectingTo"
 msgid "Connecting to {network}…"
-msgstr "Připojují se k {network}…"
+msgstr "Připojování k {network}…"
 
 #. Text of the connection bar shown above the message input when the chat network is down and no reconnect attempt is running yet. {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:339
 msgctxt "composer.disconnectedFrom"
 msgid "Disconnected from {network}."
-msgstr "Odpojený od {network}."
+msgstr "Odpojeno od {network}."
 
 #. Label at the left of the compose bar shown while the user edits a message they already sent; the edited text follows it in the same line.
 #: client/components/ChatInput.vue:55
@@ -484,18 +484,18 @@ msgstr "Zapisovat do {name}"
 msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
-msgstr[0] "Připojují se k {network} za {seconds}s…"
-msgstr[1] "Připojuji se k {network} v {seconds}s…"
-msgstr[2] "Připojuji se k {network} v {seconds}s…"
+msgstr[0] "Opětovné připojení k {network} za {seconds} s…"
+msgstr[1] "Opětovné připojení k {network} za {seconds} s…"
+msgstr[2] "Opětovné připojení k {network} za {seconds} s…"
 
 #. Text of the connection bar shown above the message input while the wait before the retry is the chat server's connection throttle (dialling sooner would be refused and prolong it). {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
 #: client/components/ChatInput.vue:524
 msgctxt "composer.reconnectInThrottled"
 msgid "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
 msgid_plural "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
-msgstr[0] "Opětovné připojení k {network} za {seconds} sekundu: server omezuje rychlá opětovná připojení."
-msgstr[1] "Opětovné připojení k {network} za {seconds} sekundy: server omezuje rychlá opětovná připojení."
-msgstr[2] "Opětovné připojení k {network} za {seconds} sekund: server omezuje rychlá opětovná připojení."
+msgstr[0] "Opětovné připojení k {network} za {seconds} s: server omezuje rychlá opětovná připojení."
+msgstr[1] "Opětovné připojení k {network} za {seconds} s: server omezuje rychlá opětovná připojení."
+msgstr[2] "Opětovné připojení k {network} za {seconds} s: server omezuje rychlá opětovná připojení."
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
@@ -544,78 +544,78 @@ msgstr "Nahrává se {file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "označen jako pryč"
-msgstr[1] "označeno jako vzdálené {count} krát"
-msgstr[2] "označeno jako vzdálené {count} krát"
+msgstr[0] "jednou označen jako nepřítomný"
+msgstr[1] "{count}× označen jako nepřítomný"
+msgstr[2] "{count}× označen jako nepřítomný"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "označen jako zpátky"
-msgstr[1] "označeno jako zpět {count} krát"
-msgstr[2] "označeno jako zpět {count} krát"
+msgstr[0] "jednou označen jako zpět"
+msgstr[1] "{count}× označen jako zpět"
+msgstr[2] "{count}× označen jako zpět"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
-msgstr[0] "{count} uživatel změnil hostname"
-msgstr[1] "{count} uživatelů změnil hostname"
-msgstr[2] "{count} uživatelů změnil hostname"
+msgstr[0] "{count} uživatel změnil název hostitele"
+msgstr[1] "{count} uživatelé změnili název hostitele"
+msgstr[2] "{count} uživatelů změnilo název hostitele"
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.join"
 msgid "{count} user has joined"
 msgid_plural "{count} users have joined"
-msgstr[0] "{count} uživatel se připojil"
-msgstr[1] "{count} uživatelů se připojilo"
-msgstr[2] "{count} uživatelů se připojilo"
+msgstr[0] "{count} uživatel vstoupil"
+msgstr[1] "{count} uživatelé vstoupili"
+msgstr[2] "{count} uživatelů vstoupilo"
 
 #. Condensed status block: {count} users were kicked while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
-msgstr[0] "{count} uživatel byl vystřelen"
-msgstr[1] "{count} uživatelů bylo vysouhlaseno"
-msgstr[2] "{count} uživatelů bylo vysouhlaseno"
+msgstr[0] "{count} uživatel byl vyhozen"
+msgstr[1] "{count} uživatelé byli vyhozeni"
+msgstr[2] "{count} uživatelů bylo vyhozeno"
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.left"
 msgid "{count} user has left"
 msgid_plural "{count} users have left"
-msgstr[0] "{count} uživatel se odpojil"
-msgstr[1] "{count} užijeli jsou opouštění"
-msgstr[2] "{count} užijeli jsou opouštění"
+msgstr[0] "{count} uživatel odešel"
+msgstr[1] "{count} uživatelé odešli"
+msgstr[2] "{count} uživatelů odešlo"
 
 #. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
-msgstr[0] "Režim {count} byl nastaven"
-msgstr[1] "{count} režimy byly nastaveny"
-msgstr[2] "{count} režimy byly nastaveny"
+msgstr[0] "nastaven {count} režim"
+msgstr[1] "nastaveny {count} režimy"
+msgstr[2] "nastaveno {count} režimů"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] "Uživatel {count} změnil nickname"
-msgstr[1] "{count} uživatelé změnili jméno"
-msgstr[2] "{count} uživatelé změnili nick"
+msgstr[0] "{count} uživatel změnil přezdívku"
+msgstr[1] "{count} uživatelé změnili přezdívku"
+msgstr[2] "{count} uživatelů změnilo přezdívku"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.toggle"
 msgid "Toggle status messages"
-msgstr "Přepnout stavové zprávy"
+msgstr "Zobrazit nebo skrýt stavové zprávy"
 
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 #: client/components/ConfirmDialog.vue
@@ -1715,7 +1715,7 @@ msgstr "Doplňování"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.intro"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the {up} and {down} keys to highlight an item, and insert it by pressing {tab} or {enter} (or by clicking the desired item)."
-msgstr ""
+msgstr "Pro automatické doplňování přezdívek, kanálů, příkazů a emoji napište jeden z níže uvedených znaků — otevře se seznam návrhů. Klávesami {up} a {down} zvýrazněte položku a vložte ji klávesou {tab} nebo {enter} (nebo kliknutím na požadovanou položku)."
 
 #. Description of the @ autocompletion trigger in the help window: typing @ suggests user names.
 #: client/components/Windows/Help.vue
@@ -1727,7 +1727,7 @@ msgstr "Jméno"
 #: client/components/Windows/Help.vue
 msgctxt "help.builtFromCommit"
 msgid "{app} is built from {commit}, after v{version}."
-msgstr ""
+msgstr "Sestavení {app}: {commit}, po v{version}."
 
 #. Lead-in of the alias line under a command description in the help window; the alternative command follows it as a code fragment. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1757,7 +1757,7 @@ msgstr "Odešlete svůj stav dál (nastavený s"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ban"
 msgid "Ban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "Zabanuje ({mode}) uživatele v aktuálním kanálu. Může jít o přezdívku nebo masku hostitele."
 
 #. Description of the /banlist command in the help window.
 #: client/components/Windows/Help.vue
@@ -1781,19 +1781,19 @@ msgstr "Zhruba všechny náhledy v aktuálním kanále (opakovaně"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connect"
 msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
-msgstr ""
+msgstr "Připojí se k nové síti IRC. Pokud {port} začíná znakem {plus}, spojení bude zabezpečeno pomocí TLS."
 
 #. Description of the /ctcp command in the help window. {ctcp} is the abbreviation CTCP (never translated, an element with its expansion as tooltip); {link} is a link whose text is help.commands.ctcpLink ('the dedicated Wikipedia article') — write this frame so that phrase fits where {link} stands.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcp"
 msgid "Send a {ctcp} request. Read more about this on {link}."
-msgstr ""
+msgstr "Pošle požadavek {ctcp}. Více se dozvíte v {link}."
 
 #. Text of the link at the end of the /ctcp command description in the help window (help.commands.ctcp, where it stands for {link}); it opens the Wikipedia article on CTCP. Use the form that fits that frame in your language.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
-msgstr "věnované článku Wikipedie"
+msgstr "článku na Wikipedii"
 
 #. Expansion of the acronym CTCP, shown as the abbreviation's hover tooltip in the help window's /ctcp command description.
 #: client/components/Windows/Help.vue
@@ -1805,13 +1805,13 @@ msgstr "klient-ke klientovi protokol"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deop"
 msgid "Remove op ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "Odebere op ({mode}) jednomu nebo více uživatelům v aktuálním kanálu."
 
 #. Description of the /devoice command in the help window. {mode} is the channel mode -v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoice"
 msgid "Remove voice ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "Odebere voice ({mode}) jednomu nebo více uživatelům v aktuálním kanálu."
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
@@ -1847,7 +1847,7 @@ msgstr "načíst seznam ignorovaných uživatelů pro současnou síti."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.invite"
 msgid "Invite a user to the specified channel. If {channel} is omitted, user will be invited to the current channel."
-msgstr ""
+msgstr "Pozve uživatele do zadaného kanálu. Pokud {channel} vynecháte, uživatel bude pozván do aktuálního kanálu."
 
 #. Description of the /join command in the help window.
 #: client/components/Windows/Help.vue
@@ -1865,7 +1865,7 @@ msgstr "vyhodit uživatele z současného kanálu."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickban"
 msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
-msgstr ""
+msgstr "Vyhodí a zabanuje ({mode}) uživatele v aktuálním kanálu. Na rozdíl od {ban} lze použít jen přezdívky (ne masky hostitele)."
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1913,14 +1913,13 @@ msgstr "Odesílá upozornění zprávu do určeného kanálu."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.op"
 msgid "Give op ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "Udělí op ({mode}) jednomu nebo více uživatelům v aktuálním kanálu."
 
 #. Description of the /part command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
-#, fuzzy
 msgctxt "help.commands.part"
 msgid "Close the specified channel or private message window, or the current channel if {channel} is omitted."
-msgstr "Zavři zadaný kanál nebo soukromý zprávový okno, nebo aktuální kanál pokud"
+msgstr "Zavře zadaný kanál nebo soukromou konverzaci, případně aktuální kanál, pokud {channel} vynecháte."
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue
@@ -1962,13 +1961,13 @@ msgstr "Připnout někoho v aktuálním kanálu s trávníkem!"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.topic"
 msgid "Get the topic in the current channel. If {newtopic} is specified, sets the topic in the current channel."
-msgstr ""
+msgstr "Zobrazí téma aktuálního kanálu. Pokud zadáte {newtopic}, nastaví téma aktuálního kanálu."
 
 #. Description of the /unban command in the help window. {mode} is the channel mode -b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unban"
 msgid "Unban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "Zruší ban ({mode}) uživatele v aktuálním kanálu. Může jít o přezdívku nebo masku hostitele."
 
 #. Description of the /unignore command in the help window.
 #: client/components/Windows/Help.vue
@@ -1980,19 +1979,19 @@ msgstr "Unblock zprávy od určeného uživatele v aktuálním sítě. Může b�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unmute"
 msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See {mute} for more information."
-msgstr ""
+msgstr "Zruší ztlumení zadaných kanálů, případně aktuálního kanálu, pokud žádný nezadáte. Více viz {mute}."
 
 #. Description of the /ver command in the help window. {ctcp} is the abbreviation CTCP (never translated) and {command} the literal command /ctcp nick version as a code element; VERSION stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ver"
 msgid "Ask a user which client they run: a {ctcp} VERSION request, the same as {command}. The answer shows where you asked."
-msgstr ""
+msgstr "Zeptá se uživatele, jakého klienta používá: požadavek {ctcp} VERSION, totéž co {command}. Odpověď se zobrazí tam, kde jste se ptali."
 
 #. Description of the /voice command in the help window. {mode} is the channel mode +v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voice"
 msgid "Give voice ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "Udělí voice ({mode}) jednomu nebo více uživatelům v aktuálním kanálu."
 
 #. Help page, description of the /who command. {mask} is an example wildcard mask shown as code (nick!user@host); keep it.
 #: client/components/Windows/Help.vue
@@ -2016,13 +2015,13 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.compareBehind"
 msgid "Compare {range} to see what you are missing"
-msgstr ""
+msgstr "Porovnat {range} a zjistit, co vám chybí"
 
 #. First item of the help window's past-release list. {range} is a link whose text is help.range ('between v5.2.0 and 1a2b3c4').
 #: client/components/Windows/Help.vue
 msgctxt "help.compareSince"
 msgid "Compare {range} to see what changed since the release"
-msgstr ""
+msgstr "Porovnat {range} a zjistit, co se od vydání změnilo"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -2035,7 +2034,7 @@ msgstr "Dokumentace"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "tužkový"
+msgstr "tučně"
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2047,19 +2046,19 @@ msgstr "zde"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP1"
 msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range {range} to select the desired color, or use the autocompletion menu to choose a color name (see below)."
-msgstr ""
+msgstr "Obarví veškerý text napsaný po této zkratce. Potom zadejte celé číslo z rozsahu {range} pro výběr barvy, nebo vyberte název barvy v nabídce automatického doplňování (viz níže)."
 
 #. Second paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2"
 msgid "Background color can be specified by putting a comma and another integer in the range {range} after the foreground color number (autocompletion works too)."
-msgstr ""
+msgstr "Barvu pozadí zadáte čárkou a dalším celým číslem z rozsahu {range} za číslem barvy textu (automatické doplňování funguje také)."
 
 #. Last paragraph of the Ctrl+K description in the help window. {link} is a link to an external IRC color reference whose text is help.formatting.colorHere ('here'); write the frame so that word fits it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorReference"
 msgid "A color reference can be found {link}."
-msgstr ""
+msgstr "Přehled barev najdete {link}."
 
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
 #: client/components/Windows/Help.vue
@@ -2071,19 +2070,19 @@ msgstr "Formátování zkratky"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "uvozovky"
+msgstr "kurzívou"
 
 #. Description of a text-formatting shortcut in the help window. {style} is the style's name (help.formatting.bold, italic, underline, strikethrough or monospace: 'bold', 'italics', 'underlined', 'struck through', 'monospaced'), shown in that style where the placeholder stands; write the frame so those words fit it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.markAs"
 msgid "Mark all text typed after this shortcut as {style}."
-msgstr ""
+msgstr "Veškerý text napsaný po této zkratce bude naformátován takto: {style}."
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "neproporcionální"
+msgstr "neproporcionální písmo"
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2095,7 +2094,7 @@ msgstr "Zaznamenat všechny texty typované po této zkratce jako znovuformátov
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.strikethrough"
 msgid "struck through"
-msgstr "překřížené"
+msgstr "přeškrtnuté"
 
 #. The example word shown underlined in the help window's Ctrl+U formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2156,7 +2155,7 @@ msgstr "Politika ochrany osobních údajů"
 #: client/components/Windows/Help.vue
 msgctxt "help.range"
 msgid "between {from} and {to}"
-msgstr ""
+msgstr "mezi {from} a {to}"
 
 #. Link beside the version number in the help window's title line; opens the changelog window. Mid-sentence between parentheses.
 #: client/components/Windows/Help.vue
@@ -2835,7 +2834,7 @@ msgstr "{file} · Klikněte, abyste zobrazili"
 #: client/components/LinkPreviewToggle.vue
 msgctxt "link.collapse"
 msgid "Collapse preview"
-msgstr "Zkrátit náhled"
+msgstr "Sbalit náhled"
 
 #. aria-label of the button on a message link preview while the preview is folded; clicking expands the media inline.
 #: client/components/LinkPreviewToggle.vue
@@ -3717,7 +3716,7 @@ msgstr "Téma je:"
 #: client/components/MessageTypes/topic_set_by.vue
 msgctxt "msg.topicSet"
 msgid "Topic set by {nick} on {time}"
-msgstr ""
+msgstr "Téma nastavil {nick} {time}"
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -11010,7 +11009,7 @@ msgstr "Hledání probíhá pouze mezi zprávami načtenými v tomto session —
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.searchingIn"
 msgid "Searching in {channel} for"
-msgstr ""
+msgstr "Hledání v {channel}:"
 
 #. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
 #: client/components/Windows/SearchResults.vue
@@ -11126,7 +11125,7 @@ msgstr "Je už /{name}."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorName"
 msgid "Give the alias a name."
-msgstr "Přidej jméno aliasu."
+msgstr "Pojmenujte alias."
 
 #. Row error: the alias name contains characters other than letters, digits, hyphen and underscore. The - and _ are literal characters, keep them.
 #: client/components/Settings/Aliases.vue
@@ -11156,7 +11155,7 @@ msgstr "Spouští"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.intro"
 msgid "An alias is a slash command of your own. Typing {example} runs what you define here — one command per line, with the arguments filled in where the body says {first}, {rest} or {all}."
-msgstr ""
+msgstr "Alias je váš vlastní příkaz s lomítkem. Zadání {example} spustí to, co zde definujete — jeden příkaz na řádek, s argumenty dosazenými tam, kde je v těle {first}, {rest} nebo {all}."
 
 #. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
 #: client/components/Settings/Aliases.vue
@@ -11174,7 +11173,7 @@ msgstr "jméno"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nested"
 msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
-msgstr ""
+msgstr "Řádek může volat jiný alias a alias pojmenovaný po vestavěném příkazu ho nahradí — {command} se může stát {expansion} bez zacyklení."
 
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
 #: client/components/Settings/Aliases.vue
@@ -11768,7 +11767,7 @@ msgstr "Vždy zobrazené"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHelp"
 msgid "Media in these scopes loads without asking. Add one with {button} on any preview."
-msgstr ""
+msgstr "Média z těchto zdrojů se načítají bez ptaní. Zdroj přidáte tlačítkem {button} u libovolného náhledu."
 
 #. Subheading in the always-shown media list of Settings > Appearance above the user account entries.
 #: client/components/Settings/Appearance.vue
@@ -12287,7 +12286,7 @@ msgstr "Pushové oznámení"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr ""
+msgstr "Push se nastavuje pro každou síť zvlášť — zapněte nebo vypněte ho v nastavení dané sítě (Upravit síť → „Push oznámení pro tuto síť“), kde je vidět i stav registrace. Oznámení doručuje prohlížeč; každý server s podporou push rozhoduje, zda tuto aplikaci probudí."
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
@@ -12311,7 +12310,7 @@ msgstr "Změnil se identifikátor serveru (jeho klíč), takže tento zařízen�
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.unsupported"
 msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
-msgstr "Upozornění: Tento prohlížeč nepodporuje oznámení (potřebují API Push, službný pracovní proces a bezpečný kontext)."
+msgstr "Tento prohlížeč nepodporuje push oznámení (potřebují Push API, service worker a zabezpečený kontext)."
 
 #. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.
 #: client/components/Settings/Notifications.vue
@@ -12406,7 +12405,7 @@ msgstr "Skočit na..."
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.language"
 msgid "Display language"
-msgstr "Zobrazit jazyk"
+msgstr "Jazyk rozhraní"
 
 #. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many messages highlight (mention) the user.
 #: client/components/ChannelWrapper.vue:97
@@ -12459,9 +12458,9 @@ msgstr "Přepnout eruda devtools"
 msgctxt "sidebar.unread"
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
-msgstr[0] "{count} nepřečtené zprávy"
+msgstr[0] "{count} nepřečtená zpráva"
 msgstr[1] "{count} nepřečtené zprávy"
-msgstr[2] "{count} nepřečtené zprávy"
+msgstr[2] "{count} nepřečtených zpráv"
 
 #. Column header of the channel-ban list: the banned hostmask, verbatim server data.
 #: client/components/Special/ListBans.vue
@@ -12696,31 +12695,31 @@ msgstr "{nick} je pryč"
 #: client/components/MessageTypes/back.vue:10
 msgctxt "system.back"
 msgid "{nick} is back"
-msgstr "{nick} je zpátky"
+msgstr "{nick} je zpět"
 
 #. System line tail case: a user's username/hostname changed but neither value arrived (degenerate). {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:4
 msgctxt "system.chghost"
 msgid "{nick} has changed"
-msgstr "{nick} se změnil"
+msgstr "{nick} změnil údaje"
 
 #. System line when a user's username AND hostname change together. {nick} and {ident} are VERBATIM user content; {host} is a verbatim technical value; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:12
 msgctxt "system.chghostBoth"
 msgid "{nick} has changed username to {ident} and hostname to {host}"
-msgstr "{nick} se změnil uživatelské jméno na {ident} a hostname na {host}"
+msgstr "{nick} změnil uživatelské jméno na {ident} a název hostitele na {host}"
 
 #. System line when a user's hostname changes. {nick} is the user's nick (VERBATIM, renders as the interactive username element) and {host} the new hostname (verbatim technical value).
 #: client/components/MessageTypes/chghost.vue:9
 msgctxt "system.chghostHost"
 msgid "{nick} has changed hostname to {host}"
-msgstr "{nick} se změnil hostname na {host}"
+msgstr "{nick} změnil název hostitele na {host}"
 
 #. System line when a user's username (ident) changes. {nick} is the user's nick and {ident} the new username — both VERBATIM, never translate; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:6
 msgctxt "system.chghostIdent"
 msgid "{nick} has changed username to {ident}"
-msgstr "{nick} se změnil uživatelské jméno na {ident}"
+msgstr "{nick} změnil uživatelské jméno na {ident}"
 
 #. System line for an incoming CTCP request. {nick} is the sender's nick (VERBATIM user content, renders as the interactive username element); {ctcp} is the fixed abbreviation CTCP (never translate); {message} is the verbatim CTCP payload.
 #: client/components/MessageTypes/ctcp_request.vue:5
@@ -12732,49 +12731,49 @@ msgstr "{nick} poslal požadavek {ctcp}: {message}"
 #: client/components/MessageTypes/invite.vue:9
 msgctxt "system.inviteTarget"
 msgid "{nick} has invited {target} to {channel}"
-msgstr "{nick} vyzval {target} do {channel}"
+msgstr "{nick} pozval {target} do {channel}"
 
 #. System line when the invite targets the reader. {nick} is the inviter's nick (VERBATIM user content, renders as the interactive username element) and {channel} the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:7
 msgctxt "system.inviteYou"
 msgid "{nick} has invited you to {channel}"
-msgstr "{nick} vyzval teba do {channel}"
+msgstr "{nick} vás pozval do {channel}"
 
 #. System line when a user joins a channel. {nick} is the joining user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element inline where the placeholder stands, so word order around it is the translator's.
 #: client/components/MessageTypes/join.vue:8
 msgctxt "system.join"
 msgid "{nick} has joined the channel"
-msgstr "{nick} se připojil do kanálu"
+msgstr "{nick} vstoupil do kanálu"
 
 #. System line when a user is kicked from a channel. {nick} is the kicker's nick and {target} the kicked user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 #: client/components/MessageTypes/kick.vue:6
 msgctxt "system.kick"
 msgid "{nick} has kicked {target}"
-msgstr "{nick} vylétl {target}"
+msgstr "{nick} vyhodil {target} z kanálu"
 
 #. System line when a channel or user mode changes. {nick} is the nick that set the mode, VERBATIM user content; {modes} is the verbatim mode change (e.g. +o nick), rendered as-is.
 #: client/components/MessageTypes/mode.vue:6
 msgctxt "system.mode"
 msgid "{nick} sets mode {modes}"
-msgstr "{nick} nastavil režim {modes}"
+msgstr "{nick} nastavuje režim {modes}"
 
 #. System line when a user changes nick. {nick} is the old nick and {newNick} the new one — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 #: client/components/MessageTypes/nick.vue:6
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr "{nick} je nyní známý jako {newNick}"
+msgstr "{nick} si změnil přezdívku na {newNick}"
 
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 #: client/components/MessageTypes/part.vue:6
 msgctxt "system.part"
 msgid "{nick} has left the channel"
-msgstr "{nick} se odpojil z kanálu"
+msgstr "{nick} opustil kanál"
 
 #. System line when a user disconnects from the network. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The quit reason (user-set, verbatim) follows the sentence in parentheses.
 #: client/components/MessageTypes/quit.vue:6
 msgctxt "system.quit"
 msgid "{nick} has quit"
-msgstr "{nick} opustil kanál"
+msgstr "{nick} se odpojil"
 
 #. Reason given when pending token requests (upload tokens) are dropped because the connection closed; shown inside the upload error notice.
 #: client/js/irc/authtoken.ts
@@ -12876,7 +12875,7 @@ msgstr "GPU naváže nejvýše {limit} v jedné vyrovnávací paměti; nejmenš�
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.alreadyIn"
 msgid "Already in {language}, not translated. Translation options"
-msgstr "Už je v {language}, nejsou překládány. Možnosti překladu"
+msgstr "Už v cílovém jazyce ({language}), nepřeloženo. Možnosti překladu"
 
 #. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
 #: client/components/TranslationLine.vue
@@ -12894,7 +12893,7 @@ msgstr "Jazyk nelze odlišit, nejsou překládány. Možnosti překladu"
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.placeholder"
 msgid "Write to {name} · sent in {language}"
-msgstr "Zapisovat do {name} · posílán do {language}"
+msgstr "Zpráva pro {name} · jazyk odesílání: {language}"
 
 #. Placeholder of the message input when the channel's write target is the language the user reads: every line is corrected (spelling and grammar) before it is sent. {name} is the channel or user name, verbatim; the middle dot is part of the copy.
 #: client/components/ChatInput.vue
@@ -12906,7 +12905,7 @@ msgstr "Napište {name} · odeslán opravený"
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendCorrectedOn"
 msgid "Sending corrected in {language} · click to stop"
-msgstr "Odesílám opravené v {language} · klikněte, abyste zastavili"
+msgstr "Odesílání s opravami, jazyk: {language} · kliknutím vypnete"
 
 #. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens a dialog to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
 #: client/components/ChatInput.vue
@@ -12918,7 +12917,7 @@ msgstr "Překládám to, co odesílám…"
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOn"
 msgid "Sending in {language} · click to stop"
-msgstr "Odesílání {language} · klikněte, abyste zastavili"
+msgstr "Odesílání s překladem, jazyk: {language} · kliknutím vypnete"
 
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
@@ -12994,49 +12993,49 @@ msgstr "Označovat osoby"
 #: client/components/Chat.vue
 msgctxt "translate.header.off"
 msgid "Translate messages into {reading}"
-msgstr "Překládat zprávy do {reading}"
+msgstr "Překládat zprávy (jazyk: {reading})"
 
 #. Tooltip of the translate button in a chat window's header when translation is off and the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.offPaused"
 msgid "Translate messages into {reading}, paused: {reason}"
-msgstr "Překládat zprávy do {reading}, pauzováno: {reason}"
+msgstr "Překládat zprávy (jazyk: {reading}); pozastaveno: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are not translated but outgoing ones are. {reading} and {writing} are language names.
 #: client/components/Chat.vue
 msgctxt "translate.header.offWrite"
 msgid "Translate messages into {reading}, sending in {writing}"
-msgstr "Překládat zprávy do {reading}, odesílání: {writing}"
+msgstr "Překládat příchozí zprávy (jazyk: {reading}), odchozí — jazyk: {writing}"
 
 #. Tooltip of the translate button in a chat window's header when only outgoing messages are translated and the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.offWritePaused"
 msgid "Translate messages into {reading}, sending in {writing}, paused: {reason}"
-msgstr "Překládat zprávy do {reading}, odesílání: {writing}, pauzováno: {reason}"
+msgstr "Překládat příchozí zprávy (jazyk: {reading}), odchozí — jazyk: {writing}; pozastaveno: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are being translated. {reading} is a language name.
 #: client/components/Chat.vue
 msgctxt "translate.header.read"
 msgid "Translating into {reading}"
-msgstr "Překládání do {reading}"
+msgstr "Překlad (jazyk: {reading})"
 
 #. Tooltip of the translate button in a chat window's header when translation is on but the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.readPaused"
 msgid "Translating into {reading}, paused: {reason}"
-msgstr "Překládání do {reading}, pauzováno: {reason}"
+msgstr "Překlad (jazyk: {reading}); pozastaveno: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are translated and outgoing ones are too. {reading} and {writing} are language names.
 #: client/components/Chat.vue
 msgctxt "translate.header.readWrite"
 msgid "Translating into {reading}, sending in {writing}"
-msgstr "Překládání do {reading}, odesílání: {writing}"
+msgstr "Překlad příchozích (jazyk: {reading}), odchozích — jazyk: {writing}"
 
 #. Tooltip of the translate button in a chat window's header when reading and writing are both translated but the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.readWritePaused"
 msgid "Translating into {reading}, sending in {writing}, paused: {reason}"
-msgstr "Překládání do {reading}, odesílání: {writing}, pauzováno: {reason}"
+msgstr "Překlad příchozích (jazyk: {reading}), odchozích — jazyk: {writing}; pozastaveno: {reason}"
 
 #. Tooltip and aria-label of the translate button in a chat window's header on a touch device, where tapping it opens the translation panel.
 #: client/components/Chat.vue
@@ -13085,7 +13084,7 @@ msgstr "Přepojovat"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFrom"
 msgid "Retranslate from: {language}"
-msgstr "Retranslatovat z: {language}"
+msgstr "Přeložit znovu z jazyka: {language}"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
@@ -13273,7 +13272,7 @@ msgstr "Řady, které odesílají jiní, jsou znázorněny s překladem pod nimi
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readIn"
 msgid "Read messages in {language}"
-msgstr "Přečti zprávy v {language}"
+msgstr "Číst zprávy v jazyce: {language}"
 
 #. Heading of the translation panel's section about incoming messages, and the label of the on/off control in it.
 #: client/components/TranslationPanel.vue
@@ -13562,7 +13561,7 @@ msgstr "{from} → {to} · {model} (CPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeCpuRetried"
 msgid "{from} → {to} · {model} (CPU) · retried without a source"
-msgstr "{from} → {to} · {model} (CPU) · pokus bez zdroja"
+msgstr "{from} → {to} · {model} (CPU) · opakováno bez zdrojového jazyka"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the graphics processor.
 #: client/components/ChatInput.vue
@@ -13574,7 +13573,7 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr "{from} → {to} · {model} (GPU) · pokus bez zdroja"
+msgstr "{from} → {to} · {model} (GPU) · opakováno bez zdrojového jazyka"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
@@ -13702,7 +13701,7 @@ msgstr "Jazyky: {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translation.panel.remove"
 msgid "Remove {language}"
-msgstr "Odstrániť {language}"
+msgstr "Odebrat: {language}"
 
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 #: client/components/TypingIndicator.vue:31
@@ -13754,9 +13753,9 @@ msgstr "Nahrávka zrušena"
 msgctxt "upload.confirmCount"
 msgid "Upload {count} file"
 msgid_plural "Upload {count} files"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Nahrát {count} soubor"
+msgstr[1] "Nahrát {count} soubory"
+msgstr[2] "Nahrát {count} souborů"
 
 #. Intro line of the upload confirmation dialog; asks the user to check the files and warns that every uploaded file is reachable through its link.
 #: client/components/UploadPreview.vue
@@ -14176,7 +14175,7 @@ msgstr "Ano"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.allReleasesLink"
 msgid "see all releases"
-msgstr "zobrazit všechny verze"
+msgstr "zobrazte všechna vydání"
 
 #. aria-label of the changelog window, which shows the app's release notes.
 #: client/components/Windows/Changelog.vue
@@ -14194,25 +14193,25 @@ msgstr "« Pomoc"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.notBundledLine"
 msgid "Release notes are not bundled with the build. {readNotes} or {allReleases}."
-msgstr ""
+msgstr "Poznámky k vydání nejsou součástí sestavení. {readNotes} nebo {allReleases}."
 
 #. Changelog window sentence shown when the running build is newer than its release. {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v; {since} is a link whose text is windows.changelog.sinceReleaseLink ('what changed since the release').
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.pastReleaseLine"
 msgid "This build is {commit}, after v{version}: {since}."
-msgstr ""
+msgstr "Toto sestavení je {commit}, po v{version}: {since}."
 
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.readNotesLink"
 msgid "Read the notes for v{version}"
-msgstr "Přečtěte si poznámky pro v{version}"
+msgstr "Přečtěte si poznámky k v{version}"
 
 #. Text of the link in the changelog's past-release sentence that opens the list of changes between the release and this build. Mid-sentence.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.sinceReleaseLink"
 msgid "what changed since the release"
-msgstr "co se změnilo od vydání"
+msgstr "co se od vydání změnilo"
 
 #. Heading of the changelog window. {version} is the release version number, kept as written (a v followed by the number).
 #: client/components/Windows/Changelog.vue
