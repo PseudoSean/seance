@@ -7,6 +7,7 @@ import {
 	type AdapterLike,
 	type ProbeEnv,
 } from "../../client/js/translate/capability";
+import {buildCatalog, modelBlock} from "../../client/js/translate/models";
 
 function adapter(overrides: Partial<{f16: boolean; maxBuffer: number}> = {}): AdapterLike {
 	const f16 = overrides.f16 ?? true;
@@ -91,6 +92,46 @@ describe("translate/capability", () => {
 				)
 			).reasons
 		).to.deep.equal(["SMALL_BUFFER"]);
+	});
+
+	// WebLLM's detectGPUDevice refuses an adapter below these two before it
+	// asks for a device, however large its buffers: the probe has to say
+	// so, or Settings promises a model that can never load.
+	it("is cpu below WebLLM's shader limits, and a limit the adapter does not report passes", async () => {
+		const withLimits = (limits: Partial<AdapterLike["limits"]>) =>
+			probe(
+				env({
+					gpu: {
+						requestAdapter() {
+							const a = adapter();
+
+							return Promise.resolve({...a, limits: {...a.limits, ...limits}});
+						},
+					},
+				})
+			);
+
+		for (const limits of [
+			{maxStorageBuffersPerShaderStage: 8},
+			{maxComputeWorkgroupStorageSize: 16384},
+		]) {
+			const cap = await withLimits(limits);
+
+			expect(cap.tier).to.equal("cpu");
+			expect(cap.reasons).to.deep.equal(["GPU_LIMITS"]);
+			expect(modelBlock(buildCatalog().llm, cap, {llm: true, cpu: true})).to.deep.equal({
+				kind: "device",
+				reason: "GPU_LIMITS",
+			});
+		}
+
+		const enough = await withLimits({
+			maxStorageBuffersPerShaderStage: 10,
+			maxComputeWorkgroupStorageSize: 32768,
+		});
+
+		expect(enough.tier).to.equal("gpu");
+		expect(enough.reasons).to.deep.equal([]);
 	});
 
 	it("rates gpu a phone's GPU that binds the 1.7B's embedding, not WebLLM's 1 GiB", async () => {

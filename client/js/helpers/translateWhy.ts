@@ -24,6 +24,8 @@ export function translateWhyText(block: RouteBlock): string {
 					return t("translate.why.noAdapter");
 				case "NO_F16":
 					return t("translate.why.noF16");
+				case "GPU_LIMITS":
+					return t("translate.why.gpuLimits");
 				case "NO_WASM_SIMD":
 					return t("translate.why.noWasmSimd");
 				case "PROBE_FAILED":

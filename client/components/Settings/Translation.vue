@@ -427,6 +427,8 @@ export default defineComponent({
 					return t("translate.capability.reason.noAdapter");
 				case "NO_F16":
 					return t("translate.capability.reason.noF16");
+				case "GPU_LIMITS":
+					return t("translate.capability.reason.gpuLimits");
 				case "SMALL_BUFFER":
 					return t("translate.capability.reason.smallBuffer", {
 						limit: size(capability.value?.maxBufferBytes ?? 0),

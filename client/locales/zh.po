@@ -12710,6 +12710,12 @@ msgctxt "translate.capability.none"
 msgid "Translation cannot run on this device."
 msgstr "该设备无法运行翻译。"
 
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Lowercase start, short phrase like the other reasons in the list.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.capability.reason.gpuLimits"
+msgid "GPU shader limits too low"
+msgstr "GPU 着色器限制过低"
+
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the page is not served securely. WebGPU, HTTPS and localhost are technical names.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.insecureOrigin"
@@ -13516,6 +13522,12 @@ msgstr "CPU 模型已在 设置 → 翻译 中关闭。"
 msgctxt "translate.why.down"
 msgid "The model for this failed to load earlier; reload the page to try it again."
 msgstr "此前未能加载所需的模型；请重新加载页面再试。"
+
+#. Reason a GPU translation model cannot run: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.gpuLimits"
+msgid "This GPU's shader limits are too low for the GPU models."
+msgstr "此 GPU 的着色器限制过低，无法运行 GPU 模型。"
 
 #. Reason a GPU translation model cannot run: the page is plain HTTP. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebGPU', 'HTTPS' and 'localhost'.
 #: client/js/helpers/translateWhy.ts

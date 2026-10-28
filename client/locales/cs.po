@@ -12829,6 +12829,12 @@ msgctxt "translate.capability.none"
 msgid "Translation cannot run on this device."
 msgstr "Překlady nelze běžet na tomto zařízení."
 
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Lowercase start, short phrase like the other reasons in the list.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.capability.reason.gpuLimits"
+msgid "GPU shader limits too low"
+msgstr "příliš nízké limity shaderů GPU"
+
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the page is not served securely. WebGPU, HTTPS and localhost are technical names.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.insecureOrigin"
@@ -13635,6 +13641,12 @@ msgstr "Modely CPU jsou vypnuté v Nastavení → Překlady."
 msgctxt "translate.why.down"
 msgid "The model for this failed to load earlier; reload the page to try it again."
 msgstr "Model pro tento překlad se dříve nepodařilo načíst; obnovte stránku a zkuste to znovu."
+
+#. Reason a GPU translation model cannot run: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.gpuLimits"
+msgid "This GPU's shader limits are too low for the GPU models."
+msgstr "Limity shaderů tohoto GPU jsou pro modely GPU příliš nízké."
 
 #. Reason a GPU translation model cannot run: the page is plain HTTP. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebGPU', 'HTTPS' and 'localhost'.
 #: client/js/helpers/translateWhy.ts

@@ -172,6 +172,7 @@ const GPU_REASONS: readonly DeviceReason[] = [
 	"NO_WEBGPU",
 	"NO_ADAPTER",
 	"NO_F16",
+	"GPU_LIMITS",
 ];
 
 /**

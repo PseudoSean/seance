@@ -1,5 +1,6 @@
 // The device probe (spec § capability.ts): what the router may pick from.
-// `gpu` needs a WebGPU adapter with 16-bit float shaders and a storage
+// `gpu` needs a WebGPU adapter with 16-bit float shaders, WebLLM's shader
+// limits (`WEBLLM_MIN_*`) and a storage
 // binding as large as the smallest GPU model's largest tensor
 // (models.ts `LLM_MIN_BUFFER_BYTES`; which models fit is `llmFits`); `cpu` needs
 // WebAssembly SIMD for ONNX Runtime; `none` hides the feature. The reasons
@@ -20,6 +21,8 @@ export type CapabilityReason =
 	| "INSECURE_ORIGIN"
 	| "NO_ADAPTER"
 	| "NO_F16"
+	/** Below WebLLM's own shader floors (`WEBLLM_MIN_*`): it refuses the adapter outright. */
+	| "GPU_LIMITS"
 	| "SMALL_BUFFER"
 	| "NO_WASM_SIMD"
 	/** The probe itself threw: nothing could be measured (service.ts). */
@@ -38,7 +41,13 @@ export interface Capability {
 
 export interface AdapterLike {
 	features: {has(name: string): boolean};
-	limits: {maxBufferSize: number; maxStorageBufferBindingSize: number};
+	limits: {
+		maxBufferSize: number;
+		maxStorageBufferBindingSize: number;
+		/** Absent (an adapter that does not say) passes; see `WEBLLM_MIN_*`. */
+		maxStorageBuffersPerShaderStage?: number;
+		maxComputeWorkgroupStorageSize?: number;
+	};
 }
 
 export interface ProbeEnv {
@@ -63,6 +72,13 @@ export interface ProbeEnv {
 // worker asks WebLLM's device for whatever the adapter offers
 // (engines/gpuLimits.ts), and a phone offering 256 MiB-1 GiB can load it.
 export const GPU_MIN_BUFFER_BYTES = LLM_MIN_BUFFER_BYTES;
+
+// WebLLM's own floors (`detectGPUDevice`, @mlc-ai/web-llm 0.2.85): an
+// adapter below either is refused before a device is even asked for, so a
+// GPU model could never load there, whatever its buffers. WebGPU's defaults
+// are 8 and 16 KiB; desktop adapters report at least these.
+export const WEBLLM_MIN_STORAGE_BUFFERS = 10;
+export const WEBLLM_MIN_WORKGROUP_STORAGE = 32768;
 
 /** A minimal module using a v128 op; validating it proves SIMD support. */
 export const WASM_SIMD_PROBE = new Uint8Array([
@@ -98,6 +114,8 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 
 			if (!f16) {
 				reasons.push("NO_F16");
+			} else if (!meetsWebLlmFloors(adapter.limits)) {
+				reasons.push("GPU_LIMITS");
 			} else if (maxBufferBytes < GPU_MIN_BUFFER_BYTES) {
 				reasons.push("SMALL_BUFFER");
 			} else {
@@ -131,6 +149,17 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 		storageQuotaBytes,
 		mobile: env.mobile === true,
 	};
+}
+
+/** A limit the adapter does not report is taken as met: only a number below the floor fails. */
+function meetsWebLlmFloors(limits: AdapterLike["limits"]): boolean {
+	const below = (value: number | undefined, floor: number) =>
+		typeof value === "number" && value < floor;
+
+	return !(
+		below(limits.maxStorageBuffersPerShaderStage, WEBLLM_MIN_STORAGE_BUFFERS) ||
+		below(limits.maxComputeWorkgroupStorageSize, WEBLLM_MIN_WORKGROUP_STORAGE)
+	);
 }
 
 export function browserEnv(): ProbeEnv {

@@ -1,10 +1,12 @@
 // What the translation UI says this device can run, and why not, on the
 // real device probe (capability.ts) over a stand-in for WebGPU: headless
 // has no GPU, so an init script defines `navigator.gpu` (or takes it away)
-// with an adapter that reports the features and limits of five devices:
+// with an adapter that reports the features and limits of six devices:
 //
 //   noWebgpu  no `navigator.gpu` at all
 //   noF16     an adapter without shader-f16
+//   lowLimits shader-f16 and 2 GiB, but WebGPU's default 8 storage buffers
+//             per shader stage, below WebLLM's floor of 10 (GPU_LIMITS)
 //   binds128  shader-f16, 128 MiB in one storage binding (the tier is cpu)
 //   binds160  160 MiB: the 1.7B fits, the 4B does not
 //   desktop   2 GiB: everything runs
@@ -70,6 +72,11 @@ const DEVICES = {
 		runs: {[SMALL]: false, [LARGE]: false},
 		why: () => EN["translate.why.noF16"],
 	},
+	lowLimits: {
+		gpu: {f16: true, max: 2 * GiB, storageBuffers: 8},
+		runs: {[SMALL]: false, [LARGE]: false},
+		why: () => EN["translate.why.gpuLimits"],
+	},
 	binds128: {
 		gpu: {f16: true, max: 128 * MiB},
 		runs: {[SMALL]: false, [LARGE]: false},
@@ -107,7 +114,12 @@ const GPU_STUB = `(() => {
 	const gpu = device.gpu === null ? undefined : {
 		requestAdapter: async () => ({
 			features: new Set(device.gpu.f16 ? ["shader-f16"] : []),
-			limits: {maxBufferSize: device.gpu.max, maxStorageBufferBindingSize: device.gpu.max},
+			limits: {
+				maxBufferSize: device.gpu.max,
+				maxStorageBufferBindingSize: device.gpu.max,
+				maxStorageBuffersPerShaderStage: device.gpu.storageBuffers ?? 10,
+				maxComputeWorkgroupStorageSize: 32768,
+			},
 		}),
 	};
 	Object.defineProperty(Navigator.prototype, "gpu", {configurable: true, get: () => gpu});
