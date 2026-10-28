@@ -594,7 +594,8 @@ export default defineComponent({
 			);
 
 		// Why a GPU model cannot be chosen here: the device binds too little
-		// for it, or cannot run a GPU model at all, on a device the probe
+		// for it, a phone cannot hold it, or cannot run a GPU model at all,
+		// on a device the probe
 		// placed on the gpu tier -- where choosing it would quietly run the
 		// default instead (models.ts `llmChoice`). Not while probing, not
 		// for the switch (choosing ahead of switching on is fine), and not
@@ -607,7 +608,10 @@ export default defineComponent({
 
 			const block = modelBlock(choice, capability.value, {llm: true, cpu: true, nllb: true});
 
-			return block && (block.kind === "buffer" || block.kind === "device") ? block : null;
+			return block &&
+				(block.kind === "buffer" || block.kind === "memory" || block.kind === "device")
+				? block
+				: null;
 		};
 
 		const unfitLlms = computed(() => llmChoices.filter((choice) => !!llmUnfit(choice)));

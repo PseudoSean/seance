@@ -190,6 +190,16 @@ function candidateBlock(
 			);
 		}
 
+		// A phone's page cannot hold this model (models.ts `tooLargeForPhone`).
+		// The service never routes it there — its selection resolves to a
+		// model the device runs (`llmChoice`) — but a caller holding another
+		// catalog (Settings' questions, a test) hears the same reason.
+		const memory = input.capability ? modelBlock(ref, input.capability, switches) : null;
+
+		if (memory?.kind === "memory") {
+			return memory;
+		}
+
 		if (!input.allowLlm) {
 			return {kind: "off", engine: "llm"};
 		}

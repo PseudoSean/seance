@@ -71,6 +71,9 @@ export function translateWhyText(block: RouteBlock): string {
 				limit: friendlysize(block.limit),
 			});
 
+		case "memory":
+			return t("translate.why.phoneMemory", {needed: friendlysize(block.needed)});
+
 		case "off":
 			switch (block.engine) {
 				case "llm":

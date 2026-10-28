@@ -212,6 +212,15 @@ export interface Engine {
 export const BATCH_REFUSED = "seq2seq engines do not batch";
 
 /**
+ * A request too long for the context window the GPU model was loaded with
+ * (budget.ts `fitToWindow`, or WebLLM's own `ContextWindowSizeExceededError`
+ * when the bound under-counted): the request's failure, never the model's —
+ * the model stays loaded, nothing is marked down, and the reading queue
+ * retries the line bare and alone and counts it toward no pause.
+ */
+export const CONTEXT_OVERFLOW = "the request does not fit the model's context window";
+
+/**
  * An engine's own failure classification. `load`: the model is gone or
  * cannot be used (a lost WebGPU device, twice); the service marks the
  * candidate down. `request`: this request failed (a bad pair, an

@@ -128,7 +128,7 @@ describe("translate/service and the small-buffer build", () => {
 
 		expect(r.configured).to.deep.equal([
 			undefined,
-			{maxBufferBytes: 128 * MiB, capBytes: 128 * MiB},
+			{maxBufferBytes: 128 * MiB, capBytes: 128 * MiB, mobile: true},
 		]);
 		// Settings' rows are asked again, now against the build that loads here.
 		expect(r.modelsAsked.length).to.be.greaterThan(askedBefore);
@@ -138,6 +138,18 @@ describe("translate/service and the small-buffer build", () => {
 
 	it("starts a worker after the probe with the budget in its first configure", async () => {
 		const r = rig(phone());
+
+		r.releaseProbe();
+		await r.service.capabilities();
+		await r.service.models();
+		expect(r.configured).to.deep.equal([
+			{maxBufferBytes: 128 * MiB, capBytes: null, mobile: true},
+		]);
+		r.service.dispose();
+	});
+
+	it("tells a computer's worker no more than it always did: no mobile flag", async () => {
+		const r = rig(phone({mobile: false}));
 
 		r.releaseProbe();
 		await r.service.capabilities();

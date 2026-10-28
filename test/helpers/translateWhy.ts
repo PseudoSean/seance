@@ -10,6 +10,7 @@ import {TRANSLATION_UNAVAILABLE} from "../../client/js/translate/service";
 import {needsDownloadError} from "../../client/js/translate/consent";
 import friendlysize from "../../client/js/helpers/friendlysize";
 import {ABORTED, TIMED_OUT} from "../../client/js/translate/outgoing";
+import {CONTEXT_OVERFLOW} from "../../client/js/translate/engine";
 
 // The rule reports codes (models.ts modelBlock, router.ts explainRoute and
 // translationBlock); these two helpers turn them into the sentences every
@@ -64,6 +65,16 @@ describe("translateWhyText", () => {
 		expect(new Set(Object.values(reasons).map((key) => en[key])).size).to.equal(7);
 	});
 
+	it("says a phone cannot hold a model, with the memory it needs", () => {
+		const needed = 3_400_000_000;
+		const text = translateWhyText({kind: "memory", needed});
+
+		expect(text).to.equal(
+			en["translate.why.phoneMemory"].replace("{needed}", friendlysize(needed))
+		);
+		expect(text).to.include("GiB");
+	});
+
 	it("names both sizes of a buffer that is too small", () => {
 		const text = translateWhyText({
 			kind: "buffer",
@@ -78,6 +89,10 @@ describe("translateWhyText", () => {
 describe("translateErrorText", () => {
 	before(() => {
 		setCatalog("en", enCatalog, undefined);
+	});
+
+	it("says a request too long for the model's window is too long", () => {
+		expect(translateErrorText(CONTEXT_OVERFLOW)).to.equal(en["translate.error.tooLong"]);
 	});
 
 	it("says why nothing could take the request when the caller knows", () => {

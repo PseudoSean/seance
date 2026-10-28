@@ -183,6 +183,13 @@ export class TranslateService {
 	private consent: DownloadConsent | null;
 	/** Settings (or a route) has asked the worker what is downloaded: asked again once the probe lands. */
 	private modelsAsked = false;
+	/**
+	 * The CPU engine has been given work in the current worker. ONNX
+	 * Runtime's WebAssembly heap grows and never shrinks, so unloading its
+	 * models gives none of it back: on a phone the GPU model is only loaded
+	 * into a fresh worker once it has (`makeRoom`).
+	 */
+	private cpuHeapUsed = false;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -405,8 +412,84 @@ export class TranslateService {
 			? {
 					maxBufferBytes: this.probed.maxBufferBytes,
 					capBytes: this.probed.bufferCapBytes ?? null,
+					// The phone's smaller context window (models.ts
+					// `contextWindowFor`); a computer's message is unchanged.
+					...(this.probed.mobile ? {mobile: true} : {}),
 			  }
 			: undefined;
+	}
+
+	/**
+	 * One engine in memory at a time, on a phone or tablet: WebKit counts
+	 * the GPU model's memory against the page's own process, which also
+	 * holds the worker's ONNX Runtime heap (NLLB-200 ~900 MB, an OPUS-MT
+	 * pair ~110 MB), and past about 2.1 GB the page is killed. A computer
+	 * keeps both, and runs them side by side.
+	 */
+	private oneEngineAtATime(): boolean {
+		return this.probed?.mobile === true;
+	}
+
+	/**
+	 * What has to happen before `engine` may load or run here: null when
+	 * nothing (a computer; or the other engine idle and out of memory), else
+	 * a wait, after which the caller checks again. Never claims anything
+	 * itself, so a caller claims (`engineStarted`) right after a null, with
+	 * no await between — and nobody ever waits while holding a claim, so two
+	 * callers on the two engines cannot wait on each other. The other
+	 * engine running: wait for it. The GPU model wanted in a worker the CPU
+	 * engine has used: a fresh worker (`recycleWorker`), since that heap does
+	 * not shrink. The other engine loaded: unload it.
+	 */
+	private makeRoom(engine: EngineName): Promise<void> | null {
+		if (!this.oneEngineAtATime()) {
+			return null;
+		}
+
+		const other: EngineName = engine === "llm" ? "seq2seq" : "llm";
+
+		if (this.engineRunning[other] > 0) {
+			return this.whenEngineIdle(other);
+		}
+
+		if (engine === "llm" && this.cpuHeapUsed && this.engineRunning.llm === 0) {
+			this.recycleWorker();
+			return Promise.resolve();
+		}
+
+		const worker = this.worker;
+
+		if (worker && this.loadedEngines.has(other)) {
+			this.clearEngineTimer(other);
+			this.loadedEngines.delete(other);
+
+			return worker.client.unload(other).catch(() => {
+				// A worker torn down meanwhile unloaded it anyway.
+			});
+		}
+
+		return null;
+	}
+
+	/**
+	 * A fresh worker in place of this one, everything it held gone with it,
+	 * without the teardown's generation step: nothing runs on it (`makeRoom`
+	 * checks), and the request that asked carries on in the next one.
+	 */
+	private recycleWorker(): void {
+		const worker = this.worker;
+
+		if (!worker) {
+			return;
+		}
+
+		this.worker = null;
+		this.cpuHeapUsed = false;
+		this.clearEngineTimer("llm");
+		this.clearEngineTimer("seq2seq");
+		this.loadedEngines.clear();
+		worker.client.dispose();
+		worker.terminate();
 	}
 
 	/**
@@ -726,7 +809,22 @@ export class TranslateService {
 					throw new TranslateError(BATCH_REFUSED, "request");
 				}
 
+				// On a phone the other engine goes first (`makeRoom`); then
+				// route again, since the wait may have moved things.
+				const room = this.makeRoom(route.ref.engine);
+
+				if (room) {
+					await room;
+					checkAborted();
+					continue;
+				}
+
 				const client = this.client();
+
+				if (route.ref.engine === "seq2seq") {
+					this.cpuHeapUsed = true;
+				}
+
 				const gen = this.generation;
 				const id = this.nextId++;
 				// A seq2seq model has no prompt to detect a source in: it takes
@@ -960,12 +1058,34 @@ export class TranslateService {
 		this.publish();
 		this.inFlight++;
 		this.clearIdle();
-		this.engineStarted(ref.engine);
 
 		const startGeneration = this.generation;
 		let llmClaimed = false;
+		let engineClaimed = false;
 
 		try {
+			// On a phone the other engine goes first (`makeRoom`), waited
+			// out before this download claims its own engine — the last
+			// check and the claim with no await between them. Whether this
+			// is a phone is the probe's to say (it has usually answered by
+			// the time Settings offers a Download).
+			await this.capabilities();
+
+			if (this.generation !== startGeneration) {
+				throw new Error(WORKER_DISPOSED);
+			}
+
+			for (let wait = this.makeRoom(ref.engine); wait; wait = this.makeRoom(ref.engine)) {
+				await wait;
+
+				if (this.generation !== startGeneration) {
+					throw new Error(WORKER_DISPOSED);
+				}
+			}
+
+			this.engineStarted(ref.engine);
+			engineClaimed = true;
+
 			if (ref.engine === "llm") {
 				// WebLLM holds one model: loading this one while a request or a
 				// download runs on another would end that work. Wait until none
@@ -994,7 +1114,13 @@ export class TranslateService {
 				llmClaimed = true;
 			}
 
-			await this.client().load(ref, (progress: LoadProgress) => {
+			const client = this.client();
+
+			if (ref.engine === "seq2seq") {
+				this.cpuHeapUsed = true;
+			}
+
+			await client.load(ref, (progress: LoadProgress) => {
 				view.fraction = progress.fraction;
 				this.publish();
 			});
@@ -1022,7 +1148,10 @@ export class TranslateService {
 				this.llmEnded(ref.id);
 			}
 
-			this.engineEnded(ref.engine);
+			if (engineClaimed) {
+				this.engineEnded(ref.engine);
+			}
+
 			this.inFlight--;
 			this.scheduleIdle();
 			this.publish();
@@ -1179,6 +1308,7 @@ export class TranslateService {
 			const worker = this.deps.createClient();
 
 			this.worker = worker;
+			this.cpuHeapUsed = false;
 			worker.client.onWorkerError = (message: string) => this.reportWorkerError(message);
 			worker.client.onDead = (detail: string) => this.workerDied(worker, detail);
 			worker.client.configure(this.options.catalog, this.options.ortBase, this.gpuBudget());
