@@ -368,6 +368,25 @@ describe("translate/engines/webllm", () => {
 		});
 	});
 
+	it("a cleanup decodes greedily: one token's narrow lead decides a correction", async () => {
+		const d = deps(["you're going to love this\n"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const polish = request({
+			text: "your going to love this",
+			from: "en",
+			to: "en",
+			purpose: "polish",
+		});
+
+		for await (const chunk of engine.translate(polish, new AbortController().signal)) {
+			void chunk;
+		}
+
+		expect(d.calls.create[0].temperature).to.equal(0);
+	});
+
 	it("translate streams cumulative text, then the trimmed result, with the spec's decoding settings", async () => {
 		const d = deps(["I'll", " send", " you the log", " shortly.\n"]);
 		const engine = new WebLlmEngine(d.deps, name);
@@ -392,6 +411,7 @@ describe("translate/engines/webllm", () => {
 		const created = d.calls.create[0];
 
 		expect(created.stream).to.equal(true);
+		// A translation keeps its low temperature; a cleanup is greedy (below).
 		expect(created.temperature).to.equal(0.1);
 		expect(created.stop).to.deep.equal([]);
 		expect(created.extra_body).to.deep.equal({enable_thinking: false});

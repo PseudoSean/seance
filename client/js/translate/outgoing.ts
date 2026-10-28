@@ -513,6 +513,39 @@ const QUESTION_MARK_OPTIONAL = new Set(["ja", "zh", "ko", "th", "el"]);
  * without one (`QUESTION_MARK_OPTIONAL`). A mark inside the source ("Memorizar?
  * Hm...") does not make the line a question.
  */
+/**
+ * A cleanup that dropped its question's mark: the draft ended in one, the
+ * corrected line has none, and the line is still mostly the draft's words
+ * (at least half of them, case and punctuation aside). A copy editor that
+ * loses a "?" made a slip, not an answer -- the web 1.7B handed back
+ * "wanna come" for "…, wanna come?", which isAnsweredQuestion then failed
+ * as an answered question. The mark goes back on; an actual answer, which
+ * shares few of the draft's words, is left for answerError to refuse.
+ */
+export function keepQuestionMark(draft: string, corrected: string): string {
+	const last = draft.replace(QUESTION_TAIL, "").slice(-1);
+
+	if (last === "" || !QUESTION_MARKS.test(last) || QUESTION_MARKS.test(corrected)) {
+		return corrected;
+	}
+
+	const words = (text: string) =>
+		text
+			.toLowerCase()
+			.split(/\s+/)
+			.map((w) => w.replace(/[\p{P}\p{S}]+/gu, ""))
+			.filter((w) => w !== "");
+	const draftWords = words(draft);
+	const kept = new Set(words(corrected));
+	const shared = draftWords.filter((w) => kept.has(w)).length;
+
+	if (draftWords.length === 0 || shared * 2 < draftWords.length) {
+		return corrected;
+	}
+
+	return corrected.replace(/\s+$/, "") + last;
+}
+
 export function isAnsweredQuestion(source: string, answer: string, to: string): boolean {
 	if (QUESTION_MARK_OPTIONAL.has(to)) {
 		return false;

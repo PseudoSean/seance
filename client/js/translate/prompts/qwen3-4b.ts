@@ -189,9 +189,30 @@ export function userPrompt(req: TranslateRequest, name: LanguageNamer): string {
 	return parts.join("\n");
 }
 
+/**
+ * An English cleanup gets three earlier exchanges in its own shape: two
+ * sound-alike corrections and a clean casual line handed back as it was.
+ * Measured on the web build's 4-bit weights (2026-10-28,
+ * tools/translate-eval/results/2026-10-28-polish.md): the same 11 of 14
+ * corrections and 6 of 6 clean lines kept as the bare prompt, and the
+ * first word of "your going to love this" moves from "you" 50.4 % against
+ * "your" 47.3 % -- a coin flip at the browser's temperature -- to "you"
+ * 98.8 %. English only: nothing was measured for another language, where
+ * English examples could pull the answer into English.
+ */
+export const POLISH_EXAMPLE_TURNS: readonly ChatMessage[] = [
+	{role: "user", content: "Correct: i hope your feeling better"},
+	{role: "assistant", content: "i hope you're feeling better"},
+	{role: "user", content: "Correct: we parked are car over they're"},
+	{role: "assistant", content: "we parked our car over there"},
+	{role: "user", content: "Correct: lol ok, see u at 9"},
+	{role: "assistant", content: "lol ok, see u at 9"},
+];
+
 export function buildMessages(req: TranslateRequest, name: LanguageNamer): ChatMessage[] {
 	return [
 		{role: "system", content: systemPrompt(req, name)},
+		...(req.purpose === "polish" && req.to === "en" ? POLISH_EXAMPLE_TURNS : []),
 		{role: "user", content: userPrompt(req, name)},
 	];
 }

@@ -1,11 +1,15 @@
 import {expect} from "chai";
 import {emptyContext, PromptContext, TranslateRequest} from "../../client/js/translate/engine";
-import {bareRetry, OutgoingRequest} from "../../client/js/translate/outgoing";
+import {bareRetry, keepQuestionMark, OutgoingRequest} from "../../client/js/translate/outgoing";
 import {
+	buildMessages as buildMessages17,
+	POLISH_EXAMPLES_EN,
 	systemPrompt as systemPrompt17,
 	userPrompt as userPrompt17,
 } from "../../client/js/translate/prompt";
 import {
+	buildMessages as buildMessages4B,
+	POLISH_EXAMPLE_TURNS,
 	systemPrompt as systemPrompt4B,
 	userPrompt as userPrompt4B,
 } from "../../client/js/translate/prompts/qwen3-4b";
@@ -92,5 +96,88 @@ describe("translate/polish", () => {
 		expect(retry.to).to.equal("en");
 		expect(retry.context.recent).to.deep.equal([]);
 		expect(retry.context.names).to.deep.equal([]);
+	});
+});
+
+// Measured on the web build's 4-bit weights (2026-10-28,
+// tools/translate-eval/results/2026-10-28-polish.md): examples lift the
+// English cleanup -- as earlier turns for the 4B, inside the system prompt
+// for the 1.7B. Nothing was measured for another language, which keeps the
+// bare shape.
+describe("translate/polish examples", () => {
+	const req = (to: string): TranslateRequest => ({
+		id: 1,
+		model: "m",
+		text: "your going to love this",
+		from: to,
+		to,
+		purpose: "polish",
+		context: emptyContext(),
+	});
+
+	it("the 4B's English cleanup has three earlier exchanges before the line", () => {
+		const messages = buildMessages4B(req("en"), name);
+
+		expect(messages.map((m) => m.role)).to.deep.equal([
+			"system",
+			"user",
+			"assistant",
+			"user",
+			"assistant",
+			"user",
+			"assistant",
+			"user",
+		]);
+		expect(messages.slice(1, 7)).to.deep.equal([...POLISH_EXAMPLE_TURNS]);
+		expect(messages[7].content).to.equal("Correct: your going to love this");
+
+		// Every example asks in the line's own shape.
+		for (const turn of POLISH_EXAMPLE_TURNS.filter((m) => m.role === "user")) {
+			expect(turn.content).to.match(/^Correct: /);
+		}
+	});
+
+	it("the 1.7B's English cleanup carries the examples in its system prompt", () => {
+		expect(systemPrompt17(req("en"), name)).to.include(POLISH_EXAMPLES_EN);
+		expect(buildMessages17(req("en"), name)).to.have.length(2);
+	});
+
+	it("another language's cleanup, and any translation, carries no examples", () => {
+		expect(buildMessages4B(req("de"), name)).to.have.length(2);
+		expect(systemPrompt17(req("de"), name)).to.not.include(POLISH_EXAMPLES_EN);
+
+		const write: TranslateRequest = {...req("de"), from: "en", purpose: "write"};
+
+		expect(buildMessages4B(write, name)).to.have.length(2);
+		expect(systemPrompt17({...write, to: "en", from: "de"}, name)).to.not.include(
+			POLISH_EXAMPLES_EN
+		);
+	});
+});
+
+describe("translate/polish keepQuestionMark", () => {
+	it("puts back the question mark a cleanup dropped", () => {
+		expect(
+			keepQuestionMark(
+				"were going to the store, wanna come?",
+				"we're going to the store, wanna come"
+			)
+		).to.equal("we're going to the store, wanna come?");
+		expect(keepQuestionMark("is this you're car？", "is this your car")).to.equal(
+			"is this your car？"
+		);
+	});
+
+	it("leaves a line that kept its mark, a draft that asked nothing, and an actual answer", () => {
+		expect(keepQuestionMark("is this you're car?", "is this your car?")).to.equal(
+			"is this your car?"
+		);
+		expect(keepQuestionMark("your going to love this", "you're going to love this")).to.equal(
+			"you're going to love this"
+		);
+		// An answer shares few of the question's words: answerError refuses it.
+		expect(keepQuestionMark("wanna come to the store?", "Sure, I would love to")).to.equal(
+			"Sure, I would love to"
+		);
 	});
 });

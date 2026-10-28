@@ -141,6 +141,17 @@ function contextLine(line: ContextLine): string {
 	return line.translated ? `${base} (translation: ${line.translated})` : base;
 }
 
+/**
+ * The 1.7B's English cleanup carries three examples in its system prompt:
+ * two sound-alike corrections and a clean casual line handed back as it
+ * was. Measured on the web build's 4-bit weights (2026-10-28,
+ * tools/translate-eval/results/2026-10-28-polish.md): 6 of 14 corrections
+ * against 2 of 14 bare, the 6 clean lines kept. Still far from the 4B's
+ * 11; the model mostly hands a line back. English only, as measured.
+ */
+export const POLISH_EXAMPLES_EN =
+	'Examples: "i hope your feeling better" -> "i hope you\'re feeling better"; "we parked are car over they\'re" -> "we parked our car over there"; "lol ok, see u at 9" -> "lol ok, see u at 9".';
+
 export function systemPrompt(req: TranslateRequest, name: (code: string) => string): string {
 	const c = req.context;
 	const parts: string[] = [];
@@ -187,7 +198,9 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 	// that were already right came back untouched under every wording.
 	const frame =
 		req.purpose === "polish"
-			? `Correct the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Fix misspelled words, wrong grammar, wrong punctuation, and words that are the wrong word for the sentence even though they are spelled correctly, such as a word confused with another that sounds the same. Keep every other word exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included; nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged.`
+			? `Correct the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Fix misspelled words, wrong grammar, wrong punctuation, and words that are the wrong word for the sentence even though they are spelled correctly, such as a word confused with another that sounds the same. Keep every other word exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included; nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged.${
+					req.to === "en" ? ` ${POLISH_EXAMPLES_EN}` : ""
+			  }`
 			: req.lines
 			? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
 			: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;

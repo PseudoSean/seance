@@ -45,6 +45,7 @@ import {
 	translateDraft,
 	writeSource,
 	UNCHANGED,
+	keepQuestionMark,
 	stripPolishLabel,
 } from "./outgoing";
 import {
@@ -455,12 +456,15 @@ export async function translateOutgoing(
 			// `nick: ` keeps it, since then the prefix is the user's own.
 			// The copied name, then the model's packaging (a preamble about the
 			// translation, a wrapper round the whole answer): outgoing.ts tidyAnswer.
-			const text = tidyAnswer(
+			const tidied = tidyAnswer(
 				draft,
 				polish
 					? stripPolishLabel(stripCopiedNickPrefix(answer, draft, nicks))
 					: stripCopiedNickPrefix(answer, draft, nicks)
 			);
+			// A cleanup that lost its question's mark gets it back, so the
+			// slip is not judged an answer (outgoing.ts keepQuestionMark).
+			const text = polish ? keepQuestionMark(draft, tidied) : tidied;
 
 			record(text, answerError(draft, text, to));
 
