@@ -397,9 +397,9 @@ msgstr "Použití: /who [mask] [flags] (bez masky aktuální kanál)"
 msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
-msgstr[0] "Zobrazit vše {count} řádek"
+msgstr[0] "Zobrazit {count} řádek"
 msgstr[1] "Zobrazit všechny {count} řádky"
-msgstr[2] "Zobrazit všechny {count} řádky"
+msgstr[2] "Zobrazit všech {count} řádků"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
 #: client/components/CodeBlock.vue
@@ -3005,9 +3005,9 @@ msgstr "Seznam pozvání"
 msgctxt "list.loaded"
 msgid "Loaded {count} channel..."
 msgid_plural "Loaded {count} channels..."
-msgstr[0] "Načteno {count} kanál..."
-msgstr[1] "Načteno {count} kanálů..."
-msgstr[2] "Načteno {count} kanálů..."
+msgstr[0] "Načten {count} kanál…"
+msgstr[1] "Načteny {count} kanály…"
+msgstr[2] "Načteno {count} kanálů…"
 
 #. Status line in the 'Channel List' window while the server sends its channels.
 #: client/js/irc/handlers/list.ts
@@ -11198,18 +11198,18 @@ msgstr "Odstranit alias {name}"
 msgctxt "settings.aliases.statusBroken"
 msgid "{count} alias saved — rows with errors are not saved."
 msgid_plural "{count} aliases saved — rows with errors are not saved."
-msgstr[0] "{count} alias uchován – řádky s chybami nejsou uchovány."
-msgstr[1] "{count} aliasy uchovány – řádky s chybami nejsou uchovány."
-msgstr[2] "{count} aliasy uchovány – řádky s chybami nejsou uchovány."
+msgstr[0] "Uložen {count} alias — řádky s chybami se neukládají."
+msgstr[1] "Uloženy {count} aliasy — řádky s chybami se neukládají."
+msgstr[2] "Uloženo {count} aliasů — řádky s chybami se neukládají."
 
 #. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusSaved"
 msgid "{count} alias saved."
 msgid_plural "{count} aliases saved."
-msgstr[0] "{count} alias uchován."
-msgstr[1] "{count} aliasy uloženy."
-msgstr[2] "{count} aliasy uchovány."
+msgstr[0] "Uložen {count} alias."
+msgstr[1] "Uloženy {count} aliasy."
+msgstr[2] "Uloženo {count} aliasů."
 
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
 #: client/components/Settings/Aliases.vue
@@ -11853,7 +11853,7 @@ msgctxt "settings.general.backupNetworks"
 msgid "{count} network"
 msgid_plural "{count} networks"
 msgstr[0] "{count} síť"
-msgstr[1] "{count} sítí"
+msgstr[1] "{count} sítě"
 msgstr[2] "{count} sítí"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
@@ -13708,9 +13708,9 @@ msgstr "Odebrat: {language}"
 msgctxt "typing.many"
 msgid "{nick1}, {nick2} and {count} other is typing…"
 msgid_plural "{nick1}, {nick2} and {count} others are typing…"
-msgstr[0] "{nick1}, {nick2} a {count} jiného typuje…"
-msgstr[1] "{nick1}, {nick2} a {count} iné typujú…"
-msgstr[2] "{nick1}, {nick2} a {count} iné typujú…"
+msgstr[0] "{nick1}, {nick2} a {count} další píší…"
+msgstr[1] "{nick1}, {nick2} a {count} další píší…"
+msgstr[2] "{nick1}, {nick2} a {count} dalších píše…"
 
 #. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
 #: client/components/TypingIndicator.vue:31
@@ -13877,8 +13877,8 @@ msgctxt "userlist.count"
 msgid "{count} user"
 msgid_plural "{count} users"
 msgstr[0] "{count} uživatel"
-msgstr[1] "{count} používatelov"
-msgstr[2] "{count} používatelov"
+msgstr[1] "{count} uživatelé"
+msgstr[2] "{count} uživatelů"
 
 #. Heading of the channel administrators group in the user list (channel mode +a, the & prefix).
 #: client/components/ChatUserList.vue

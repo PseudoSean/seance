@@ -67,10 +67,10 @@
   "cmd.usageVer": "Використання: /ver <nick>",
   "cmd.usageWho": "Використання: /who [mask] [flags] (без маски — поточний канал)",
   "code.showAllLines": {
-    "one": "Показати всі {count} рядки",
-    "few": "Показати всі {count} рядки",
-    "many": "Показати всі {count} рядки",
-    "other": "Показати всі {count} рядки"
+    "one": "Показати всі рядки ({count})",
+    "few": "Показати всі рядки ({count})",
+    "many": "Показати всі рядки ({count})",
+    "other": "Показати всі рядки ({count})"
   },
   "code.showLess": "Показати менше",
   "composer.cancel": "Скасувати",
@@ -129,10 +129,10 @@
     "other": "{count} користувачів увійшли"
   },
   "condensed.kicked": {
-    "one": "{count} користувача вигнано",
-    "few": "{count} користувачів вигнано",
-    "many": "{count} користувачів вигнано",
-    "other": "{count} користувачів вигнано"
+    "one": "Вигнано {count} користувача",
+    "few": "Вигнано {count} користувачів",
+    "many": "Вигнано {count} користувачів",
+    "other": "Вигнано {count} користувачів"
   },
   "condensed.left": {
     "one": "{count} користувач вийшов",
@@ -548,10 +548,10 @@
   "list.kindExcepts": "Список виключень",
   "list.kindInvites": "Список призивів",
   "list.loaded": {
-    "one": "Завантажено {count} канал...",
-    "few": "Завантажено {count} канали...",
-    "many": "Завантажується {count} каналів...",
-    "other": "Завантажується {count} каналів..."
+    "one": "Завантажено {count} канал…",
+    "few": "Завантажено {count} канали…",
+    "many": "Завантажено {count} каналів…",
+    "other": "Завантажено {count} каналів…"
   },
   "list.loading": "Завантаження списку каналів, це може тривати трохи...",
   "list.windowTitle": "{kind} для {channel}",
@@ -2037,16 +2037,16 @@
   "settings.aliases.previewMiss": "Не алиас — це було введено як typed.",
   "settings.aliases.removeAria": "Видалити алиас {name}",
   "settings.aliases.statusBroken": {
-    "one": "{count} алиас збережено — рядки з помилками не зберігаються.",
-    "few": "{count} алиаси збережені — рядки з помилками не зберігаються.",
-    "many": "{count} алиаси збережені — рядки з помилками не зберігаються.",
-    "other": "{count} алиаси збережені — рядки з помилками не зберігаються."
+    "one": "Збережено {count} псевдонім; рядки з помилками не зберігаються.",
+    "few": "Збережено {count} псевдоніми; рядки з помилками не зберігаються.",
+    "many": "Збережено {count} псевдонімів; рядки з помилками не зберігаються.",
+    "other": "Збережено {count} псевдонімів; рядки з помилками не зберігаються."
   },
   "settings.aliases.statusSaved": {
-    "one": "{count} alias збережено.",
-    "few": "{count} алиаси збережені.",
-    "many": "{count} алиаси збережені.",
-    "other": "{count} алиаси збережені."
+    "one": "Збережено {count} псевдонім.",
+    "few": "Збережено {count} псевдоніми.",
+    "many": "Збережено {count} псевдонімів.",
+    "other": "Збережено {count} псевдонімів."
   },
   "settings.aliases.titleHeading": "Алиаси команд",
   "settings.aliases.tryAria": "Спробуйте алиас",
@@ -2157,8 +2157,8 @@
   "settings.general.backupNetworks": {
     "one": "{count} мережа",
     "few": "{count} мережі",
-    "many": "{count} мережі",
-    "other": "{count} мережі"
+    "many": "{count} мереж",
+    "other": "{count} мереж"
   },
   "settings.general.backupPartSettings": "ваші налашування",
   "settings.general.backupPasswords": "Файл вміщує пароли для мереж.",
@@ -2237,7 +2237,7 @@
   "settings.notifications.stale": "Оскільки ідентифікатор push сервера (його ключ) змінено, цей пристрій не може бути повідомлений. Оновіть його через налаштування цього мережі (Редагувати мережу → “Оновити push-повідомлення”), щоб залишатися повідомленим, навіть коли додаток вимкнений.",
   "settings.notifications.unsupported": "Цей браузер не підтримує push-сповіщення (для них потрібні Push API, service worker і захищене з'єднання).",
   "settings.notifications.warning": "Увага",
-  "settings.tabs.aliases": "Альтернативні назви",
+  "settings.tabs.aliases": "Псевдоніми",
   "settings.tabs.appearance": "Вигляд",
   "settings.tabs.aria": "Вкладки налаштувань",
   "settings.tabs.general": "Означення",
@@ -2475,10 +2475,10 @@
   "translation.panel.languages": "Мови: {channel}",
   "translation.panel.remove": "Видалити: {language}",
   "typing.many": {
-    "one": "{nick1}, {nick2} і {count} інші пишуть…",
-    "few": "{nick1}, {nick2} і {count} інші пишуть…",
-    "many": "{nick1}, {nick2} і {count} інші пишуть…",
-    "other": "{nick1}, {nick2} і {count} інші пишуть…"
+    "one": "{nick1}, {nick2} та ще {count} пишуть…",
+    "few": "{nick1}, {nick2} та ще {count} пишуть…",
+    "many": "{nick1}, {nick2} та ще {count} пишуть…",
+    "other": "{nick1}, {nick2} та ще {count} пишуть…"
   },
   "typing.one": "{nick} пише...",
   "typing.three": "{nick1}, {nick2} і {nick3} пише...",
@@ -2513,7 +2513,7 @@
   "upload.tooLarge": "Файл {file} перевищує максимальний дозволений розмір",
   "userlist.count": {
     "one": "{count} користувач",
-    "few": "{count} користувачів",
+    "few": "{count} користувачі",
     "many": "{count} користувачів",
     "other": "{count} користувачів"
   },

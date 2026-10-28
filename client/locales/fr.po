@@ -3257,10 +3257,9 @@ msgstr "{target} sur {network}"
 #. Heading of the popup (the inbox) that lists the unread messages mentioning you, grouped by conversation.
 #: client/components/Mentions.vue:10
 #: client/components/Mentions.vue:18
-#, fuzzy
 msgctxt "mentions.title"
 msgid "Mentions"
-msgstr "Mentionnés récemment"
+msgstr ""
 
 #. Count of unread messages: the accessible name of the total beside the mentions popup's heading, and the label on a private conversation's row when more than one of its lines is unread. {count} is the number. The singular form shows for one, the plural for any other number.
 #: client/components/Mentions.vue:522
@@ -4027,8 +4026,8 @@ msgstr "Killer {nick}"
 msgctxt "oper.activity.actions"
 msgid "{count} action"
 msgid_plural "{count} actions"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{count} action"
+msgstr[1] "{count} actions"
 
 #. Oper panel, Opers tab (what the network's IRC operators have been doing, rolled up from the kept server notices): toggle button: one row per kind of action. Short. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/OperActivity.vue
@@ -5726,8 +5725,8 @@ msgstr "distant"
 msgctxt "oper.check.messages"
 msgid "{count} message"
 msgid_plural "{count} messages"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{count} message"
+msgstr[1] "{count} messages"
 
 #. Word between two values in a CHECK card ('120 bytes of 40000 bytes' for a queue, '12 of 500' users): a used amount of a maximum. Rendered as its own chip between the two values; one short word.
 #: client/js/irc/profiles/nefarious/check.ts

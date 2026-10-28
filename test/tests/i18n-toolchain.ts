@@ -46,7 +46,7 @@ import {
 } from "../../tools/i18n/fill";
 import {protect, restoreAll} from "../../client/js/translate/spans";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
-import {sweepEntries} from "../../tools/i18n/sweep";
+import {pluralEchoes, sweepEntries} from "../../tools/i18n/sweep";
 import {isSuspectCatalogEntry, repad, slotVerdict} from "../../tools/i18n/quality";
 import {EXPECTED_SCRIPTS, OWN_SCRIPTS} from "../../tools/i18n/scripts";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
@@ -643,6 +643,40 @@ describe("i18n toolchain", () => {
 			sweepEntries([kept, echoed], PLURAL_RULES.de, "de");
 			expect(kept.msgstr).to.deep.equal(["{count} Byte", "{count} Byte"]);
 			expect(echoed.msgstr).to.deep.equal(["", ""]);
+		});
+
+		it("reports (and keeps) plural forms that are one text across counts", () => {
+			// ru condensed.join had "пользователей" for 2 as well as for 5: the
+			// fill copied one English plural into few and many alike. Not an
+			// error -- a label frame is the same for every count -- so the
+			// report lists it for review and empties nothing.
+			const entry = (key: string, msgstr: string[]) => ({
+				translatorComments: [],
+				context: [],
+				loc: [],
+				flags: [],
+				previous: [],
+				msgctxt: key,
+				msgid: "{count} user has joined",
+				msgidPlural: "{count} users have joined",
+				msgstr,
+			});
+			const echoed = entry("condensed.join", [
+				"{count} пользователь вошёл",
+				"{count} пользователей вошли",
+				"{count} пользователей вошли",
+			]);
+			const sound = entry("condensed.left", [
+				"{count} пользователь вышел",
+				"{count} пользователя вышли",
+				"{count} пользователей вышли",
+			]);
+			expect(pluralEchoes([echoed, sound], PLURAL_RULES.ru, "ru")).to.deep.equal([
+				{key: "condensed.join", slots: [1, 2], counts: [2, 0]},
+			]);
+			expect(echoed.msgstr[1]).to.equal("{count} пользователей вошли");
+			// Two forms (de) cannot disagree that way.
+			expect(pluralEchoes([echoed], PLURAL_RULES.de, "de")).to.deep.equal([]);
 		});
 
 		it("checks every slot of a three-form locale, not just the first two", () => {

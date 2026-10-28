@@ -397,9 +397,9 @@ msgstr "Использование: /who [mask] [flags] (без маски — �
 msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
-msgstr[0] "Показать все {count} строки"
-msgstr[1] "Показать все строки {count}"
-msgstr[2] "Показать все строки {count}"
+msgstr[0] "Показать все строки ({count})"
+msgstr[1] "Показать все строки ({count})"
+msgstr[2] "Показать все строки ({count})"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
 #: client/components/CodeBlock.vue
@@ -3005,9 +3005,9 @@ msgstr "Список приглашений"
 msgctxt "list.loaded"
 msgid "Loaded {count} channel..."
 msgid_plural "Loaded {count} channels..."
-msgstr[0] "Загруженный канал {count}..."
-msgstr[1] "Загруженные каналы {count}..."
-msgstr[2] "Загруженные каналы {count}..."
+msgstr[0] "Загружен {count} канал…"
+msgstr[1] "Загружено {count} канала…"
+msgstr[2] "Загружено {count} каналов…"
 
 #. Status line in the 'Channel List' window while the server sends its channels.
 #: client/js/irc/handlers/list.ts
@@ -11198,18 +11198,18 @@ msgstr "Удалить имя {name}"
 msgctxt "settings.aliases.statusBroken"
 msgid "{count} alias saved — rows with errors are not saved."
 msgid_plural "{count} aliases saved — rows with errors are not saved."
-msgstr[0] "{count}, вымышленные имена — ряды с ошибками не сохранены."
-msgstr[1] "{count} сохраненные псевдонимы — ряды с ошибками не сохранены."
-msgstr[2] "{count} сохраненные псевдонимы — ряды с ошибками не сохранены."
+msgstr[0] "Сохранён {count} псевдоним; строки с ошибками не сохраняются."
+msgstr[1] "Сохранено {count} псевдонима; строки с ошибками не сохраняются."
+msgstr[2] "Сохранено {count} псевдонимов; строки с ошибками не сохраняются."
 
 #. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusSaved"
 msgid "{count} alias saved."
 msgid_plural "{count} aliases saved."
-msgstr[0] "{count}, имя сохранено."
-msgstr[1] "{count} алиасы сохранены."
-msgstr[2] "{count} алиасы сохранены."
+msgstr[0] "Сохранён {count} псевдоним."
+msgstr[1] "Сохранено {count} псевдонима."
+msgstr[2] "Сохранено {count} псевдонимов."
 
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
 #: client/components/Settings/Aliases.vue
@@ -11854,7 +11854,7 @@ msgid "{count} network"
 msgid_plural "{count} networks"
 msgstr[0] "{count} сеть"
 msgstr[1] "{count} сети"
-msgstr[2] "сети {count}"
+msgstr[2] "{count} сетей"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
 #: client/components/Settings/General.vue
@@ -12323,7 +12323,7 @@ msgstr "Внимание-."
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.aliases"
 msgid "Aliases"
-msgstr "Коллегии)."
+msgstr "Псевдонимы"
 
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
 #: client/components/Settings/Navigation.vue
@@ -13708,9 +13708,9 @@ msgstr "Удалить: {language}"
 msgctxt "typing.many"
 msgid "{nick1}, {nick2} and {count} other is typing…"
 msgid_plural "{nick1}, {nick2} and {count} others are typing…"
-msgstr[0] "{nick1}, {nick2} и {count} другой набирает…"
-msgstr[1] "{nick1}, {nick2} и {count} другие набирают…"
-msgstr[2] "{nick1}, {nick2} и {count} другие пишут..."
+msgstr[0] "{nick1}, {nick2} и ещё {count} печатают…"
+msgstr[1] "{nick1}, {nick2} и ещё {count} печатают…"
+msgstr[2] "{nick1}, {nick2} и ещё {count} печатают…"
 
 #. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
 #: client/components/TypingIndicator.vue:31
@@ -13876,8 +13876,8 @@ msgstr "Файл {file} превышает максимально допусти
 msgctxt "userlist.count"
 msgid "{count} user"
 msgid_plural "{count} users"
-msgstr[0] "{count} пользователя"
-msgstr[1] "{count} пользователей"
+msgstr[0] "{count} пользователь"
+msgstr[1] "{count} пользователя"
 msgstr[2] "{count} пользователей"
 
 #. Heading of the channel administrators group in the user list (channel mode +a, the & prefix).

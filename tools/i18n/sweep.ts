@@ -4,14 +4,20 @@
 // the model fill produces. The compile refuses a whole catalog for one
 // mismatch, so this runs before every compile while the fills are landing.
 //
-//   npx tsx tools/i18n/sweep.ts [--tags de,fr,...] [--dry]
+//   npx tsx tools/i18n/sweep.ts [--tags de,fr,...] [--dry] [--plurals]
 
 import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {pathToFileURL} from "node:url";
 import {resolve} from "node:path";
 import {parsePo, PoEntry, serializePo} from "./po";
 import {NAME_TO_TAG, TARGETS_SOURCE} from "./targets";
-import {PLURAL_RULES, parsePluralForms, planPluralSlots, PluralRule} from "./plural";
+import {
+	countsReadingSlot,
+	PLURAL_RULES,
+	parsePluralForms,
+	planPluralSlots,
+	PluralRule,
+} from "./plural";
 import {slotVerdict, SlotVerdict} from "./quality";
 
 export type SweepReason = SlotVerdict | "empty-source";
@@ -110,9 +116,61 @@ export function sweepEntries(
 	return {emptied, reports};
 }
 
+/**
+ * Plural entries whose forms for different counts are one and the same text,
+ * in a language with three or more forms: the review list for a slot filled
+ * from the one English plural where the grammar wants another word form (ru
+ * "2 пользователей" for "пользователя", "5 непрочитанные сообщения"). Not an
+ * error -- a label frame ("непрочитанных: {count}") is the same for every
+ * count on purpose -- so the sweep reports these and empties nothing. Each
+ * hit names the slots and a count each one serves.
+ */
+export function pluralEchoes(
+	entries: PoEntry[],
+	rule: PluralRule,
+	tag: string
+): Array<{key: string; slots: number[]; counts: number[]}> {
+	if (rule.nplurals < 3) {
+		return [];
+	}
+
+	const hits: Array<{key: string; slots: number[]; counts: number[]}> = [];
+
+	for (const entry of entries) {
+		if (entry.msgidPlural === undefined || entry.flags.includes("fuzzy")) {
+			continue;
+		}
+
+		const byText = new Map<string, number[]>();
+
+		for (let index = 0; index < rule.nplurals; index++) {
+			const text = entry.msgstr[index];
+
+			if (text && countsReadingSlot(tag, rule.expr, index).length > 0) {
+				byText.set(text, [...(byText.get(text) ?? []), index]);
+			}
+		}
+
+		for (const slots of byText.values()) {
+			if (slots.length > 1) {
+				hits.push({
+					key: entry.msgctxt ?? entry.msgid,
+					slots,
+					counts: slots.map((index) => countsReadingSlot(tag, rule.expr, index)[0]),
+				});
+			}
+		}
+	}
+
+	return hits;
+}
+
 function main(): void {
 	const args = process.argv.slice(2);
 	const dry = args.includes("--dry");
+	// --plurals: list (never empty) the plural entries whose forms for
+	// different counts are the same text, for a reviewer to check.
+	const plurals = args.includes("--plurals");
 	const only = args.includes("--tags")
 		? args[args.indexOf("--tags") + 1]?.split(",").map((s) => s.trim())
 		: null;
@@ -139,6 +197,18 @@ function main(): void {
 
 		if (!rule) {
 			console.warn(`sweep: no plural rule for ${tag} — skipped`);
+			continue;
+		}
+
+		if (plurals) {
+			for (const {key, slots, counts} of pluralEchoes(po.entries, rule, tag)) {
+				console.log(
+					`${tag} ${key}: forms ${slots.join("/")} (counts ${counts.join(
+						", "
+					)}) are one text`
+				);
+			}
+
 			continue;
 		}
 

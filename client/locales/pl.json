@@ -67,10 +67,10 @@
   "cmd.usageVer": "Użycie: /ver <nick>",
   "cmd.usageWho": "Użycie: /who [mask] [flags] (bez maski: bieżący kanał)",
   "code.showAllLines": {
-    "one": "Pokaż wszystkie {count} wierszy",
+    "one": "Pokaż {count} wiersz",
     "few": "Pokaż wszystkie {count} wiersze",
-    "many": "Pokaż wszystkie {count} wiersze",
-    "other": "Pokaż wszystkie {count} wiersze"
+    "many": "Pokaż wszystkie {count} wierszy",
+    "other": "Pokaż wszystkie {count} wierszy"
   },
   "code.showLess": "Pokaż mniej",
   "composer.cancel": "Anuluj",
@@ -546,10 +546,10 @@
   "list.kindExcepts": "Lista wyjątków",
   "list.kindInvites": "Lista zaproszeń",
   "list.loaded": {
-    "one": "Załadowano {count} kanał...",
-    "few": "Załadowano {count} kanałów...",
-    "many": "Załadowano {count} kanałów...",
-    "other": "Załadowano {count} kanałów..."
+    "one": "Załadowano {count} kanał…",
+    "few": "Załadowano {count} kanały…",
+    "many": "Załadowano {count} kanałów…",
+    "other": "Załadowano {count} kanałów…"
   },
   "list.loading": "Ładowanie listy kanałów, może to zająć chwilę...",
   "list.windowTitle": "{kind} dla {channel}",
@@ -2018,16 +2018,16 @@
   "settings.aliases.previewMiss": "Nie jest aliasem — byłby wysłany jak wpisany.",
   "settings.aliases.removeAria": "Usuń alias {name}",
   "settings.aliases.statusBroken": {
-    "one": "{count} aliasy zapisane — wiersze z błędami nie są zapisane.",
-    "few": "{count} aliasy zapisane — wiersze z błędami nie są zapisane.",
-    "many": "{count} aliasy zapisane — wiersze z błędami nie są zapisane.",
-    "other": "{count} aliasy zapisane — wiersze z błędami nie są zapisane."
+    "one": "Zapisano {count} alias — wiersze z błędami nie są zapisywane.",
+    "few": "Zapisano {count} aliasy — wiersze z błędami nie są zapisywane.",
+    "many": "Zapisano {count} aliasów — wiersze z błędami nie są zapisywane.",
+    "other": "Zapisano {count} aliasów — wiersze z błędami nie są zapisywane."
   },
   "settings.aliases.statusSaved": {
-    "one": "{count} aliasy zapisane.",
-    "few": "{count} aliasy zapisane.",
-    "many": "{count} aliasy zapisane.",
-    "other": "{count} aliasy zapisane."
+    "one": "Zapisano {count} alias.",
+    "few": "Zapisano {count} aliasy.",
+    "many": "Zapisano {count} aliasów.",
+    "other": "Zapisano {count} aliasów."
   },
   "settings.aliases.titleHeading": "Aliasy poleceń",
   "settings.aliases.tryAria": "Spróbuj alias",
@@ -2456,10 +2456,10 @@
   "translation.panel.languages": "Języki: {channel}",
   "translation.panel.remove": "Usuń: {language}",
   "typing.many": {
-    "one": "{nick1}, {nick2} i {count} innych typią…",
-    "few": "{nick1}, {nick2} i {count}, a inni piszą...",
-    "many": "{nick1}, {nick2} i {count}, a inni piszą...",
-    "other": "{nick1}, {nick2} i {count}, a inni piszą..."
+    "one": "{nick1}, {nick2} i {count} inna osoba piszą…",
+    "few": "{nick1}, {nick2} i {count} inne osoby piszą…",
+    "many": "{nick1}, {nick2} i {count} innych osób pisze…",
+    "other": "{nick1}, {nick2} i {count} innych osób pisze…"
   },
   "typing.one": "{nick} typią…",
   "typing.three": "{nick1}, {nick2} i {nick3} typią…",
@@ -2509,7 +2509,7 @@
   "who.account": "Konto",
   "who.count": {
     "one": "{count} użytkownik",
-    "few": "{count} użytkowników",
+    "few": "{count} użytkownicy",
     "many": "{count} użytkowników",
     "other": "{count} użytkowników"
   },

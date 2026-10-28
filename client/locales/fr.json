@@ -694,6 +694,10 @@
   "oper.action.titleBan": "{type} sur {nick}",
   "oper.action.titleBanVia": "{type} sur {nick} via {bot}",
   "oper.action.titleKill": "Killer {nick}",
+  "oper.activity.actions": {
+    "one": "{count} action",
+    "other": "{count} actions"
+  },
   "oper.activity.byKind": "Par type",
   "oper.activity.byOper": "Par oper",
   "oper.activity.count.alerts": {
@@ -981,6 +985,10 @@
   "oper.check.history.connected": "connecté",
   "oper.check.idle": "inactif",
   "oper.check.managing.remote": "distant",
+  "oper.check.messages": {
+    "one": "{count} message",
+    "other": "{count} messages"
+  },
   "oper.check.of": "sur",
   "oper.check.row.account": "Compte",
   "oper.check.row.away": "Absence",

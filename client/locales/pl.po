@@ -397,9 +397,9 @@ msgstr "Użycie: /who [mask] [flags] (bez maski: bieżący kanał)"
 msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
-msgstr[0] "Pokaż wszystkie {count} wierszy"
+msgstr[0] "Pokaż {count} wiersz"
 msgstr[1] "Pokaż wszystkie {count} wiersze"
-msgstr[2] "Pokaż wszystkie {count} wiersze"
+msgstr[2] "Pokaż wszystkie {count} wierszy"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
 #: client/components/CodeBlock.vue
@@ -3005,9 +3005,9 @@ msgstr "Lista zaproszeń"
 msgctxt "list.loaded"
 msgid "Loaded {count} channel..."
 msgid_plural "Loaded {count} channels..."
-msgstr[0] "Załadowano {count} kanał..."
-msgstr[1] "Załadowano {count} kanałów..."
-msgstr[2] "Załadowano {count} kanałów..."
+msgstr[0] "Załadowano {count} kanał…"
+msgstr[1] "Załadowano {count} kanały…"
+msgstr[2] "Załadowano {count} kanałów…"
 
 #. Status line in the 'Channel List' window while the server sends its channels.
 #: client/js/irc/handlers/list.ts
@@ -11198,18 +11198,18 @@ msgstr "Usuń alias {name}"
 msgctxt "settings.aliases.statusBroken"
 msgid "{count} alias saved — rows with errors are not saved."
 msgid_plural "{count} aliases saved — rows with errors are not saved."
-msgstr[0] "{count} aliasy zapisane — wiersze z błędami nie są zapisane."
-msgstr[1] "{count} aliasy zapisane — wiersze z błędami nie są zapisane."
-msgstr[2] "{count} aliasy zapisane — wiersze z błędami nie są zapisane."
+msgstr[0] "Zapisano {count} alias — wiersze z błędami nie są zapisywane."
+msgstr[1] "Zapisano {count} aliasy — wiersze z błędami nie są zapisywane."
+msgstr[2] "Zapisano {count} aliasów — wiersze z błędami nie są zapisywane."
 
 #. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusSaved"
 msgid "{count} alias saved."
 msgid_plural "{count} aliases saved."
-msgstr[0] "{count} aliasy zapisane."
-msgstr[1] "{count} aliasy zapisane."
-msgstr[2] "{count} aliasy zapisane."
+msgstr[0] "Zapisano {count} alias."
+msgstr[1] "Zapisano {count} aliasy."
+msgstr[2] "Zapisano {count} aliasów."
 
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
 #: client/components/Settings/Aliases.vue
@@ -13708,9 +13708,9 @@ msgstr "Usuń: {language}"
 msgctxt "typing.many"
 msgid "{nick1}, {nick2} and {count} other is typing…"
 msgid_plural "{nick1}, {nick2} and {count} others are typing…"
-msgstr[0] "{nick1}, {nick2} i {count} innych typią…"
-msgstr[1] "{nick1}, {nick2} i {count}, a inni piszą..."
-msgstr[2] "{nick1}, {nick2} i {count}, a inni piszą..."
+msgstr[0] "{nick1}, {nick2} i {count} inna osoba piszą…"
+msgstr[1] "{nick1}, {nick2} i {count} inne osoby piszą…"
+msgstr[2] "{nick1}, {nick2} i {count} innych osób pisze…"
 
 #. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
 #: client/components/TypingIndicator.vue:31
@@ -13940,7 +13940,7 @@ msgctxt "who.count"
 msgid "{count} user"
 msgid_plural "{count} users"
 msgstr[0] "{count} użytkownik"
-msgstr[1] "{count} użytkowników"
+msgstr[1] "{count} użytkownicy"
 msgstr[2] "{count} użytkowników"
 
 #. The /who result table in the chat (IRC WHO reply). A tag in the Status column: the user is away. One short word.

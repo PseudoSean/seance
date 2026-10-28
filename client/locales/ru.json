@@ -67,10 +67,10 @@
   "cmd.usageVer": "Использование: /ver <nick>",
   "cmd.usageWho": "Использование: /who [mask] [flags] (без маски — текущий канал)",
   "code.showAllLines": {
-    "one": "Показать все {count} строки",
-    "few": "Показать все строки {count}",
-    "many": "Показать все строки {count}",
-    "other": "Показать все строки {count}"
+    "one": "Показать все строки ({count})",
+    "few": "Показать все строки ({count})",
+    "many": "Показать все строки ({count})",
+    "other": "Показать все строки ({count})"
   },
   "code.showLess": "Показать меньше",
   "composer.cancel": "Отмена",
@@ -548,10 +548,10 @@
   "list.kindExcepts": "Список исключений",
   "list.kindInvites": "Список приглашений",
   "list.loaded": {
-    "one": "Загруженный канал {count}...",
-    "few": "Загруженные каналы {count}...",
-    "many": "Загруженные каналы {count}...",
-    "other": "Загруженные каналы {count}..."
+    "one": "Загружен {count} канал…",
+    "few": "Загружено {count} канала…",
+    "many": "Загружено {count} каналов…",
+    "other": "Загружено {count} каналов…"
   },
   "list.loading": "Загрузка списка каналов, это может занять минуту....",
   "list.windowTitle": "{kind} для {channel}",
@@ -2037,16 +2037,16 @@
   "settings.aliases.previewMiss": "Не алиас — это будет отправлено как введённый.",
   "settings.aliases.removeAria": "Удалить имя {name}",
   "settings.aliases.statusBroken": {
-    "one": "{count}, вымышленные имена — ряды с ошибками не сохранены.",
-    "few": "{count} сохраненные псевдонимы — ряды с ошибками не сохранены.",
-    "many": "{count} сохраненные псевдонимы — ряды с ошибками не сохранены.",
-    "other": "{count} сохраненные псевдонимы — ряды с ошибками не сохранены."
+    "one": "Сохранён {count} псевдоним; строки с ошибками не сохраняются.",
+    "few": "Сохранено {count} псевдонима; строки с ошибками не сохраняются.",
+    "many": "Сохранено {count} псевдонимов; строки с ошибками не сохраняются.",
+    "other": "Сохранено {count} псевдонимов; строки с ошибками не сохраняются."
   },
   "settings.aliases.statusSaved": {
-    "one": "{count}, имя сохранено.",
-    "few": "{count} алиасы сохранены.",
-    "many": "{count} алиасы сохранены.",
-    "other": "{count} алиасы сохранены."
+    "one": "Сохранён {count} псевдоним.",
+    "few": "Сохранено {count} псевдонима.",
+    "many": "Сохранено {count} псевдонимов.",
+    "other": "Сохранено {count} псевдонимов."
   },
   "settings.aliases.titleHeading": "Командные псевдонимы",
   "settings.aliases.tryAria": "Попробуй псевдоним",
@@ -2157,8 +2157,8 @@
   "settings.general.backupNetworks": {
     "one": "{count} сеть",
     "few": "{count} сети",
-    "many": "сети {count}",
-    "other": "сети {count}"
+    "many": "{count} сетей",
+    "other": "{count} сетей"
   },
   "settings.general.backupPartSettings": "настройки",
   "settings.general.backupPasswords": "Файл включает сетевые пароли.",
@@ -2237,7 +2237,7 @@
   "settings.notifications.stale": "Идентификатор пуша сервера (его ключ) изменился, поэтому подписанная на уведомления с этим сервером устройство больше не работает. Обновите её в настройках сети (Редактировать сеть → «Обновить уведомления»), чтобы продолжать получать уведомления, когда приложение закрыто.",
   "settings.notifications.unsupported": "Этот браузер не поддерживает push-уведомления (для них нужны Push API, service worker и защищённое соединение).",
   "settings.notifications.warning": "Внимание-.",
-  "settings.tabs.aliases": "Коллегии).",
+  "settings.tabs.aliases": "Псевдонимы",
   "settings.tabs.appearance": "Внешний вид",
   "settings.tabs.aria": "Настройка вкладок.",
   "settings.tabs.general": "Общие сведения.",
@@ -2475,10 +2475,10 @@
   "translation.panel.languages": "Языки: {channel}",
   "translation.panel.remove": "Удалить: {language}",
   "typing.many": {
-    "one": "{nick1}, {nick2} и {count} другой набирает…",
-    "few": "{nick1}, {nick2} и {count} другие набирают…",
-    "many": "{nick1}, {nick2} и {count} другие пишут...",
-    "other": "{nick1}, {nick2} и {count} другие пишут..."
+    "one": "{nick1}, {nick2} и ещё {count} печатают…",
+    "few": "{nick1}, {nick2} и ещё {count} печатают…",
+    "many": "{nick1}, {nick2} и ещё {count} печатают…",
+    "other": "{nick1}, {nick2} и ещё {count} печатают…"
   },
   "typing.one": "{nick} печатает...",
   "typing.three": "{nick1}, {nick2} и {nick3} печатают...",
@@ -2512,8 +2512,8 @@
   "upload.removeTitle": "Не загружайте этот файл",
   "upload.tooLarge": "Файл {file} превышает максимально допустимый размер",
   "userlist.count": {
-    "one": "{count} пользователя",
-    "few": "{count} пользователей",
+    "one": "{count} пользователь",
+    "few": "{count} пользователя",
     "many": "{count} пользователей",
     "other": "{count} пользователей"
   },

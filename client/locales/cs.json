@@ -66,9 +66,9 @@
   "cmd.usageVer": "Použití: /ver <nick>",
   "cmd.usageWho": "Použití: /who [mask] [flags] (bez masky aktuální kanál)",
   "code.showAllLines": {
-    "one": "Zobrazit vše {count} řádek",
+    "one": "Zobrazit {count} řádek",
     "few": "Zobrazit všechny {count} řádky",
-    "other": "Zobrazit všechny {count} řádky"
+    "other": "Zobrazit všech {count} řádků"
   },
   "code.showLess": "Zobrazit méně",
   "composer.cancel": "Zrušit",
@@ -535,9 +535,9 @@
   "list.kindExcepts": "Seznam výjimk",
   "list.kindInvites": "Seznam pozvání",
   "list.loaded": {
-    "one": "Načteno {count} kanál...",
-    "few": "Načteno {count} kanálů...",
-    "other": "Načteno {count} kanálů..."
+    "one": "Načten {count} kanál…",
+    "few": "Načteny {count} kanály…",
+    "other": "Načteno {count} kanálů…"
   },
   "list.loading": "Načítám seznam kanálů, může to trvat chvíli...",
   "list.windowTitle": "{kind} pro {channel}",
@@ -1968,14 +1968,14 @@
   "settings.aliases.previewMiss": "Nealias – tento byl by odeslán jako zadaný.",
   "settings.aliases.removeAria": "Odstranit alias {name}",
   "settings.aliases.statusBroken": {
-    "one": "{count} alias uchován – řádky s chybami nejsou uchovány.",
-    "few": "{count} aliasy uchovány – řádky s chybami nejsou uchovány.",
-    "other": "{count} aliasy uchovány – řádky s chybami nejsou uchovány."
+    "one": "Uložen {count} alias — řádky s chybami se neukládají.",
+    "few": "Uloženy {count} aliasy — řádky s chybami se neukládají.",
+    "other": "Uloženo {count} aliasů — řádky s chybami se neukládají."
   },
   "settings.aliases.statusSaved": {
-    "one": "{count} alias uchován.",
-    "few": "{count} aliasy uloženy.",
-    "other": "{count} aliasy uchovány."
+    "one": "Uložen {count} alias.",
+    "few": "Uloženy {count} aliasy.",
+    "other": "Uloženo {count} aliasů."
   },
   "settings.aliases.titleHeading": "Aliasy příkazů",
   "settings.aliases.tryAria": "Zkus alias",
@@ -2085,7 +2085,7 @@
   "settings.general.backupMutes": "Zvukové a ignorování seznamy",
   "settings.general.backupNetworks": {
     "one": "{count} síť",
-    "few": "{count} sítí",
+    "few": "{count} sítě",
     "other": "{count} sítí"
   },
   "settings.general.backupPartSettings": "Vaše nastavení",
@@ -2401,9 +2401,9 @@
   "translation.panel.languages": "Jazyky: {channel}",
   "translation.panel.remove": "Odebrat: {language}",
   "typing.many": {
-    "one": "{nick1}, {nick2} a {count} jiného typuje…",
-    "few": "{nick1}, {nick2} a {count} iné typujú…",
-    "other": "{nick1}, {nick2} a {count} iné typujú…"
+    "one": "{nick1}, {nick2} a {count} další píší…",
+    "few": "{nick1}, {nick2} a {count} další píší…",
+    "other": "{nick1}, {nick2} a {count} dalších píše…"
   },
   "typing.one": "{nick} typuje…",
   "typing.three": "{nick1}, {nick2} a {nick3} typují…",
@@ -2437,8 +2437,8 @@
   "upload.tooLarge": "Soubor {file} je větší než maximální povolený rozsah",
   "userlist.count": {
     "one": "{count} uživatel",
-    "few": "{count} používatelov",
-    "other": "{count} používatelov"
+    "few": "{count} uživatelé",
+    "other": "{count} uživatelů"
   },
   "userlist.mode.admins": "Administrátoři",
   "userlist.mode.halfOperators": "Poloviční operátoři",

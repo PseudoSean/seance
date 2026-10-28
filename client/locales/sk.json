@@ -66,9 +66,9 @@
   "cmd.usageVer": "Použitie: /ver <nick>",
   "cmd.usageWho": "Použitie: /who [mask] [flags] (bez masky aktuálny kanál)",
   "code.showAllLines": {
-    "one": "Zobrazovať všetky {count} riadok",
+    "one": "Zobraziť {count} riadok",
     "few": "Zobraziť všetky {count} riadky",
-    "other": "Zobraziť všetky {count} riadky"
+    "other": "Zobraziť všetkých {count} riadkov"
   },
   "code.showLess": "Zobrazovať menej",
   "composer.cancel": "Zrušiť",
@@ -535,9 +535,9 @@
   "list.kindExcepts": "Zoznam výnimiek",
   "list.kindInvites": "Zoznam pozvánok",
   "list.loaded": {
-    "one": "Naloadované {count} kanál...",
-    "few": "Načítané {count} kanálov...",
-    "other": "Načítané {count} kanálov..."
+    "one": "Načítaný {count} kanál…",
+    "few": "Načítané {count} kanály…",
+    "other": "Načítaných {count} kanálov…"
   },
   "list.loading": "Načítavanie zoznamu kanálov, to môže trvať okamžik...",
   "list.windowTitle": "{kind} pre {channel}",
@@ -1969,14 +1969,14 @@
   "settings.aliases.previewMiss": "Nie je alias – tento by bol odoslaný ako napísaný.",
   "settings.aliases.removeAria": "Odstrániť alias {name}",
   "settings.aliases.statusBroken": {
-    "one": "{count} aliasy uložené – riadky s chybami sa nepresúvajú.",
-    "few": "{count} aliasy uchované – riadky s chybami sa nepresúvajú.",
-    "other": "{count} aliasy uchované – riadky s chybami sa nepresúvajú."
+    "one": "Uložený {count} alias — riadky s chybami sa neukladajú.",
+    "few": "Uložené {count} aliasy — riadky s chybami sa neukladajú.",
+    "other": "Uložených {count} aliasov — riadky s chybami sa neukladajú."
   },
   "settings.aliases.statusSaved": {
-    "one": "{count} aliasy uložené.",
-    "few": "{count} aliasy uchované.",
-    "other": "{count} aliasy uchované."
+    "one": "Uložený {count} alias.",
+    "few": "Uložené {count} aliasy.",
+    "other": "Uložených {count} aliasov."
   },
   "settings.aliases.titleHeading": "Aliasy príkazov",
   "settings.aliases.tryAria": "Skúsiť alias",
@@ -2085,9 +2085,9 @@
   "settings.general.backupIntro": "Uchovajte svoje nastavenia do súboru. Môžete ho obnoviť tu alebo na inom zariadení.",
   "settings.general.backupMutes": "Zvlnené a zneškodnené zoznamy",
   "settings.general.backupNetworks": {
-    "one": "{count} siet",
+    "one": "{count} sieť",
     "few": "{count} siete",
-    "other": "{count} siete"
+    "other": "{count} sietí"
   },
   "settings.general.backupPartSettings": "Vaše nastavenia",
   "settings.general.backupPasswords": "Súbor obsahuje heslá pre siete.",
@@ -2402,9 +2402,9 @@
   "translation.panel.languages": "Jazyky: {channel}",
   "translation.panel.remove": "Odstrániť: {language}",
   "typing.many": {
-    "one": "{nick1}, {nick2} a {count} inéš je typuje…",
-    "few": "{nick1}, {nick2} a {count} ďalší typujú...",
-    "other": "{nick1}, {nick2} a {count} in typujú…"
+    "one": "{nick1}, {nick2} a {count} ďalší píšu…",
+    "few": "{nick1}, {nick2} a {count} ďalší píšu…",
+    "other": "{nick1}, {nick2} a {count} ďalších píše…"
   },
   "typing.one": "{nick} je typuje…",
   "typing.three": "{nick1}, {nick2} a {nick3} sú typujú…",
@@ -2437,9 +2437,9 @@
   "upload.removeTitle": "Návádzaj tento súbor",
   "upload.tooLarge": "Súbor {file} je vyšší ako maximálny povolený rozsah",
   "userlist.count": {
-    "one": "{count} užívateľ",
+    "one": "{count} používateľ",
     "few": "{count} používatelia",
-    "other": "{count} používatelia"
+    "other": "{count} používateľov"
   },
   "userlist.mode.admins": "Administrátori",
   "userlist.mode.halfOperators": "Polovičné operátory",
