@@ -13,7 +13,8 @@
 // Translation's model rows say "Can run on this device" / "Can't run on this
 // device" with the reason as its own line (the device code in words, or the
 // buffer numbers), Download is disabled exactly where it cannot run and is
-// described by that reason; the composer's translate dialog, opened on the
+// described by that reason, and "In use" marks a GPU model only where one
+// can run; the composer's translate dialog, opened on the
 // same language twice (the cleanup pass, LLM-only), shows the confirm
 // disabled with "Correcting a message needs the GPU model." and the reason
 // where the GPU model cannot run, and "Correct" enabled where it can, and
@@ -388,6 +389,23 @@ export default async function run(page) {
 				state.disabled === !runs && (runs || state.describedBy === state.why)
 			);
 		}
+
+		// "In use" only on a GPU model that can run here.
+		const inUse = await page.evaluate(
+			`[...document.querySelectorAll(".translate-model-in-use")].map((el) => el.closest(".translate-model").dataset.model).join(",")`
+		);
+		const expectInUse = {binds160: SMALL}[name];
+
+		page.check(
+			`${name}: "In use" is on ${
+				expectInUse ?? (device.runs[SMALL] ? "a GPU model" : "no row")
+			} (${inUse || "none"})`,
+			expectInUse
+				? inUse === expectInUse
+				: device.runs[SMALL]
+				? inUse === SMALL || inUse === LARGE
+				: inUse === ""
+		);
 
 		const nllb = await page.evaluate(
 			`document.querySelector(${JSON.stringify(ROW(NLLB))}).dataset.runs`

@@ -134,8 +134,14 @@
 				>
 					<span class="translate-model-name"
 						>{{ modelLabel(view.ref) }}
+						<!-- No GPU model is in use on a device that can run none:
+						     the selection then only keys the route table. -->
 						<span
-							v-if="view.ref.engine === 'llm' && view.ref.id === selectedLlm.id"
+							v-if="
+								view.ref.engine === 'llm' &&
+								view.ref.id === selectedLlm.id &&
+								runsState(view.ref) !== 'cannot'
+							"
 							class="translate-model-in-use"
 							>{{ t("translate.settings.inUse") }}</span
 						></span
