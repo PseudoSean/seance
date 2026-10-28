@@ -2292,6 +2292,7 @@
   "translate.settings.gpuModelHint": "Büyük model daha doğal çeviri yapar, yaklaşık 3,4 GB grafik belleği ve daha yavaş çalışır.",
   "translate.settings.heading": "Çeviri",
   "translate.settings.inUse": "Kullanılıyor",
+  "translate.settings.interfaceLanguageLabel": "Arayüz dili",
   "translate.settings.intro": "Bu cihaz tarafından indirilen bir model tarafından mesajlar çeviri yapar; hiçbir şey bir çeviri hizmetine gönderilmez. Kanal başı çeviri butonundan kanal bazlı açılır.",
   "translate.settings.languageHint": "Arayüz ve okunulan dille yazılan ve çevrilenecek dille — bir kontrol. Otomatik tarayıcınızın dili izler.",
   "translate.settings.languageLabel": "Arayüz ve okunulan dille",

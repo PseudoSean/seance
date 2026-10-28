@@ -2231,6 +2231,7 @@
   "translate.settings.gpuModelHint": "Den store model oversætter mere naturligt, har brug for omkring 3,4 GB grafisk minde og er langsommere.",
   "translate.settings.heading": "Oversættelse",
   "translate.settings.inUse": "i brug",
+  "translate.settings.interfaceLanguageLabel": "Brugerfladens sprog",
   "translate.settings.intro": "Beskedene oversættes på dette apparat ved at downloade en model; ingenting sendes til en oversættelses service. Aktivér det per kanal fra knappen \"oversæt\" i kanalhuvudet.",
   "translate.settings.languageHint": "Sproget, som brugsvejledningen er skrevet på og beskedene oversættes til – ét kontrol. Automatisk følger din browser's sprog.",
   "translate.settings.languageLabel": "Brugsvejlednings og læsesprog",

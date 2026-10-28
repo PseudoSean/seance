@@ -2260,6 +2260,7 @@
   "translate.settings.gpuModelHint": "Mô hình lớn hơn dịch tự nhiên hơn, cần khoảng 3,4 GB bộ nhớ đồ họa và chậm hơn.",
   "translate.settings.heading": "Dịch",
   "translate.settings.inUse": "Đang sử dụng",
+  "translate.settings.interfaceLanguageLabel": "Ngôn ngữ giao diện",
   "translate.settings.intro": "Tin nhắn được dịch trên thiết bị này bằng một mô hình mà nó tải xuống một lần; không có gì được gửi đến dịch vụ dịch.",
   "translate.settings.languageHint": "Ngôn ngữ giao diện và tin nhắn được dịch thành — một điều khiển. Tự động theo ngôn ngữ trình duyệt của bạn.",
   "translate.settings.languageLabel": "Ngôn ngữ giao diện và đọc",

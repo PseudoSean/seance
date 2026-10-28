@@ -2217,6 +2217,7 @@
   "translate.settings.gpuModelHint": "Den större modellen översätter mer naturligt, behöver cirka 3,4 GB grafisk minne och är långsammare.",
   "translate.settings.heading": "Översättning",
   "translate.settings.inUse": "I användning",
+  "translate.settings.interfaceLanguageLabel": "Gränssnittets språk",
   "translate.settings.intro": "Meddelanden översätts på detta enhet genom en modell som den läser ner en gång; inget skickas till en översättnings tjänst. Aktivera det per kanal från översättningsknappen i kanalhuvudet.",
   "translate.settings.languageHint": "Språket som gränssnittet skrivs i och meddelandena översätts till – ett styrning. Automatiskt följer din webbläsares språk.",
   "translate.settings.languageLabel": "Gränssnitt och läsningsspråk",

@@ -2259,6 +2259,7 @@
   "translate.settings.gpuModelHint": "더 큰 모델은 더 자연스럽게 번역되지만, 약 3.4GB의 그래픽 메모리가 필요하며 더 느리다.",
   "translate.settings.heading": "번역",
   "translate.settings.inUse": "사용 중",
+  "translate.settings.interfaceLanguageLabel": "인터페이스 언어",
   "translate.settings.intro": "이 기기에서 메시지가 다운로드한 모델을 사용하여 번역되며, 아무것도 번역 서비스에 전송되지 않는다. 번역 버튼을 클릭하여 채널 헤더에서 채널별로 활성화합니다.",
   "translate.settings.languageHint": "인터페이스가 작성된 언어와 메시지가 번역되는 언어 — 하나의 제어입니다. 자동으로 브라우저 언어를 따라갑니다.",
   "translate.settings.languageLabel": "인터페이스 및 읽기 언어",

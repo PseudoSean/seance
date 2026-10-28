@@ -2417,6 +2417,7 @@
   "translate.settings.gpuModelHint": "większy model tłumaczy bardziej naturalnie, potrzebuje około 3,4 GB pamięci graficznej i jest wolniejszy.",
   "translate.settings.heading": "Tłumaczenie",
   "translate.settings.inUse": "W użyciu",
+  "translate.settings.interfaceLanguageLabel": "Język interfejsu",
   "translate.settings.intro": "Wiadomości są tłumaczone na tym urządzeniu przez model, który pobrał raz; nic nie wysyła do usługi tłumaczenia. Włącz to na kanale z przycisku tłumaczenia w nagłówku kanalu.",
   "translate.settings.languageHint": "Język, w którym jest napisany interfejs i przekłady — jeden kontroler. Automatycznie następuje język przeglądarki.",
   "translate.settings.languageLabel": "Język interfejsu i odczytu",

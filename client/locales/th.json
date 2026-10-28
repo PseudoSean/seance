@@ -2261,6 +2261,7 @@
   "translate.settings.gpuModelHint": "โมเดลขนาดใหญ่แปลได้ดีกว่า แต่ต้องใช้หน่วยความจำกราฟิกประมาณ 3.4 GB และช้ากว่า",
   "translate.settings.heading": "การแปล",
   "translate.settings.inUse": "กำลังใช้งาน",
+  "translate.settings.interfaceLanguageLabel": "ภาษาของอินเทอร์เฟซ",
   "translate.settings.intro": "ข้อความถูกแปลโดยโมเดลที่อุปกรณ์นี้ดาวน์โหลดไว้แล้ว ไม่มีข้อมูลถูกส่งไปยังบริการแปล ต้องเปิดใช้งานต่อเนื่องจากปุ่มแปลในหัวช่องทาง",
   "translate.settings.languageHint": "ภาษาของอินเทอร์เฟซและภาษาที่ข้อความถูกแปลเป็น — ควบคุมเดียว โหมดอัตโนมัติตามภาษาระบบเบราว์เซอร์",
   "translate.settings.languageLabel": "ภาษาอินเทอร์เฟซและภาษาการอ่าน",

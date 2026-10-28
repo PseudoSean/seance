@@ -2262,6 +2262,7 @@
   "translate.settings.gpuModelHint": "更大的模型翻译更自然，需要约3.4 GB的显存且速度较慢。",
   "translate.settings.heading": "翻译",
   "translate.settings.inUse": "正在使用",
+  "translate.settings.interfaceLanguageLabel": "界面语言",
   "translate.settings.intro": "消息是通过该设备下载的模型进行翻译的； nothing 会发送到翻译服务。从频道头的翻译按钮开启。",
   "translate.settings.languageHint": "界面语言和翻译语言 — 一个控制。自动跟随浏览器语言。",
   "translate.settings.languageLabel": "界面语言和阅读语言",

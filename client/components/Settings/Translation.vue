@@ -1,20 +1,28 @@
 <template>
 	<div>
 		<h2>{{ t("translate.settings.heading") }}</h2>
+		<div v-if="enabled" class="translate-hint">{{ t("translate.settings.intro") }}</div>
+		<!-- Outside the enabled branch: this is the production build's only
+		     interface-language picker, and a deploy that turns translation
+		     off still has readers who want German. There it is the interface
+		     language alone, and says so. -->
+		<label class="opt translate-target">
+			<span>{{
+				enabled
+					? t("translate.settings.languageLabel")
+					: t("translate.settings.interfaceLanguageLabel")
+			}}</span>
+			<!-- The one language control the whole app uses (the sidebar
+			     globe renders the same component): one list of codes, one
+			     "Automatic" label. `name` is not a prop, so it falls
+			     through onto the <select> and the settings container's
+			     change handler stores it like any other field. -->
+			<LanguageSelect name="locale" :model-value="store.state.settings.locale" />
+		</label>
 		<div v-if="!enabled" class="translate-hint">
 			{{ t("translate.settings.disabled") }}
 		</div>
 		<template v-else>
-			<div class="translate-hint">{{ t("translate.settings.intro") }}</div>
-			<label class="opt translate-target">
-				<span>{{ t("translate.settings.languageLabel") }}</span>
-				<!-- The one language control the whole app uses (the sidebar
-				     globe renders the same component): one list of codes, one
-				     "Automatic" label. `name` is not a prop, so it falls
-				     through onto the <select> and the settings container's
-				     change handler stores it like any other field. -->
-				<LanguageSelect name="locale" :model-value="store.state.settings.locale" />
-			</label>
 			<div class="translate-hint">{{ t("translate.settings.languageHint") }}</div>
 			<div
 				v-if="effectiveReading && limited(effectiveReading)"

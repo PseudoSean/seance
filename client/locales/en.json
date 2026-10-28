@@ -2335,6 +2335,7 @@
   "translate.settings.gpuModelHint": "The larger model translates more naturally, needs about 3.4 GB of graphics memory and is slower.",
   "translate.settings.heading": "Translation",
   "translate.settings.inUse": "In use",
+  "translate.settings.interfaceLanguageLabel": "Interface language",
   "translate.settings.intro": "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header.",
   "translate.settings.languageHint": "The language the interface is written in and messages are translated into — one control. Automatic follows your browser's language.",
   "translate.settings.languageLabel": "Interface and reading language",

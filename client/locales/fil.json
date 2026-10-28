@@ -2195,6 +2195,7 @@
   "translate.settings.gpuModelHint": "Ang mas malaking modelo ay mas maayos sa pagbabahagi, kailangan ito ng 3.4 GB ng grafiko memory at mas mabilis.",
   "translate.settings.heading": "Pagbabahagi",
   "translate.settings.inUse": "Nagsimula ito",
+  "translate.settings.interfaceLanguageLabel": "Wika ng interface",
   "translate.settings.intro": "Ang mga mensahe ay nagsisimula sa pagbabahagi sa device na ito sa isang modelo na itinataguna; walang nagsisimula sa isang serbisyo ng pagbabahagi. Ibabawas ito per channel mula sa buton ng pagbabahagi sa header ng channel.",
   "translate.settings.languageHint": "Ang wika kung saan nagsisimula ang interface at ang mga mensahe ay nagsisimula — isang kontrol. Automatic ay nagpapalaki sa wika ng browser.",
   "translate.settings.languageLabel": "Interface at wika ng pagbabahagi",

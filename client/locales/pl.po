@@ -13473,6 +13473,12 @@ msgctxt "translate.settings.inUse"
 msgid "In use"
 msgstr "W użyciu"
 
+#. Label of the language select in Settings > Translation when the deployment has translation turned off: there it only chooses the language the interface is written in.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.interfaceLanguageLabel"
+msgid "Interface language"
+msgstr "Język interfejsu"
+
 #. Introductory paragraph of the Translation tab in Settings, explaining that translation runs locally.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.intro"

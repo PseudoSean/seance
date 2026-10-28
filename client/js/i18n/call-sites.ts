@@ -2154,6 +2154,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.settings.gpuModelHint",
 	"translate.settings.heading",
 	"translate.settings.inUse",
+	"translate.settings.interfaceLanguageLabel",
 	"translate.settings.intro",
 	"translate.settings.languageHint",
 	"translate.settings.languageLabel",

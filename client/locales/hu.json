@@ -2310,6 +2310,7 @@
   "translate.settings.gpuModelHint": "A nagyobb modell fordítja meg jobban, de 3,4 GB grafikus memóriát igényel, és lassabb.",
   "translate.settings.heading": "Fordítás",
   "translate.settings.inUse": "Használatban",
+  "translate.settings.interfaceLanguageLabel": "A felület nyelve",
   "translate.settings.intro": "Ez a eszközön a modell lehetséges, amit letölt, és nem küld semmit a fordítószolgáltatásnak. Kattintson a fordító gombra a csatorna fejlegyen a csatorna beállításokból.",
   "translate.settings.languageHint": "Az felület nyelve és a fordítás nyelve – egy vezérlő. Automatikus követi a böngésző nyelvét.",
   "translate.settings.languageLabel": "Felület és olvasási nyelv",

@@ -2224,6 +2224,7 @@
   "translate.settings.gpuModelHint": "Il modello più grande traduce in modo più naturale, richiede circa 3,4 GB di memoria grafica e è più lento.",
   "translate.settings.heading": "Traduzione",
   "translate.settings.inUse": "In uso",
+  "translate.settings.interfaceLanguageLabel": "Lingua dell'interfaccia",
   "translate.settings.intro": "I messaggi sono tradotti su questo dispositivo da un modello che scarica una volta; niente viene inviato a un servizio di traduzione. Attivarlo per canale dal pulsante traduci nell'intestazione del canale.",
   "translate.settings.languageHint": "La lingua dell'interfaccia e in cui vengono tradotti i messaggi — un controllo unico. Automatico segue la lingua del browser.",
   "translate.settings.languageLabel": "Lingua interfaccia e lettura",

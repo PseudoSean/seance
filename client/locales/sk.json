@@ -2363,6 +2363,7 @@
   "translate.settings.gpuModelHint": "Špeciálny model prekladu prekladá skôr pohodlný, potrebuje približne 3,4 GB pamäti grafickej karty a je pomalší.",
   "translate.settings.heading": "Preklad",
   "translate.settings.inUse": "V používaní",
+  "translate.settings.interfaceLanguageLabel": "Jazyk rozhrania",
   "translate.settings.intro": "Správy sú prekladané na tomto zariadení modelom, ktorý stiahne jednou; nič sa neposíla do služby prekladu. Aktivujte ho pre kanál z tlačidla prekladu v hlavičke kanálu.",
   "translate.settings.languageHint": "Jazyk rozhrania a jazyk prekladu – jedna kontrola. Automaticky sleduje jazyk prehliadky.",
   "translate.settings.languageLabel": "Jazyk rozhrania a čítania",

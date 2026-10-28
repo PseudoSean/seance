@@ -2189,6 +2189,7 @@
   "translate.settings.gpuModelHint": "Das größere Modell übersetzt natürlicher, benötigt etwa 3,4 GB Grafikspeicher und ist langsamer.",
   "translate.settings.heading": "Übersetzung",
   "translate.settings.inUse": "In Gebrauch",
+  "translate.settings.interfaceLanguageLabel": "Sprache der Oberfläche",
   "translate.settings.intro": "Nachrichten werden auf diesem Gerät von einem Modell übersetzt, das es einmal herunterlädt; nichts wird an einen Übersetzungsdienst gesendet. Schalten Sie es pro Kanal von der Übersetzungstaste im Channel Header aus ein.",
   "translate.settings.languageHint": "Die Sprache, in der die Schnittstelle geschrieben wird und Nachrichten in übersetzt werden — eine Steuerung. Automatisch folgt Ihrem Browser Sprache.",
   "translate.settings.languageLabel": "Schnittstelle und Lesesprache",

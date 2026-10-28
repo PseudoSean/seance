@@ -2362,6 +2362,7 @@
   "translate.settings.gpuModelHint": "Větší model překládá přirozeněji, potřebuje přibližně 3,4 GB grafické paměti a je pomalejší.",
   "translate.settings.heading": "Překlad",
   "translate.settings.inUse": "V užívání",
+  "translate.settings.interfaceLanguageLabel": "Jazyk rozhraní",
   "translate.settings.intro": "Zprávy jsou překládány na tomto zařízení modelem, který stáhne jednou; nic se nepošle do služby překladu. Zdůrazněte ho podle kanálu z tlačítka překladu v hlavičce kanálu.",
   "translate.settings.languageHint": "Jazyk, do kterého je rozhraní napsané a zprávy jsou překládány – jedno ovládání. Automaticky následuje jazyk prohlížeče.",
   "translate.settings.languageLabel": "Jazyk rozhraní a čtení",

@@ -2314,6 +2314,7 @@
   "translate.settings.gpuModelHint": "Modelul mai mare traduce mai natural, necesită aproximativ 3,4 GB de memorie grafică și este mai lent.",
   "translate.settings.heading": "Traducere",
   "translate.settings.inUse": "În folosire",
+  "translate.settings.interfaceLanguageLabel": "Limba interfeței",
   "translate.settings.intro": "Mesajele sunt traduse de pe acest dispozitiv de un model pe care îl descarcă o dată; nimic nu este trimis unui serviciu de traducere. Activă-l pe canalele din butonul de traducere din header.",
   "translate.settings.languageHint": "Limbile pentru interfață și traducerea mesajelor — un control. Automatic urmează limbii browser-ului tău.",
   "translate.settings.languageLabel": "Limbă interfață și citire",
