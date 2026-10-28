@@ -12,6 +12,7 @@
 // whole (docs/resources/translation.md § Two engines, one router).
 
 import {
+	BATCH_REFUSED,
 	Engine,
 	EngineCapabilities,
 	EngineStatus,
@@ -239,7 +240,7 @@ export class Seq2seqEngine implements Engine {
 
 	async *translate(req: TranslateRequest, signal: AbortSignal): AsyncIterable<TranslateChunk> {
 		if (req.lines) {
-			throw new Error("seq2seq engines do not batch");
+			throw new Error(BATCH_REFUSED);
 		}
 
 		const pipe = this.loaded.get(req.model);

@@ -11,7 +11,14 @@
 
 import {Capability} from "./capability";
 import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
-import {EngineName, LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
+import {
+	BATCH_REFUSED,
+	EngineName,
+	LoadProgress,
+	ModelRef,
+	TranslateChunk,
+	TranslateRequest,
+} from "./engine";
 import {ABORTED} from "./outgoing";
 import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
 import {Route, RouteTable, mergeRoutes, resolveRoute, routeInput} from "./router";
@@ -507,6 +514,14 @@ export class TranslateService {
 					await this.whenLlm(() => !this.otherLlmWork(waitingFor));
 					checkAborted();
 					continue;
+				}
+
+				// A batch made for the GPU model that now routes elsewhere (the
+				// model switched off, or down after a failed load): say so
+				// before posting, rather than loading a seq2seq model only to
+				// have it refuse. The caller sends the lines one at a time.
+				if (request.lines && route.ref.engine !== "llm") {
+					throw new TranslateError(BATCH_REFUSED, "request");
 				}
 
 				const client = this.client();

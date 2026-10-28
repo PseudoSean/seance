@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
 import type {Capability} from "../../client/js/translate/capability";
-import {emptyContext, type ModelRef} from "../../client/js/translate/engine";
+import {BATCH_REFUSED, emptyContext, type ModelRef} from "../../client/js/translate/engine";
 import {
 	QWEN3_1_7B_ID,
 	QWEN3_4B_ID,
@@ -430,6 +430,44 @@ describe("translate/service", () => {
 		// not retried on the next candidate, and the LLM is still the route
 		expect(r.seq2seq.calls.translate.length).to.equal(0);
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
+		r.service.dispose();
+	});
+
+	// The reading queue batches lines for the GPU model when they are
+	// queued, and the route is resolved again when the batch runs: the model
+	// switched off, or down after a failed load, sends it to a seq2seq
+	// candidate, which cannot take it. Said before anything is loaded, in
+	// the one message the queue knows to split the batch on.
+	it("a batch routed to a seq2seq candidate is refused before its model loads", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await text(r.service.translate(base));
+		await r.llm.unload();
+		r.llm.failLoad = new Error("device lost");
+
+		let message = "";
+
+		try {
+			await text(r.service.translate({...base, text: "", lines: ["Eins", "Zwei"]}));
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal(BATCH_REFUSED);
+		expect(r.seq2seq.calls.load).to.deep.equal([]);
+		expect(r.seq2seq.calls.translate).to.deep.equal([]);
+
+		r.service.setSettings({llm: false, cpu: true});
+		message = "";
+
+		try {
+			await text(r.service.translate({...base, text: "", lines: ["Eins", "Zwei"]}));
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal(BATCH_REFUSED);
+		expect(r.seq2seq.calls.load).to.deep.equal([]);
 		r.service.dispose();
 	});
 

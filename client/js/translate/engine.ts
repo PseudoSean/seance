@@ -171,6 +171,15 @@ export interface Engine {
 }
 
 /**
+ * What a request with `lines` gets from an engine that does not batch (the
+ * seq2seq engines; `TranslateService.translate` says it before posting).
+ * The router may hand a batch an engine other than the one it was batched
+ * for -- the GPU model switched off, or failing to load -- so this is the
+ * caller's cue to send the lines one at a time, never the engine's failure.
+ */
+export const BATCH_REFUSED = "seq2seq engines do not batch";
+
+/**
  * An engine's own failure classification. `load`: the model is gone or
  * cannot be used (a lost WebGPU device, twice); the service marks the
  * candidate down. `request`: this request failed (a bad pair, an

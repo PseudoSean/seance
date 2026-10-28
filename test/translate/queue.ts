@@ -2,6 +2,7 @@ import {expect} from "chai";
 import sinon from "ts-sinon";
 import {WORKER_DISPOSED} from "../../client/js/translate/client";
 import {
+	BATCH_REFUSED,
 	emptyContext,
 	type TranslateChunk,
 	type TranslateRequest,
@@ -1224,6 +1225,46 @@ describe("translate/queue", () => {
 		expect(r.updates.map(([, u]) => u.status)).to.deep.equal(["pending", "dropped"]);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
+	});
+
+	// The route is fixed when a line is queued and resolved again when it
+	// runs (service.ts): a batch made for the GPU model that now routes to a
+	// seq2seq engine (the model switched off, or failing to load) is
+	// refused. Each line goes again on its own, in order, with the new
+	// engine's marker form -- never failed, and never a pause of the GPU
+	// lane with the refusal on its banner.
+	it("a batch refused by an engine that does not batch goes again line by line", async () => {
+		const r = rig((req) => (req.lines ? new Error(BATCH_REFUSED) : [`[en] ${req.text}`]));
+		clock = r.clock;
+		r.queue.pauseForTest();
+
+		for (let i = 1; i <= 3; i++) {
+			r.queue.enqueue(item(i, `zeile *${i}* hier`));
+		}
+
+		await settle(r.clock, 3);
+
+		// Batched for the LLM; the GPU model goes before the batch runs.
+		r.setEngine(() => "seq2seq");
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests[0].lines).to.have.length(3);
+		const singles = r.requests.slice(1);
+
+		expect(singles.map((q) => q.lines)).to.deep.equal([undefined, undefined, undefined]);
+		expect(singles.map((q) => q.markers)).to.deep.equal([
+			"placeholder",
+			"placeholder",
+			"placeholder",
+		]);
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([]);
+		expect(r.updates.filter(([, u]) => u.status === "done")).to.deep.equal([
+			[1, {status: "done", text: "[en] zeile *1* hier", engine: "seq2seq"}],
+			[2, {status: "done", text: "[en] zeile *2* hier", engine: "seq2seq"}],
+			[3, {status: "done", text: "[en] zeile *3* hier", engine: "seq2seq"}],
+		]);
+		expect(r.paused).to.deep.equal([]);
 	});
 
 	it("a requeued batch goes back in the order it was sent in", async () => {
