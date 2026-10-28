@@ -159,13 +159,16 @@
 	--slide-end-away: calc(-1 * var(--userlist-width));
 }
 
-/* A field that takes the user's text says dir="auto", and an empty one is
- * left-to-right whatever its placeholder: under an RTL interface the
- * translated placeholder then sat on the left, under the search glyph that
- * inset-inline-end puts there (the user list's "1 مستخدم" lost its count).
- * Until there is text to judge by, the field follows the page. */
-:root[dir="rtl"] :is(input, textarea)[dir="auto"]:placeholder-shown {
+/* A field that takes the user's text says dir="auto", which flips the
+ * whole box with its content: an empty field, or one holding Latin text,
+ * turned left-to-right under an RTL interface, so its padding-inline-end
+ * moved to the right while the search glyph, placed by the page's
+ * direction, stayed on the left, over the placeholder ("1 مستخدم" lost its
+ * count) and over what was typed. Under RTL the box keeps the page's
+ * sides; the text still takes its own direction, line by line. */
+:root[dir="rtl"] :is(input, textarea)[dir="auto"] {
 	direction: rtl;
+	unicode-bidi: plaintext;
 }
 
 /* The font-size setting's scale (client/js/helpers/fontSize.ts); "medium" is
@@ -6776,6 +6779,13 @@ html[data-shell="native"] #footer {
 
 	#connect .connect-row {
 		flex-direction: column;
+	}
+
+	/* Stacked above its field, a label has the whole row: at 25% wide the
+	 * word-break that keeps a long term inside its column cut "Channels"
+	 * in two on a phone. */
+	#connect .connect-row > label {
+		width: auto;
 	}
 
 	#connect .connect-row > .input,
