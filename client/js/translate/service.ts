@@ -29,6 +29,8 @@ export const GPU_IDLE_UNLOAD_MS = 3 * 60 * 1000;
 /** A loaded CPU model with no request for this long gives its memory back. */
 export const CPU_IDLE_UNLOAD_MS = 5 * 60 * 1000;
 export const TRANSLATION_UNAVAILABLE = "no translation engine can take this request";
+/** How long a route waits for the worker to say what is downloaded (`cacheOrDeadline`). */
+export const CACHE_WAIT_MS = 15 * 1000;
 
 export interface ServiceDeps {
 	createClient(): {client: TranslateClient; terminate(): void};
@@ -391,7 +393,7 @@ export class TranslateService {
 		const capability = await this.capabilities();
 
 		if (capability.tier !== "none") {
-			await this.primeCache();
+			await this.cacheOrDeadline();
 		}
 
 		return resolveRoute(this.table, this.options.catalog, {
@@ -681,6 +683,26 @@ export class TranslateService {
 		}
 	}
 
+	/**
+	 * The cache question, waited for at most CACHE_WAIT_MS: a worker that
+	 * started but never answers would otherwise hold every route -- the
+	 * reading lines and the composer's strip before its own deadline is
+	 * armed -- for good. Past it the route counts every model as absent, and
+	 * the request's own deadline is what fails it.
+	 */
+	private async cacheOrDeadline(): Promise<void> {
+		let handle: unknown = null;
+		const deadline = new Promise<void>((resolve) => {
+			handle = this.deps.setTimeout(resolve, CACHE_WAIT_MS);
+		});
+
+		try {
+			await Promise.race([this.primeCache(), deadline]);
+		} finally {
+			this.deps.clearTimeout(handle);
+		}
+	}
+
 	private primeCache(): Promise<void> {
 		if (!this.cacheKnown) {
 			this.cacheKnown = this.models().then(
@@ -930,18 +952,48 @@ export class TranslateService {
 		}
 
 		if (!this.worker) {
-			this.worker = this.deps.createClient();
+			const worker = this.deps.createClient();
 
-			this.worker.client.onWorkerError = (message: string) => {
-				for (const listener of this.workerErrorListeners) {
-					listener(message);
-				}
-			};
-
-			this.worker.client.configure(this.options.catalog, this.options.ortBase);
+			this.worker = worker;
+			worker.client.onWorkerError = (message: string) => this.reportWorkerError(message);
+			worker.client.onDead = (detail: string) => this.workerDied(worker, detail);
+			worker.client.configure(this.options.catalog, this.options.ortBase);
 		}
 
 		return this.worker.client;
+	}
+
+	private reportWorkerError(message: string): void {
+		for (const listener of this.workerErrorListeners) {
+			listener(message);
+		}
+	}
+
+	/**
+	 * A worker that never started (client.ts `workerError`). What it was
+	 * asked fails as unavailable -- a real failure, which the reading queue
+	 * counts toward a pause, not the WORKER_DISPOSED it puts back and
+	 * retries a second later, which against a script that will not load
+	 * was a fresh worker every second -- and the worker is dropped without
+	 * the teardown's generation step (nothing ran on it), so the next call
+	 * asks for a fresh one: a deploy that finishes, or a page back online,
+	 * is picked up without a reload. Settings says so too.
+	 */
+	private workerDied(worker: {client: TranslateClient; terminate(): void}, detail: string): void {
+		if (this.worker !== worker) {
+			return;
+		}
+
+		const message = detail ? `${TRANSLATION_UNAVAILABLE}: ${detail}` : TRANSLATION_UNAVAILABLE;
+
+		this.worker = null;
+		this.clearIdle();
+		this.clearEngineTimer("llm");
+		this.clearEngineTimer("seq2seq");
+		this.loadedEngines.clear();
+		worker.client.fail(new Error(message));
+		worker.terminate();
+		this.reportWorkerError(message);
 	}
 
 	private teardown(): void {

@@ -67,11 +67,16 @@ function create(): TranslateService {
 			}
 
 			const worker = new Worker(workerUrl());
+			const client = new TranslateClient(worker as unknown as MainPort);
 
-			return {
-				client: new TranslateClient(worker as unknown as MainPort),
-				terminate: () => worker.terminate(),
-			};
+			// A script that will not load (a 404, a CSP) or a throw at its top
+			// level is an `error` here and nothing else: without this every
+			// request waited on a worker that would never answer.
+			worker.addEventListener("error", (event) => {
+				client.workerError((event as Partial<ErrorEvent>).message ?? "");
+			});
+
+			return {client, terminate: () => worker.terminate()};
 		},
 		probe: () => (fake ? Promise.resolve(FAKE_CAPABILITY) : probeOnce()),
 		setTimeout: (fn, ms) => window.setTimeout(fn, ms),

@@ -347,6 +347,7 @@ import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
 import {LLM_MIN_BUFFER_BYTES, llmChoice, llmName, modelBlock} from "../../js/translate/models";
+import {translateErrorText} from "../../js/helpers/translateErrors";
 import {translateWhyText} from "../../js/helpers/translateWhy";
 import {isLimitedLanguage} from "../../js/translate/routes.default";
 import {readingLanguage} from "../../js/translate/reader";
@@ -371,7 +372,14 @@ export default defineComponent({
 		// Two ways the worker can disappoint this tab: a call it made rejected
 		// (loadError), or the worker reported a problem of its own that no call
 		// was waiting for (the store's workerError, set by index.ts).
-		const problem = computed(() => store.state.translation.workerError ?? loadError.value);
+		// A code the translation layer reports (a worker that never started is
+		// TRANSLATION_UNAVAILABLE) in the reader's words; an engine's own text
+		// as it is.
+		const problem = computed(() => {
+			const raw = store.state.translation.workerError ?? loadError.value;
+
+			return raw ? translateErrorText(raw) : null;
+		});
 		const llmChoices = service.catalog.llmChoices;
 		// The setting as the service reads it: an id that is no longer a
 		// choice — an unset one included — shows (and runs) what the service

@@ -14,6 +14,7 @@ import type {RouteTable} from "../../client/js/translate/router";
 import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
 import {TranslateClient, WORKER_DISPOSED} from "../../client/js/translate/client";
 import {
+	CACHE_WAIT_MS,
 	CPU_IDLE_UNLOAD_MS,
 	GPU_IDLE_UNLOAD_MS,
 	TRANSLATION_UNAVAILABLE,
@@ -22,9 +23,57 @@ import {
 	type ServiceDeps,
 } from "../../client/js/translate/service";
 import {serveEngines} from "../../client/js/translate/worker";
+import {
+	PAUSE_AFTER_FAILURES,
+	TranslateQueue,
+	type QueueUpdate,
+} from "../../client/js/translate/queue";
+import {protect} from "../../client/js/translate/spans";
 import {FakeEngine} from "./fakeEngine";
 
 const catalog = buildCatalog();
+
+/**
+ * A service whose workers never answer: `dies` fires each one's `error`
+ * (client.ts `workerError`) as a script that will not load does, shortly
+ * after it is created; otherwise it is a worker that started and hangs.
+ */
+function deadWorkerRig(dies: boolean) {
+	const clock = sinon.useFakeTimers();
+	const created: {client: TranslateClient; terminated: boolean}[] = [];
+	const errors: string[] = [];
+	const service = new TranslateService(
+		{
+			createClient() {
+				const [mainPort] = createPortPair();
+				const client = new TranslateClient(mainPort);
+				const entry = {client, terminated: false};
+
+				created.push(entry);
+
+				if (dies) {
+					setTimeout(() => client.workerError(""), 5);
+				}
+
+				return {
+					client,
+					terminate() {
+						entry.terminated = true;
+					},
+				};
+			},
+			probe: () => Promise.resolve(capability("gpu")),
+			setTimeout: (fn, ms) => setTimeout(fn, ms),
+			clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
+		},
+		{catalog, selectedLlm: QWEN3_1_7B_ID, ortBase: "https://app.test/js/ort/", enabled: true},
+		{llm: true, cpu: true}
+	);
+
+	service.onWorkerError((message) => errors.push(message));
+
+	return {clock, service, created, errors};
+}
 
 function capability(tier: Capability["tier"]): Capability {
 	return {
@@ -1047,6 +1096,73 @@ describe("translate/service", () => {
 		await r.service.models();
 
 		expect(seen).to.deep.equal(["no WebAssembly"]);
+		r.service.dispose();
+	});
+
+	// A translate-worker.js that will not load (a 404 mid-deploy, a CSP) or
+	// throws at its top level answers nothing; its only word is the Worker's
+	// `error` event. What it was asked fails as unavailable -- a failure the
+	// reading queue counts toward its pause, so a dead script is tried a few
+	// times and then left for a minute rather than a fresh worker a second.
+	it("a worker that never starts fails what it was asked, and the queue pauses on it", async () => {
+		const r = deadWorkerRig(true);
+		clock = r.clock;
+		const updates: [number, QueueUpdate][] = [];
+		const paused: string[] = [];
+		const queue = new TranslateQueue({
+			route: (from, to, hint) =>
+				r.service.route(from, to, hint).then((route) => route?.ref.engine ?? null),
+			translate: (req, signal) => r.service.translate(req, signal),
+			priority: () => 0,
+			arrivals: () => 0,
+			onUpdate: (id, update) => updates.push([id, update]),
+			onPause: (engine) => paused.push(engine),
+		});
+
+		for (let i = 1; i <= PAUSE_AFTER_FAILURES + 1; i++) {
+			const p = protect(`Zeile ${i}`);
+
+			queue.enqueue({
+				id: i,
+				chanId: 1,
+				text: p.text,
+				spans: p.spans,
+				meta: p.meta,
+				from: "de",
+				to: "en",
+				context: emptyContext(),
+				arrivalsAtEnqueue: 0,
+				// One request each, so each failure is one count.
+				single: true,
+			});
+		}
+
+		await r.clock.tickAsync(10 * 1000);
+
+		const failed = updates.filter(([, u]) => u.status === "failed");
+
+		expect(failed.map(([id]) => id)).to.deep.equal([1, 2, 3]);
+		expect(failed[0][1]).to.include({error: TRANSLATION_UNAVAILABLE});
+		expect(paused).to.deep.equal(["llm"]);
+		// The cache question's worker, then one per request -- not one a
+		// second through a requeue loop.
+		expect(r.created.length).to.equal(PAUSE_AFTER_FAILURES + 1);
+		expect(r.created.every((w) => w.terminated)).to.equal(true);
+		expect(r.errors[0]).to.equal(TRANSLATION_UNAVAILABLE);
+		queue.cancelAll();
+		r.service.dispose();
+	});
+
+	it("a worker that started but never answers holds no route past CACHE_WAIT_MS", async () => {
+		const r = deadWorkerRig(false);
+		clock = r.clock;
+		let route: string | null | undefined;
+
+		void r.service.route("de", "en").then((found) => (route = found?.candidate ?? null));
+		await r.clock.tickAsync(CACHE_WAIT_MS - 1);
+		expect(route).to.equal(undefined);
+		await r.clock.tickAsync(1);
+		expect(route).to.equal("llm");
 		r.service.dispose();
 	});
 

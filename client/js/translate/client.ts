@@ -73,8 +73,16 @@ export class TranslateClient {
 	private statusWaiters: Deferred<Record<EngineName, EngineSnapshot>>[] = [];
 	private modelsWaiters: Deferred<ModelCacheState[]>[] = [];
 	private disposed = false;
+	/** Whether the worker has said anything yet: it started, at least. */
+	private heard = false;
 	/** `scope: "worker"`: a configure that threw, or a handler that did. */
 	onWorkerError: ((message: string) => void) | null = null;
+	/**
+	 * The worker never started (`workerError` before it said anything): its
+	 * owner fails what is pending (`fail`) and drops it, so the next call
+	 * asks for a fresh one. `detail` is the browser's text, often empty.
+	 */
+	onDead: ((detail: string) => void) | null = null;
 
 	constructor(private port: MainPort) {
 		port.onmessage = (event) => this.receive(event.data);
@@ -177,10 +185,42 @@ export class TranslateClient {
 		return entry.promise;
 	}
 
+	/**
+	 * The Worker's own `error` event (index.ts). Before the worker has said
+	 * anything it is one that never started -- its script would not load (a
+	 * 404 mid-deploy, a CSP that blocks workers) or it threw at the top
+	 * level -- and nothing it was asked will ever be answered: `onDead`.
+	 * Once it has answered, an error is a stray exception in a working
+	 * worker: reported, and the models it holds are left alone.
+	 */
+	workerError(detail: string): void {
+		if (this.disposed) {
+			return;
+		}
+
+		if (this.heard) {
+			if (detail) {
+				this.onWorkerError?.(detail);
+			}
+
+			return;
+		}
+
+		this.onDead?.(detail);
+	}
+
+	/** Everything still pending rejects with `error`; the client is done. */
+	fail(error: Error): void {
+		this.rejectAll(error);
+	}
+
 	dispose(): void {
+		this.rejectAll(new Error(WORKER_DISPOSED));
+	}
+
+	private rejectAll(error: Error): void {
 		this.disposed = true;
 		this.port.onmessage = null;
-		const error = new Error(WORKER_DISPOSED);
 
 		for (const load of this.loads.values()) {
 			load.reject(error);
@@ -216,6 +256,8 @@ export class TranslateClient {
 		if (this.disposed) {
 			return;
 		}
+
+		this.heard = true;
 
 		switch (message.type) {
 			case "progress":
