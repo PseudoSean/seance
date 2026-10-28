@@ -12925,6 +12925,30 @@ msgctxt "translate.composer.sendOn"
 msgid "Sending in {language} · click to stop"
 msgstr "Wysyłanie z tłumaczeniem, język: {language} · kliknij, aby wyłączyć"
 
+#. Extra line in the dialog asking before a translation model is downloaded, shown only when the browser reports a cellular connection or Data Saver: a warning that the download may cost data.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.metered"
+msgid "Your connection is metered or set to save data."
+msgstr "Twoje połączenie jest taryfowe lub ma włączone oszczędzanie danych."
+
+#. Button in the dialog asking before a translation model is downloaded: declines the download for now. The translation then uses a model already on the device, or fails saying which model it needs. Keep it short (a button).
+#: client/js/translate/index.ts
+msgctxt "translate.consent.notNow"
+msgid "Not now"
+msgstr "Nie teraz"
+
+#. Body of the dialog asking before a translation model is downloaded (title 'Download {model}?'). {model} is the model's name as Settings lists it; {size} its download size with its unit, e.g. '938.4 MiB' or '2.1 GiB'. The buttons are 'Not now' and 'Download'.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.text"
+msgid "Translating this needs {model}, a {size} download. It is kept on this device, so it is downloaded only once."
+msgstr "To tłumaczenie wymaga modelu {model}, do pobrania {size}. Zostaje na tym urządzeniu, więc pobiera się go tylko raz."
+
+#. Title of the dialog that asks before a translation model is downloaded for the first time, because a translation (reading a channel, the composer, a message's Translate) needs it and it is not on this device yet. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)' or 'OPUS-MT German → English (CPU)'.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.title"
+msgid "Download {model}?"
+msgstr "Pobrać {model}?"
+
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.aborted"
@@ -13473,6 +13497,12 @@ msgctxt "translate.settings.gpuModelHint"
 msgid "The larger model translates more naturally, needs about 3.4 GB of graphics memory and is slower."
 msgstr "większy model tłumaczy bardziej naturalnie, potrzebuje około 3,4 GB pamięci graficznej i jest wolniejszy."
 
+#. Line under the GPU model select in Settings → Translation, for a model that is greyed out in the select because this device's GPU cannot hold it. {model} is the model's name, e.g. 'Qwen3 4B'. Followed by a sentence of its own giving the reason, e.g. 'It needs a GPU that binds 185.5 MiB in one buffer; this one binds 160 MiB.'
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.gpuModelUnfit"
+msgid "{model} can't run on this device."
+msgstr "{model} nie może działać na tym urządzeniu."
+
 #. Heading of the Translation tab in Settings.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.heading"
@@ -13521,6 +13551,12 @@ msgctxt "translate.settings.models"
 msgid "Models"
 msgstr "Modele"
 
+#. Line under the 'Use NLLB-200 …' switch in Settings → Translation, naming the model's licence, which is why the switch is off by default. NLLB-200 and CC BY-NC 4.0 are names, never translated.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.nllbLicence"
+msgid "NLLB-200 is licensed CC BY-NC 4.0: for non-commercial use only."
+msgstr "NLLB-200 jest na licencji CC BY-NC 4.0: tylko do użytku niekomercyjnego."
+
 #. Label of the checkbox in Settings → Translation that allows the smaller main-processor models. CPU is the usual abbreviation for the main processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
@@ -13532,6 +13568,12 @@ msgstr "Używaj modeli CPU, gdy są lepszym wyborem"
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
 msgstr "Używaj modelu GPU, gdy jest lepszym wyborem"
+
+#. Switch in Settings → Translation, under 'Use the CPU models where they are the better choice': lets the router use the NLLB-200 model (CPU, 200 languages). Off by default. NLLB-200 is a model name, never translated.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.useNllb"
+msgid "Use NLLB-200 for languages the other models do not cover"
+msgstr "Używaj NLLB-200 dla języków, których nie obsługują inne modele"
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
 #: client/components/Settings/Translation.vue
@@ -13677,6 +13719,18 @@ msgstr "WebGPU wymaga, by aplikacja była serwowana przez HTTPS (lub z localhost
 msgctxt "translate.why.llmOff"
 msgid "The GPU model is switched off in Settings → Translation."
 msgstr "Model GPU jest wyłączony w Ustawienia → Przetłumaczenie."
+
+#. Reason a translation did not run: the user answered 'Not now' when asked to download the model it needs, and it is not on this device yet. Shown under a translated line that failed (cut at about 120 characters there, so keep it short), in the composer's translation strip and in the translation controls. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)'; {size} its download size with its unit, e.g. '938.4 MiB'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.needsDownload"
+msgid "Needs {model}, a {size} download: get it in Settings → Translation."
+msgstr "Wymaga modelu {model} ({size} do pobrania): pobierz go w Ustawienia → Przetłumaczenie."
+
+#. Reason a translation cannot run: only the NLLB-200 model serves this language pair here, and the user has not switched it on (it is off by default because its licence is non-commercial). Shown wherever a translation action is unavailable, as a sentence of its own. NLLB-200 is a model name, never translated. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.nllbOff"
+msgid "This needs NLLB-200, which is switched off in Settings → Translation."
+msgstr "To wymaga modelu NLLB-200, który jest wyłączony w Ustawienia → Przetłumaczenie."
 
 #. Reason a GPU translation model cannot run: WebGPU exists but returned no graphics adapter. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
 #: client/js/helpers/translateWhy.ts
