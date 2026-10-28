@@ -8,6 +8,7 @@
 import {computed, defineComponent, PropType} from "vue";
 import type {ClientChan} from "../js/types";
 import {useI18n} from "../js/i18n";
+import {typingSummary} from "../js/helpers/typingState";
 
 // A one-line "alice is typing…" strip above the input, with a fixed height
 // (see #form .typing-indicator in style.css). It appears with the first
@@ -30,32 +31,7 @@ export default defineComponent({
 			() => props.channel.typing.length > 0 || props.channel.typingReserved
 		);
 
-		// One key per length up to three (word order is free per locale);
-		// beyond that the two longest-typing nicks are named and the rest is
-		// summarized as a count, plural for the "{count} others" noun.
-		const summary = computed(() => {
-			const nicks = props.channel.typing.map((entry) => entry.nick);
-
-			switch (nicks.length) {
-				case 0:
-					return "";
-				case 1:
-					return t("typing.one", {nick: nicks[0]});
-				case 2:
-					return t("typing.two", {nick1: nicks[0], nick2: nicks[1]});
-				case 3:
-					return t("typing.three", {
-						nick1: nicks[0],
-						nick2: nicks[1],
-						nick3: nicks[2],
-					});
-				default:
-					return tCount("typing.many", nicks.length - 2, {
-						nick1: nicks[0],
-						nick2: nicks[1],
-					});
-			}
-		});
+		const summary = computed(() => typingSummary(props.channel.typing, t, tCount));
 
 		return {visible, summary};
 	},

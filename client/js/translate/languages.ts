@@ -3,6 +3,8 @@
 // English table behind it for engines that do not have the locale; the UI
 // always shows a full name, never a code (spec § Decisions).
 
+import {isTraditionalChinese} from "../i18n/traditionalChinese";
+
 export const SUPPORTED_LANGUAGES: readonly string[] = [
 	"en",
 	"de",
@@ -233,8 +235,15 @@ export function fromLocaleTag(tag: string): string {
 	return isSupported(code) ? code : "en";
 }
 
-/** `navigator.language` → a supported code; English when nothing matches. */
+/** `navigator.language` → a supported code; English when nothing matches.
+ * Traditional Chinese (`zh-TW`, `zh-HK`, `zh-Hant-*`) is English too, as
+ * the interface's automatic choice has it (i18n/core.ts `bestLocale`):
+ * `zh` here is Simplified (NLLB's `zho_Hans`). */
 export function browserLanguage(navigatorLanguage: string | undefined): string {
+	if (isTraditionalChinese(navigatorLanguage ?? "")) {
+		return "en";
+	}
+
 	const primary = (navigatorLanguage ?? "").toLowerCase().split(/[-_]/)[0];
 
 	return isSupported(primary) ? primary : "en";

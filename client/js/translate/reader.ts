@@ -10,19 +10,21 @@
 // setReading/setChannelOptions; the chip and the toolbar call
 // retranslate/showOriginal/retryTranslation.
 
-import {watch} from "vue";
+import {toRaw, watch} from "vue";
 
 import {getBranding} from "../branding";
 import {userLanguageRef} from "../i18n";
 import socket from "../socket";
 import {store, type TranslationEntry} from "../store";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../types";
+import {ChanType} from "../../../shared/types/chan";
 import {
 	type ChannelTranslation,
 	channelKey,
 	defaultChannelTranslation,
 	effectiveFormality,
 	forgetNetwork,
+	forgetTerms,
 	loadAll,
 	setChannelTranslation,
 	termsFor,
@@ -32,11 +34,15 @@ import {type Detection, LanguagePrior, detectLanguage, detectionSkip, sourceFor}
 import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} from "./eligibility";
 import {namesFor} from "./names";
 import {fromLocaleTag} from "./languages";
+import {needsDownloadError} from "./consent";
+import {type EngineSwitches, type ModelBlock, selectLlm} from "./models";
+import {type RouteVerdict, explainRoute, routeInput, translationBlock} from "./router";
 import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
 import {topicEntryId} from "./topic";
+import {yieldToPage} from "./yieldToPage";
 
 const queues = new Map<string, TranslateQueue>();
 const priors = new Map<string, LanguagePrior>();
@@ -101,8 +107,8 @@ export function readingLanguage(): string {
 }
 
 /**
- * The reading language changed (the Settings override moved, or the
- * interface's did and the override follows it): re-read every channel that
+ * The reading language changed (the interface's language did -- in
+ * Settings or through the dev globe): re-read every channel that
  * is reading, the way a switch-on does (`requeueReading` -- not
  * `setReading`, which is already on and would return at its no-op guard).
  * A change that leaves the effective language alone restarts nothing; the
@@ -162,6 +168,60 @@ export function translationAvailable(): boolean {
 	return translateService().enabled && tier !== undefined && tier !== "none";
 }
 
+/** The catalog as the service runs it: the GPU model the setting and the probe resolve to. */
+function liveCatalog() {
+	return selectLlm(
+		translateService().catalog,
+		store.state.settings.translateLlmModel,
+		store.state.translation.capability
+	);
+}
+
+function switches(): EngineSwitches {
+	return {
+		llm: !!store.state.settings.translateLlm,
+		cpu: !!store.state.settings.translateCpu,
+		nllb: !!store.state.settings.translateNllb,
+	};
+}
+
+/**
+ * Whether anything can translate here right now, and if not why (router.ts
+ * `translationBlock`): the deploy, the probe, the device, the user's two
+ * switches. Null once an engine runs. Reactive through the store reads, so
+ * a component's computed follows the switches and the probe.
+ */
+export function currentTranslationBlock(): ModelBlock | null {
+	return translationBlock(
+		liveCatalog(),
+		store.state.translation.capability,
+		switches(),
+		translateService().enabled
+	);
+}
+
+/**
+ * Whether `from` → `to` can be translated here, and if not why (router.ts
+ * `explainRoute`, the router's own test). `from` null is a line the
+ * detector will place before the request goes, so the CPU models count;
+ * `from` equal to `to` is the cleanup pass (`polish` in the verdict).
+ */
+export function pairVerdict(from: string | null, to: string): RouteVerdict {
+	const service = translateService();
+	const capability = store.state.translation.capability;
+	const input = routeInput(capability, switches(), {from, to, sourceLater: from === null});
+
+	if (!service.enabled || !capability) {
+		return {
+			route: null,
+			why: service.enabled ? {kind: "probing"} : {kind: "disabled"},
+			polish: from !== null && from === to,
+		};
+	}
+
+	return explainRoute(service.routeTable, liveCatalog(), input);
+}
+
 function priorFor(network: ClientNetwork, channel: ClientChan): LanguagePrior {
 	const key = channelKey(network.uuid, channel.name);
 	let prior = priors.get(key);
@@ -196,7 +256,13 @@ async function queueHistory(
 ): Promise<void> {
 	const generation = generationOf(channel.id);
 
-	for (const message of newestFirst) {
+	for (const [index, message] of newestFirst.entries()) {
+		// A task boundary between two lines (yieldToPage.ts): once the
+		// detector is loaded the whole load would otherwise be one task.
+		if (index > 0) {
+			await yieldToPage();
+		}
+
 		if (!stillCurrent(channel.id, generation)) {
 			return;
 		}
@@ -225,8 +291,17 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 		const service = translateService();
 
 		queue = new TranslateQueue({
+			// A route a declined download left empty fails the line with the
+			// model named (consent.ts), through the queue's rejection path,
+			// which pauses nothing.
 			route: (from, to, hint) =>
-				service.route(from, to, hint).then((route) => route?.ref.engine ?? null),
+				service.resolve(from, to, hint).then(({route, refused}) => {
+					if (!route && refused) {
+						throw new Error(needsDownloadError(refused));
+					}
+
+					return route?.ref.engine ?? null;
+				}),
 			translate: (req, signal) => service.translate(req, signal),
 			loadTicks: () => service.loadTicks(),
 			priority(chanId) {
@@ -446,8 +521,8 @@ export function requeueReading(network: ClientNetwork, channel: ClientChan): voi
 	replayBatches.drop(channel.id);
 	queues.get(network.uuid)?.cancelChannel(channel.id);
 
-	// The language is the global reading language (the interface's, or the
-	// Settings override): only a finished translation already in it is
+	// The language is the global reading language (the interface's): only
+	// a finished translation already in it is
 	// kept, a skipped mark is detected again like everything else.
 	const lang = readingLanguage();
 
@@ -718,16 +793,26 @@ export async function translateMessage(
 	// capped, and the prompt's `Names:` list is drawn from the lines just
 	// before this one, so the two windows have to end at the same place or a
 	// history line could be told to keep a name nothing fenced.
-	const at = channel.messages.findIndex((m) => m.id === message.id);
+	// Read raw: nothing here is an effect that must track them, and a big
+	// channel's user list read through the store's proxies cost about a
+	// millisecond a line.
+	const users = toRaw(channel.users);
+	const messages = toRaw(channel.messages);
+	const at = messages.findIndex((m) => m.id === message.id);
 	const nicks = namesFor({
-		users: channel.users,
+		users,
 		sender: message.from?.nick,
 		target: channel.name,
-		messages: at >= 0 ? channel.messages.slice(0, at + 1) : channel.messages,
+		messages: at >= 0 ? messages.slice(0, at + 1) : messages,
 	});
 	const generation = generationOf(channel.id);
+	// Stripped once, and only for a line that gets that far: eligibility
+	// counts its words and detection reads it (the strip runs the whole
+	// Markdown layout).
+	let plain: string | undefined;
+	const plainText = () => (plain ??= plainTextOf(message.text ?? "", nicks));
 
-	if (!force && (!initial.read || !isEligible(message, {nicks}))) {
+	if (!force && (!initial.read || !isEligible(message, {nicks, plain: plainText}))) {
 		return;
 	}
 
@@ -741,7 +826,7 @@ export async function translateMessage(
 				confidence: 1,
 				candidates: store.state.translations[message.id]?.candidates ?? [],
 		  }
-		: await detectLanguage(plainTextOf(message.text, nicks), prior, initial.languages, {
+		: await detectLanguage(plainText(), prior, initial.languages, {
 				// The language the reader already reads, so a channel that
 				// declares one other can place a line too short for franc. The
 				// switch is re-read after the await below; this is the target as
@@ -898,6 +983,9 @@ export function retryTranslation(
 	message: ClientMessage
 ): void {
 	resumePausedEngines();
+	// Someone asked for this line: a "not now" to a download is a question
+	// again (consent.ts), asked once however many lines are retried.
+	translateService().forgetDeclines();
 
 	const known = items.get(message.id);
 
@@ -1010,6 +1098,23 @@ export function initReader(): void {
 			"translationRemoveMany",
 			target.channel.messages.map((m) => m.id)
 		);
+		// The topic's translation is kept under its own id (topic.ts), not a
+		// message's: a rejoin is a new channel id, so nothing would ever
+		// show or drop this one.
+		forgetTopic(target.channel.id);
+
+		// A closed query takes its terms with it, as it does its log: they
+		// are whole lines said in private. A channel's stay with its setting.
+		if (target.channel.type === ChanType.QUERY) {
+			const kept = forgetTerms(target.network.uuid, target.channel.name);
+
+			if (kept) {
+				store.commit("translateChannelSet", {
+					key: channelKey(target.network.uuid, target.channel.name),
+					value: kept,
+				});
+			}
+		}
 	});
 
 	// Registered before socket-events/quit.ts (import order), so the
@@ -1032,6 +1137,7 @@ export function initReader(): void {
 				arrivals.delete(c.id);
 				generations.delete(c.id);
 				replayBatches.drop(c.id);
+				forgetTopic(c.id);
 			}
 		}
 

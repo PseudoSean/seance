@@ -41,7 +41,7 @@
 
 	say("loading.starting");
 
-	// Best-effort overlay: the pre-paint script in index.html has already
+	// Best-effort overlay: the pre-paint script (js/prepaint.js) has already
 	// resolved the locale (and the direction); en needs no fetch, and a
 	// production build never serves qqx.json, so the 404 just falls through.
 	const lang = (document.documentElement.lang || "").trim();

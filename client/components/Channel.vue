@@ -1,7 +1,9 @@
 <template>
 	<!-- TODO: investigate -->
 	<ChannelWrapper ref="wrapper" v-bind="$props">
-		<span class="name">{{ channel.name }}</span>
+		<span class="name"
+			><bdi>{{ channel.name }}</bdi></span
+		>
 		<span
 			v-if="channel.unread"
 			:class="{highlight: channel.highlight && !channel.muted}"

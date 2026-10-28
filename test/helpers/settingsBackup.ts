@@ -75,6 +75,8 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(isBackupKey("thelounge.push")).to.equal(false);
 		expect(isBackupKey("thelounge.state.sidebar")).to.equal(false);
 		expect(isBackupKey("thelounge.state.dndMute")).to.equal(false);
+		// The models the user agreed to download belong to this device's storage.
+		expect(isBackupKey("thelounge.state.translateConsent")).to.equal(false);
 		expect(isBackupKey("thelounge.mentions")).to.equal(false);
 	});
 
@@ -99,6 +101,29 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 			"a/#x": {read: true, languages: ["de"], terms: {}},
 		});
 		expect(backup.entries.settings).to.deep.equal({theme: "creama", coloredNicks: false});
+	});
+
+	it("carries a channel's translation terms and never a query's", function () {
+		const term = {source: "meet at 5", target: "um 5", from: "en", to: "de"};
+		store.set(
+			"thelounge.translate",
+			JSON.stringify({
+				"a/#x": {read: true, terms: [term]},
+				"a/alice": {read: true, write: "de", terms: [term]},
+			})
+		);
+		const backup = collectBackup();
+
+		// A term is a whole short line the user sent; a query's is what was
+		// said in private, and the queries' logs never travel either.
+		expect(backup.entries["thelounge.translate"]).to.deep.equal({
+			"a/#x": {read: true, terms: [term]},
+			"a/alice": {read: true, write: "de", terms: []},
+		});
+		// The device keeps its own.
+		expect(
+			JSON.parse(store.get("thelounge.translate") as string)["a/alice"].terms
+		).to.have.length(1);
 	});
 
 	it("strips saved passwords unless asked to keep them", function () {

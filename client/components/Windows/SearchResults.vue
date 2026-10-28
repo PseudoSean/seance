@@ -16,9 +16,11 @@
 				<div v-if="network && channel" class="header">
 					<SidebarToggle />
 					<span class="title"
-						>{{ t("search.results.searchingInBefore") }}
-						<span class="channel-name">{{ channel.name }}</span>
-						{{ t("search.results.searchingInAfter") }}</span
+						><I18nFrame :text="t('search.results.searchingIn', {channel: KEEP})"
+							><template v-slot:channel
+								><span class="channel-name">{{ channel.name }}</span></template
+							></I18nFrame
+						></span
 					>
 					<span class="topic">{{ route.query.q }}</span>
 					<MessageSearchForm :network="network" :channel="channel" />
@@ -105,6 +107,8 @@ import SidebarToggle from "../SidebarToggle.vue";
 import Message from "../Message.vue";
 import MessageSearchForm from "../MessageSearchForm.vue";
 import DateMarker from "../DateMarker.vue";
+import I18nFrame from "../I18nFrame.vue";
+import {KEEP} from "../../js/i18n/core";
 import {watch, computed, defineComponent, nextTick, ref, onMounted, onUnmounted} from "vue";
 
 import {useStore} from "../../js/store";
@@ -120,6 +124,7 @@ export default defineComponent({
 		Message,
 		DateMarker,
 		MessageSearchForm,
+		I18nFrame,
 	},
 	setup() {
 		const store = useStore();
@@ -281,6 +286,7 @@ export default defineComponent({
 
 		return {
 			t,
+			KEEP,
 			resultsAria,
 			closeAria,
 			chat,

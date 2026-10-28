@@ -159,6 +159,18 @@
 	--slide-end-away: calc(-1 * var(--userlist-width));
 }
 
+/* A field that takes the user's text says dir="auto", which flips the
+ * whole box with its content: an empty field, or one holding Latin text,
+ * turned left-to-right under an RTL interface, so its padding-inline-end
+ * moved to the right while the search glyph, placed by the page's
+ * direction, stayed on the left, over the placeholder ("1 مستخدم" lost its
+ * count) and over what was typed. Under RTL the box keeps the page's
+ * sides; the text still takes its own direction, line by line. */
+:root[dir="rtl"] :is(input, textarea)[dir="auto"] {
+	direction: rtl;
+	unicode-bidi: plaintext;
+}
+
 /* The font-size setting's scale (client/js/helpers/fontSize.ts); "medium" is
  * :root's own. */
 html[data-font-size="tiny"] {
@@ -473,6 +485,16 @@ code,
 	color: #e74c3c;
 	background-color: #f9f2f4;
 	border-radius: 2px;
+}
+
+/* A command, a mode or a mask in the chrome's prose (Help, the Aliases pane)
+ * is a left-to-right token: in an RTL page "/connect host [port]" otherwise
+ * rendered as "connect host [port]/". Chat text keeps its own direction. */
+#help code,
+#help kbd,
+.settings-aliases code {
+	direction: ltr;
+	unicode-bidi: isolate;
 }
 
 pre {
@@ -2161,6 +2183,11 @@ textarea.input {
 	border-radius: 0.25rem;
 }
 
+/* Nothing here can translate: dimmed, and a click opens the panel's reason. */
+#chat button.translate.unavailable {
+	opacity: 0.5;
+}
+
 /* The per-channel translation choices, in two layouts from one markup: on a
    pointer machine a column anchored under the header, on a touch device (or a
    window as narrow as the phone's chat layout) a full-screen sheet that is
@@ -2256,6 +2283,44 @@ textarea.input {
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
 	font-style: italic;
+}
+
+/* Why nothing here can translate: first in the panel, two sentences. */
+.translation-panel-blocked {
+	margin-block-end: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	border-inline-start: 0.1875rem solid var(--error-fg, #c33);
+	border-radius: 0.25rem;
+	background: rgb(128 128 128 / 10%);
+	font-size: 0.875rem;
+}
+
+.translation-panel-blocked p {
+	margin: 0;
+}
+
+.translation-panel-blocked p + p {
+	margin-block-start: 0.25rem;
+	color: var(--body-color-muted);
+}
+
+/* Why a language under "Send my messages in" is greyed: shown wherever the
+   panel is, like the limited-language note. */
+.translation-panel-why {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+.translation-panel-why-lead {
+	color: var(--body-color);
+}
+
+.translation-panel-segment:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 .translation-panel-control {
@@ -2551,11 +2616,34 @@ textarea.input {
 	margin: 0;
 }
 
-/* One line of prose under the selects: what a same-language pick does. */
+/* Prose under the selects: what a same-language pick does, or why the
+   pair cannot run here (a lead and its reason, two sentences, which the
+   disabled confirm button is described by). Empty, it takes no gap. */
 .source-language-picker-hint {
 	margin: 0;
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
+}
+
+.source-language-picker-hint:empty {
+	display: none;
+}
+
+.source-language-picker-hint p {
+	margin: 0;
+}
+
+.source-language-picker-hint p + p {
+	margin-block-start: 0.25rem;
+}
+
+.source-language-picker-blocked {
+	color: var(--body-color);
+}
+
+.source-language-picker--sheet .source-language-picker-hint {
+	padding: 0 1rem 1rem;
+	font-size: 0.875rem;
 }
 
 .source-language-picker-actions {
@@ -6693,6 +6781,13 @@ html[data-shell="native"] #footer {
 		flex-direction: column;
 	}
 
+	/* Stacked above its field, a label has the whole row: at 25% wide the
+	 * word-break that keeps a long term inside its column cut "Channels"
+	 * in two on a phone. */
+	#connect .connect-row > label {
+		width: auto;
+	}
+
 	#connect .connect-row > .input,
 	#connect .connect-row > .input-wrap {
 		flex-grow: 1;
@@ -6766,6 +6861,22 @@ html[data-shell="native"] #footer {
 	transition: opacity 0.2s, visibility 0.2s;
 	z-index: 999;
 	user-select: none;
+}
+
+/* A question outranks every surface it can be asked over: the phone's
+   translation sheet (1001) is where reading is switched on there, and the
+   download question that follows (translate/consent.ts) must not open
+   behind it. */
+#confirm-dialog-overlay {
+	z-index: 1010;
+}
+
+/* Above everything, it must take no click while it fades out (its
+   visibility holds until the 0.2s transition ends, and a page whose
+   frames are throttled can hold it there), or it would swallow the
+   first click on whatever it closed over. */
+#confirm-dialog-overlay:not(.opened) {
+	pointer-events: none;
 }
 
 #confirm-dialog-overlay.opened,
@@ -7557,6 +7668,20 @@ html[data-reduce-motion] #chat .msg-copied {
 	background: rgb(128 128 128 / 15%);
 	color: var(--body-color);
 	outline: 0;
+}
+
+/* Translate when nothing here can translate: on offer, dimmed, its reason
+ * the tooltip and the button's description (MessageActions.vue). */
+#chat .msg-action:disabled,
+#chat .msg-action[aria-disabled="true"] {
+	opacity: 0.45;
+	cursor: default;
+}
+
+#chat .msg-action:disabled:hover,
+#chat .msg-action[aria-disabled="true"]:hover {
+	background: transparent;
+	color: var(--body-color-muted);
 }
 
 #chat .msg-action-divider {

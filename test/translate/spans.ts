@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import sinon from "sinon";
 import {hasNoLetters} from "../../client/js/translate/outgoing";
 import {
 	LLM_MARKERS,
@@ -240,6 +241,40 @@ describe("translate/spans", () => {
 			expect(restoreAll(translated(info.text), info)).to.equal(
 				"[en] hallo alice, aliceland kennt alice nicht"
 			);
+		});
+
+		it("matches a nick in any case, keeps the line's spelling, and the longer of two sharing a start", () => {
+			const info = protect("Bob-2 und BOB sagen: [x] und _a und bobby", {
+				nicks: ["bob", "BoB-2", "[x]", "_A", "bobby2"],
+			});
+
+			// `bobby` is no name: `bob` is inside a word there and `bobby2`
+			// is not in the line.
+			expect(info.spans).to.deep.equal(["Bob-2", "BOB", "[x]", "_a"]);
+			expect(info.text).to.equal(
+				`${placeholder(1)} und ${placeholder(2)} sagen: ${placeholder(3)} und ${placeholder(
+					4
+				)} und bobby`
+			);
+		});
+
+		it("lowercases each nick once per line, not once per character", () => {
+			// 2000 names and a 400-character line used to lowercase every
+			// name at every position (~800k calls); a history load runs 40
+			// such lines in one task.
+			const nicks = Array.from({length: 2000}, (_, i) => `user${i}`);
+			const line = "ein Satz mit user7 und mehr Text dazu. ".repeat(10);
+			const spy = sinon.spy(String.prototype, "toLowerCase");
+			let info: ReturnType<typeof protect>;
+
+			try {
+				info = protect(line, {nicks});
+			} finally {
+				spy.restore();
+			}
+
+			expect(info.spans).to.have.length(10);
+			expect(spy.callCount).to.be.below(nicks.length * 2 + 100);
 		});
 
 		it("a nick is never found inside a placeholder an earlier stage left", () => {

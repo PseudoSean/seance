@@ -16,6 +16,7 @@
  */
 import {isDegenerate} from "../../client/js/translate/outgoing";
 import {EXPECTED_SCRIPTS, OWN_SCRIPTS} from "./scripts";
+import stopwords from "../../client/js/translate/stopwords.json";
 
 export {isDegenerate};
 
@@ -198,6 +199,8 @@ export type SlotVerdict =
 	| "padding"
 	| "artifact"
 	| "mixed-script"
+	| "stray-latin"
+	| "english"
 	| "sentences";
 
 /**
@@ -369,6 +372,70 @@ export function hasMixedScriptWord(text: string): boolean {
 	return false;
 }
 
+/** A run of Latin letters, a hyphen inside it kept (`G-line` is one token). */
+const LATIN_TOKEN = /[A-Za-zÀ-ɏ]+(?:-[A-Za-zÀ-ɏ]+)*/gu;
+
+/**
+ * True when a non-Latin answer carries a Latin token its English never had:
+ * a stray of the English the model gave up on, glued straight onto the
+ * target's own script, or a word of another Latin language. ja came back
+ * with `変iaz` for "Variant", `あなたをmentionsする` for "…that mention
+ * you", th with `การเรnder` for "rendering", ar with a Spanish `líneas`, and
+ * every other rule passed them: Han and Thai run without spaces, so the
+ * mixed-script rule cannot tell a clause from a word and skips the run, and
+ * the target's script is there, so the own-script rule is satisfied.
+ *
+ * Two shapes, both judged against the Latin words of the source:
+ * - a token touching a character of an unsegmented script (Han, kana,
+ *   Hangul, Thai) — how ja and th write a Latin word into a sentence; it is
+ *   copy only when the source has the word, or a word it begins (the
+ *   answer dropped an ending: `kill` for "Killed", `G-line` for "G-lines");
+ * - in a catalog with a script of its own, any token with a letter outside
+ *   ASCII — no English source word has one, so it is another language.
+ * An all-capitals token is an acronym or a command (IRC, WHO) and is left
+ * alone, as everywhere else.
+ */
+export function hasStrayLatin(tag: string, source: string, text: string): boolean {
+	if (!OWN_SCRIPTS[tag]) {
+		return false;
+	}
+
+	const sourceWords: string[] = Array.from(
+		withoutIdentifiers(source).matchAll(LATIN_TOKEN),
+		(match) => match[0].toLowerCase()
+	);
+
+	const fromSource = (token: string) => {
+		const lower = token.toLowerCase();
+
+		return sourceWords.some((word) => word.startsWith(lower));
+	};
+
+	const body = withoutIdentifiers(text);
+
+	for (const match of body.matchAll(LATIN_TOKEN)) {
+		const token = match[0];
+
+		if (token === token.toUpperCase() || fromSource(token)) {
+			continue;
+		}
+
+		if (/[^\x00-\x7F]/u.test(token)) {
+			return true;
+		}
+
+		const start = match.index ?? 0;
+		const before = body[start - 1] ?? "";
+		const after = body[start + token.length] ?? "";
+
+		if (UNSEGMENTED.test(before) || UNSEGMENTED.test(after)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /**
  * True when the answer padded the end of a sentence the source had already
  * finished: ru came back with `…в этом браузере..` and `…сеть IRC...` for
@@ -490,6 +557,61 @@ export function dropsSentences(tag: string, source: string, text: string): boole
 }
 
 /**
+ * English function words: two of them in a row are a sentence of English,
+ * not a protocol word or a quoted menu name ("Add to Dock" has one). A word
+ * the target itself uses (its own stopword table) never counts -- "in" is
+ * German, "do" Portuguese and Polish.
+ */
+const ENGLISH_FUNCTION_WORDS = new Set(
+	(
+		"the have has had been being is are was were will would could should cannot can't " +
+		"not now known currently instead of to from with without by for this that these " +
+		"those your you they their there here which who what when where it its an and or " +
+		"but if then than into unable does did do all any some only also already yet still " +
+		"please can be"
+	).split(" ")
+);
+
+const OWN_STOPWORDS = stopwords as Record<string, string[]>;
+
+/**
+ * True when a non-English answer carries a run of English: two English
+ * function words in a row, outside {placeholder}s and code spans. The echo
+ * rule (`isUnchanged`) only sees an answer that is ALL its current English;
+ * a model that gave up halfway ("{nick} が now known as {newNick} になりました",
+ * "Вы currently disconnected, unable to initiate upload process.") or the
+ * English of an OLDER msgid ("{count} users have been kicked" against "…were
+ * kicked") passed every rule. An all-capitals word is a command or an
+ * acronym (WHO, IRC) and breaks a run rather than joining one.
+ */
+export function hasEnglishRun(tag: string, text: string): boolean {
+	if (tag === "en") {
+		return false;
+	}
+
+	const own = new Set((OWN_STOPWORDS[tag] ?? []).map((word) => word.toLowerCase()));
+	let run = 0;
+
+	for (const raw of withoutIdentifiers(text).split(/\s+/)) {
+		const word = raw.replace(/^[^\p{L}]+|[^\p{L}']+$/gu, "");
+		const lower = word.toLowerCase();
+		const english =
+			lower !== "" &&
+			word !== word.toUpperCase() &&
+			ENGLISH_FUNCTION_WORDS.has(lower) &&
+			!own.has(lower);
+
+		run = english ? run + 1 : 0;
+
+		if (run >= 2) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * The one verdict the fill and the sweep both judge a filled slot by, so
  * that the fill refuses exactly what the sweep would empty: anything else
  * is a loop, each writing back what the other takes away. `source` is the
@@ -520,6 +642,10 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 		return "unchanged";
 	}
 
+	if (hasEnglishRun(tag, text)) {
+		return "english";
+	}
+
 	// After `unchanged`: an answer that is the English again has every
 	// sentence the English had, and reporting it as the echo it is keeps the
 	// sweep's counts honest.
@@ -527,5 +653,10 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 		return "sentences";
 	}
 
-	return isSuspectCatalogEntry(tag, source, text);
+	// Last: an answer with none of the target's script in it is foreign
+	// as a whole, which is the better report.
+	return (
+		isSuspectCatalogEntry(tag, source, text) ??
+		(hasStrayLatin(tag, source, text) ? "stray-latin" : null)
+	);
 }

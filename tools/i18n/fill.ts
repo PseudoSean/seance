@@ -21,7 +21,7 @@
 // Russian the OPUS-MT pair answers degenerately.
 //
 // The unit of work is a msgstr SLOT: a singular entry has one, a plural
-// entry one per gettext form — the slot n = 1 reads translates msgid, the
+// entry one per gettext form — only a slot n = 1 alone reads (by CLDR) translates msgid, the
 // rest translate msgid_plural, and a one-form language's single slot takes
 // the plural text (tools/i18n/plural.ts planPluralSlots). Each
 // slot's source text is protected (spans.ts, the marker form the engine's
@@ -515,7 +515,7 @@ async function main(): Promise<void> {
 				entry.msgstr.push("");
 			}
 
-			for (const {index, source} of planPluralSlots(entry, rule.nplurals, rule.expr)) {
+			for (const {index, source} of planPluralSlots(entry, rule.nplurals, rule.expr, tag)) {
 				if (!entry.msgstr[index]) {
 					todo.push({
 						entry,

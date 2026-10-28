@@ -31,8 +31,8 @@ export interface TermEntry {
 export interface ChannelTranslation {
 	/**
 	 * Reading on or off. The language is not per channel: it is the
-	 * interface's (the unified setting, with the Settings override as the
-	 * exception), so a stored record only remembers the switch. A record
+	 * interface's (the one `locale` setting), so a stored record only
+	 * remembers the switch. A record
 	 * from before the unification carries the language a per-channel
 	 * picker once set ("de"); anything truthy loads as on.
 	 */
@@ -290,6 +290,72 @@ export function termsFor(
 	}
 
 	return out;
+}
+
+/**
+ * Whether a record's key names a private conversation: a query's key is the
+ * nick. Decided on the name, because no network's CHANTYPES exist at boot
+ * or in a backup file; a nick never starts with a channel prefix.
+ */
+export function isPrivateKey(key: string): boolean {
+	return !/^[#&!+]/.test(splitKey(key).name);
+}
+
+/**
+ * A copy of `all` without the terms of private conversations (the rest of
+ * each record stays: its switches are settings, not anything said). A term
+ * is a whole short line the user sent, so a query's are what was said in
+ * private, kept and carried only where the query's own lines would be.
+ */
+export function withoutPrivateTerms<T extends {terms?: unknown}>(
+	all: Record<string, T>
+): Record<string, T> {
+	const out: Record<string, T> = {};
+
+	for (const [key, value] of Object.entries(all)) {
+		out[key] =
+			isPrivateKey(key) && Array.isArray(value?.terms) && value.terms.length > 0
+				? {...value, terms: []}
+				: value;
+	}
+
+	return out;
+}
+
+/**
+ * Drop the terms of one conversation (a query closed: what was said in it
+ * goes with it, as its log does). Returns the record left, or null when
+ * there was nothing to drop.
+ */
+export function forgetTerms(networkUuid: string, channelName: string): ChannelTranslation | null {
+	const all = loadAll();
+	const key = channelKey(networkUuid, channelName);
+	const current = all[key];
+
+	if (!current || current.terms.length === 0) {
+		return null;
+	}
+
+	all[key] = {...current, terms: []};
+	saveAll(all);
+
+	return all[key];
+}
+
+/**
+ * Drop the terms of every private conversation, on every network
+ * (`keepPrivateConversations` off). Returns whether anything was dropped.
+ */
+export function forgetPrivateTerms(): boolean {
+	const all = loadAll();
+	const next = withoutPrivateTerms(all);
+
+	if (Object.keys(all).every((key) => all[key] === next[key])) {
+		return false;
+	}
+
+	saveAll(next);
+	return true;
 }
 
 export function forgetChannel(networkUuid: string, channelName: string): void {

@@ -211,7 +211,6 @@
 				:anchor="translateOnceButton"
 				:selected="translateOncePreselected"
 				:selected-from="translateOnceFrom"
-				:polish-available="polishAvailable"
 				:once-offered="canTranslateOnce"
 				purpose="target"
 				@pick="translateOnce"
@@ -294,12 +293,19 @@ import {
 } from "../js/helpers/compose";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
-import {languageName} from "../js/translate/languages";
-import {draftGate} from "../js/translate/outgoing";
-import {readingLanguage, setChannelOptions, translationAvailable} from "../js/translate/reader";
+import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
+import {draftGate, onceTargetDefault, sendableTranslation} from "../js/translate/outgoing";
+import {
+	channelTranslation,
+	pairVerdict,
+	readingLanguage,
+	setChannelOptions,
+	translationAvailable,
+} from "../js/translate/reader";
 import SourceLanguagePicker from "./SourceLanguagePicker.vue";
 import {loadNoteText} from "../js/helpers/modelLabel";
 import {translateErrorText} from "../js/helpers/translateErrors";
+import {translateWhyText} from "../js/helpers/translateWhy";
 import {loadNote} from "../js/translate/service";
 import {
 	cancelOutgoing,
@@ -720,7 +726,14 @@ export default defineComponent({
 				return "";
 			}
 
-			const text = translateErrorText(error).replace(/\s+/g, " ").trim();
+			const text = translateErrorText(error, () => {
+				const entry = outgoing.value;
+				const verdict = entry ? pairVerdict(entry.from, entry.to) : null;
+
+				return verdict && !verdict.route ? translateWhyText(verdict.why) : "";
+			})
+				.replace(/\s+/g, " ")
+				.trim();
 
 			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
 		};
@@ -958,18 +971,14 @@ export default defineComponent({
 				}
 
 				const translated = entry.status === "done" ? entry.text : null;
-				let line = translated ?? text;
-
-				if (translated !== null && gate.kind === "action") {
-					// The translation is the action's text: the command goes
-					// back on the front of it, never escaped.
-					line = `/me ${translated}`;
-				} else if (translated !== null && translated.startsWith("/")) {
-					// A translation that begins with "/" is text, not a command:
-					// the IRC layer sends `//x` as the text `/x`, and deliver's
-					// own slash intercept would otherwise take it for a UI one.
-					line = `/${translated}`;
-				}
+				// A translation is text, never a command, on every line of it
+				// (outgoing.ts sendableTranslation); an action's goes back
+				// behind its `/me `. Whether the later lines need escaping is
+				// the IRC layer's split: one message under draft/multiline.
+				const splitsLines =
+					clientForNetwork(props.network.uuid)?.multilineLimits() === undefined;
+				const line =
+					translated === null ? text : sendableTranslation(gate, translated, splitsLines);
 
 				// Before the send: the IRC layer puts the line in the store
 				// inside deliver's emit, and cancelOutgoing takes the strip.
@@ -1215,22 +1224,25 @@ export default defineComponent({
 				return;
 			}
 
-			// The channel's last pick, else the language the interface is in:
-			// a first pick starts from what the user reads and writes, not
-			// from whatever sorts first in the list.
-			translateOncePreselected.value =
-				lastOnceTarget(props.network, props.channel) || readingLanguage();
+			// The channel's last pick, else a language the channel speaks,
+			// else the user's own (the cleanup pass) -- each only where this
+			// device can serve it from the reading language, so a device
+			// without the GPU model never opens on a disabled cleanup pass
+			// (outgoing.ts `onceTargetDefault`).
+			const reading = readingLanguage();
+			translateOncePreselected.value = onceTargetDefault({
+				reading,
+				last: lastOnceTarget(props.network, props.channel),
+				declared: channelTranslation(props.network, props.channel).languages,
+				fallback: SUPPORTED_LANGUAGES,
+				routes: (to) => !!pairVerdict(reading, to).route,
+			});
 			translateOncePickerOpen.value = !translateOncePickerOpen.value;
 		};
 
 		// A same-language pick is a cleanup pass on the GPU model
-		// (writer.ts, router.ts): the dialog says so, and says when the
-		// model is off or the device has none.
-		const polishAvailable = computed(
-			() =>
-				store.state.translation.capability?.tier === "gpu" &&
-				!!store.state.settings.translateLlm
-		);
+		// (writer.ts, router.ts): the dialog asks the router's own rule
+		// (reader.ts `pairVerdict`) and says why when it cannot run.
 
 		const translateOnce = (to: string, from: string | null = null, once = false) => {
 			translateOncePickerOpen.value = false;
@@ -1604,7 +1616,6 @@ export default defineComponent({
 			translateOncePreselected,
 			translateOnceFrom,
 			sendTarget,
-			polishAvailable,
 			openTranslateOnce,
 			translateOnce,
 		};

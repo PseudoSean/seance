@@ -136,6 +136,54 @@ export function draftGate(text: string, editing: boolean): DraftGate {
 }
 
 /**
+ * The composer's line for a translation the second Enter sends. A
+ * translation is text, never a command: the model wrote it, from a prompt
+ * that quotes the channel's topic and other people's lines, so a line of it
+ * that begins with "/" must not run (`/quit`, `/msg NickServ …`, or any raw
+ * line, since unknown commands go out as typed).
+ *
+ * The first line is the whole text's front, which the IRC layer reads as a
+ * command in every mode: it is escaped (`//x` is sent as the text `/x`), and
+ * an action's goes behind its `/me `. The later lines depend on the mode
+ * (irc/commands dispatchInput): under `draft/multiline` a multi-line say or
+ * action is one message and its lines go out verbatim, so they are left
+ * alone (an escape would be sent as `//x`); without it (`splitsLines`) every
+ * line is its own input and each one that begins with "/" is escaped.
+ * Except where the draft's own line at the same place is a command (`/x`,
+ * not the escaped text `//x`): the user typed that one, so the draft's line
+ * goes in its place, as it would have untranslated — never the model's,
+ * which could have swapped in a command of its own.
+ */
+export function sendableTranslation(
+	gate: DraftGate,
+	translated: string,
+	splitsLines: boolean
+): string {
+	const lines = translated.split("\n");
+	const draftLines = gate.text.split("\n");
+	const aligned = draftLines.length === lines.length;
+	const out = lines.map((line, i) => {
+		if (i === 0 || !splitsLines) {
+			return line;
+		}
+
+		const typed = aligned ? draftLines[i] : "";
+
+		if (typed.startsWith("/") && !typed.startsWith("//")) {
+			return typed;
+		}
+
+		return line.startsWith("/") ? `/${line}` : line;
+	});
+
+	if (gate.kind === "action") {
+		return `/me ${out.join("\n")}`;
+	}
+
+	return out[0].startsWith("/") ? `/${out.join("\n")}` : out.join("\n");
+}
+
+/**
  * The source language sent with a write. A draft too short to place
  * (`detection.lang === null`) is taken as the user's reading language when
  * that differs from the target, else left to the LLM. A draft the detector
@@ -182,6 +230,50 @@ export function writeSource(
  */
 export function reverseTarget(readingLanguage: string, writeTarget: string): string | null {
 	return readingLanguage !== writeTarget ? readingLanguage : null;
+}
+
+/**
+ * The language the composer's translate dialog opens on (ChatInput.vue).
+ * Its source is the reading language, so a target equal to it is the
+ * cleanup pass, which only the GPU model runs: opening on it made every
+ * device without one -- most phones, Firefox -- open the dialog disabled,
+ * "Correcting a message needs the GPU model", as though translation did
+ * not work there at all. So a preselection the device cannot serve is
+ * passed over, in this order:
+ *
+ * - the channel's last pick (`once`, else its send target);
+ * - a language the channel declares, other than the reading language;
+ * - the reading language itself -- the cleanup pass, where it runs;
+ * - the first of `fallback` (the supported list, English first) that is
+ *   not the reading language.
+ *
+ * `routes(to)` is the router's verdict for reading → `to`. When nothing
+ * routes (the probe still running, both engines off) the old preselection
+ * stands -- the last pick, else the reading language -- and the dialog
+ * says why it cannot run.
+ */
+export function onceTargetDefault(options: {
+	reading: string;
+	last: string;
+	declared: readonly string[];
+	fallback: readonly string[];
+	routes: (to: string) => boolean;
+}): string {
+	const {reading, last, declared, fallback, routes} = options;
+	const candidates = [
+		last,
+		...declared.filter((code) => code !== reading),
+		reading,
+		...fallback.filter((code) => code !== reading),
+	];
+
+	for (const code of candidates) {
+		if (code && routes(code)) {
+			return code;
+		}
+	}
+
+	return last || reading;
 }
 
 /** What two texts are compared as by `isUnchanged`: the differences a model

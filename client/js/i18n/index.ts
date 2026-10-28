@@ -1,6 +1,6 @@
 // Vue binding + activation for the i18n runtime: the components' useI18n(),
 // the `locale` setting's activate(), and the pre-boot <html lang>/<html dir>
-// hand-off with the pre-paint script in client/index.html. The resolver
+// hand-off with the pre-paint script, client/js/prepaint.js. The resolver
 // itself is the Vue-free core.ts (mocha loads that one, not this file).
 
 import {computed, ref} from "vue";

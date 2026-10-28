@@ -406,6 +406,60 @@ describe("translate/protocol", () => {
 		expect(seen).to.deep.equal(["no WebAssembly"]);
 	});
 
+	// The Worker's own `error` event (index.ts): before the worker has said
+	// anything, it never started and nothing will be answered; after, it is
+	// a stray exception in a working worker and only reported.
+	it("an error before the worker said anything is a dead worker; after, only a report", async () => {
+		const [mainPort] = createPortPair();
+		const silent = new TranslateClient(mainPort);
+		const dead: string[] = [];
+
+		silent.onDead = (detail) => dead.push(detail);
+		silent.workerError("");
+		expect(dead).to.deep.equal([""]);
+
+		const {client} = rig();
+		const reported: string[] = [];
+		let died = false;
+
+		client.onDead = () => (died = true);
+		client.onWorkerError = (message) => reported.push(message);
+		await client.models();
+		client.workerError("stray");
+		client.workerError("");
+
+		expect(died).to.equal(false);
+		expect(reported).to.deep.equal(["stray"]);
+	});
+
+	it("fail rejects everything pending with the error it is given", async () => {
+		const [mainPort] = createPortPair();
+		const client = new TranslateClient(mainPort);
+		const models = client.models();
+		const stream = collect(
+			client.translate(
+				{
+					id: 1,
+					model: llmRef.id,
+					text: "Hallo",
+					from: "de",
+					to: "en",
+					purpose: "read",
+					context: emptyContext(),
+				},
+				llmRef
+			)
+		);
+
+		client.fail(new Error("gone"));
+
+		const outcomes = await Promise.allSettled([models, stream]);
+
+		expect(
+			outcomes.map((o) => (o.status === "rejected" ? (o.reason as Error).message : ""))
+		).to.deep.equal(["gone", "gone"]);
+	});
+
 	it("a throwing cache rejects models() but leaves the worker alive", async () => {
 		const {client, cache} = rig();
 

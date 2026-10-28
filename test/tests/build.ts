@@ -36,9 +36,17 @@ describe("public folder", function () {
 
 		expect(html.includes("__APP_NAME__")).to.be.false;
 		expect(html.includes("__THEME_COLOR__")).to.be.false;
+		// No inline script: a Content-Security-Policy refuses those (the
+		// Electron shell's does, shells/electron/main.js), so everything that
+		// runs before the bundle is a file — the pre-paint language script
+		// is js/prepaint.js.
+		expect(/<script(?![^>]*\ssrc=)[^>]*>/i.test(html), "an inline <script>").to.be.false;
+		expect(html).to.match(/<script src="js\/prepaint\.js\?v=[^"]+"><\/script>/);
 		// Substituted at build from client/locales/tags.json for the pre-paint
 		// script; a leftover token would break the language resolution.
-		expect(html.includes("__AVAILABLE_LOCALES__")).to.be.false;
+		const prepaint = fs.readFileSync(path.join(publicFolder, "js", "prepaint.js"), "utf8");
+		expect(prepaint.includes("__AVAILABLE_LOCALES__")).to.be.false;
+		expect(prepaint).to.match(/"en(,[a-zA-Z-]+)*"\.split\(","\)/);
 		expect(html.includes(`<title>${config.appName}</title>`)).to.be.true;
 		expect(html.includes("The Lounge")).to.be.false;
 		expect(manifest.name).to.equal(config.appName);

@@ -460,7 +460,7 @@ type GroupWithContext = {
 	shown: MentionWithContext[];
 };
 
-/** How often "a few seconds ago" is redone while the pane is open. */
+/** How often the relative times ("now", "5 minutes ago") are redone while the pane is open. */
 const CLOCK_TICK_MS = 30_000;
 
 export default defineComponent({

@@ -316,7 +316,7 @@ import type {ClientNetwork} from "../../js/types";
 import type {LoggedNotice} from "../../js/irc/noticelog";
 import socket from "../../js/socket";
 import storage from "../../js/localStorage";
-import {formatDateTime} from "../../js/i18n/dates";
+import {formatDateTime, formatTime} from "../../js/i18n/dates";
 import {useI18n} from "../../js/i18n";
 import {frameSegments, KEEP} from "../../js/i18n/core";
 import useNow from "../../js/hooks/use-now";
@@ -431,8 +431,10 @@ export default defineComponent({
 			socket.off("oper:notices", onNotices);
 		});
 
-		const clock = (ms: number) => dayjs(ms).format("HH:mm");
-		const seconds = (ms: number) => dayjs(ms).format("HH:mm:ss");
+		// The app's language and its 12/24-hour setting, like every other
+		// time in the app (dayjs's "HH:mm" was always 24-hour).
+		const clock = (ms: number) => formatTime(ms, false);
+		const seconds = (ms: number) => formatTime(ms, true);
 		const span = (g: KindGroup) =>
 			clock(g.first) === clock(g.last)
 				? clock(g.last)

@@ -31,6 +31,55 @@ export type CatalogFetcher = (
 /** Overlays already fetched in this worker's lifetime, keyed by tag. */
 const overlays = new Map<string, Catalog>();
 
+/** Overlay fetches still on the way, keyed by tag: a push that gave up
+ * waiting leaves its fetch running, and the next push joins it. */
+const loading = new Map<string, Promise<Catalog>>();
+
+/**
+ * How long a push waits for its overlay before it goes out in English. A
+ * phone's worker is usually terminated between pushes, so the overlay is
+ * fetched again on most of them; on a slow or stalled connection the
+ * notification would otherwise wait for the browser's own fetch timeout
+ * (and WebKit's 20 s fallback would show a stub in its place). A late
+ * overlay is still kept for the next push.
+ */
+export const OVERLAY_TIMEOUT_MS = 2000;
+
+function loadOverlay(fetcher: CatalogFetcher, appUrl: string, locale: string): Promise<Catalog> {
+	let pending = loading.get(locale);
+
+	if (!pending) {
+		pending = (async () => {
+			const response = await fetcher(new URL(`locales/${locale}.json`, appUrl).href);
+
+			if (!response.ok) {
+				throw new Error(`no catalog for ${locale} (HTTP ${response.status ?? 0})`);
+			}
+
+			return (await response.json()) as Catalog;
+		})();
+		loading.set(locale, pending);
+		pending.then(
+			(overlay) => {
+				overlays.set(locale, overlay);
+				loading.delete(locale);
+			},
+			() => loading.delete(locale)
+		);
+	}
+
+	return pending;
+}
+
+function within<T>(promise: Promise<T>, ms: number): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const expired = new Promise<never>((_, reject) => {
+		timer = setTimeout(() => reject(new Error("overlay timed out")), ms);
+	});
+
+	return Promise.race([promise, expired]).finally(() => clearTimeout(timer));
+}
+
 /** Tags that may build a fetch URL: BCP-47-ish, nothing URL-special. The
  * value comes from our own IndexedDB (push-prefs.ts), but the worker has
  * no way to vouch for what a stale entry carries. */
@@ -48,7 +97,8 @@ function safeTag(tag: string | undefined | null): string {
 export async function applyLocale(
 	fetcher: CatalogFetcher,
 	appUrl: string,
-	tag: string | undefined | null
+	tag: string | undefined | null,
+	timeoutMs = OVERLAY_TIMEOUT_MS
 ): Promise<string> {
 	const locale = safeTag(tag);
 
@@ -58,24 +108,14 @@ export async function applyLocale(
 	}
 
 	try {
-		let overlay = overlays.get(locale);
-
-		if (!overlay) {
-			const response = await fetcher(new URL(`locales/${locale}.json`, appUrl).href);
-
-			if (!response.ok) {
-				throw new Error(`no catalog for ${locale} (HTTP ${response.status ?? 0})`);
-			}
-
-			overlay = (await response.json()) as Catalog;
-			overlays.set(locale, overlay);
-		}
+		const overlay =
+			overlays.get(locale) ?? (await within(loadOverlay(fetcher, appUrl, locale), timeoutMs));
 
 		setCatalog(locale, enCatalog, overlay);
 		return locale;
 	} catch {
-		// Unknown tag, or the fetch missed: the notification still goes out,
-		// in the default language.
+		// Unknown tag, the fetch missed, or it is taking too long: the
+		// notification still goes out, in the default language.
 		setCatalog("en", enCatalog, undefined);
 		return "en";
 	}

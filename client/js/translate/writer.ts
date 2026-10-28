@@ -11,6 +11,7 @@ import {BUILD} from "../build";
 import socket from "../socket";
 import {store, type OutgoingTranslation, type TranslationEntry} from "../store";
 import type {ClientChan, ClientNetwork} from "../types";
+import {ChanType} from "../../../shared/types/chan";
 import {
 	type Formality,
 	channelKey,
@@ -822,7 +823,12 @@ export function noteOutgoingSent(
 		}
 	}
 
-	const pair = termPair(draft, translation);
+	// A term is a whole short line the user sent: in a query it is what was
+	// said in private, kept only while private conversations are kept on
+	// the device (the query log's setting, which clears these too).
+	const privateUnkept =
+		channel.type === ChanType.QUERY && store.state.settings.keepPrivateConversations === false;
+	const pair = privateUnkept ? null : termPair(draft, translation);
 
 	if (pair) {
 		rememberTerm(network.uuid, channel.name, {source: pair[0], target: pair[1], from, to});

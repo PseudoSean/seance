@@ -9,25 +9,50 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 
 - **GPU: WebLLM.** An instruction LLM on WebGPU, prompted to translate with
   the channel's context. Greedy at temperature 0.1, thinking off, one line
-  of output. Needs an adapter with `shader-f16` and 1 GiB of buffer,
-  WebLLM's floor for a q4f16 model; adapters report 2 GiB minus alignment slack (`capability.ts`).
+  of output. Needs an adapter with `shader-f16` and a storage binding
+  (`capability.ts`: `min(maxBufferSize, maxStorageBufferBindingSize)`)
+  that holds the smallest GPU model's largest tensor -- `models.ts`
+  `LLM_MIN_BUFFER_BYTES`, the 1.7B's 148 MiB vocabulary embedding, since a
+  model binds each weight tensor whole. Which model fits is `llmFits(ref, maxBufferBytes)` against its `largestBufferBytes` (185 MiB for the 4B,
+  read from each model's `tensor-cache.json`). WebLLM 0.2.85 itself asks
+  the GPU for 1 GiB, or WebGPU's 128 MiB floor when the adapter cannot give
+  that -- nothing between -- so on a phone offering 512 MiB it got 128 MiB
+  and no model loaded; the worker wraps `GPUAdapter.prototype.requestDevice`
+  (`engines/gpuLimits.ts`, installed by `webllm.real.ts`) to ask for what
+  the adapter offers, capped at WebLLM's own 1 GiB so a desktop's device is
+  unchanged, and to make the original request should the raised one be
+  refused. A device whose binding is under 148 MiB (WebGPU's 128 MiB
+  minimum, which many phones report) runs no GPU model yet.
   There must be a `navigator.gpu` at all: away from localhost a plain-HTTP
   origin is not a secure context and the API does not exist, so the probe's
   reason says so — "insecure origin: WebGPU needs HTTPS or localhost —
   serve the app over HTTPS" — where a bare "no WebGPU" would send someone
   shopping for a GPU they already have. Settings' device note shows it.
 - **Two GPU models, one chosen.** `models.ts` `LLM_CHOICES`: `Qwen3-1.7B-q4f16_1-MLC`
-  (the default, ~1.1 GB download, ~2.0 GB of GPU memory) and
-  `Qwen3-4B-q4f16_1-MLC` (~2.3 GB, ~3.4 GB). On 45 casual chat lines into
+  (the default, 984 MB download, ~2.0 GB of GPU memory) and
+  `Qwen3-4B-q4f16_1-MLC` (2.28 GB, ~3.4 GB); NLLB is 912 MB with its
+  tokenizer and an OPUS-MT pair about 113 MB (Hugging Face's listings,
+  2026-10-27; Settings shows them). On 45 casual chat lines into
   French, German and Spanish they scored alike (41 and 40 clean), and 4B's
   phrasing read noticeably more natural; it is also slower and needs more
-  memory. It is nonetheless the **default** on a device with the memory for
-  it (`models.ts` `defaultLlmForAdapter`): where the probe read
-  `navigator.deviceMemory`, the 4B needs **6 GiB** of device memory
-  (`LARGE_LLM_MIN_MEMORY_GIB`), because Chrome clamps the adapter's
-  addressable buffer to ~2 GiB on most desktop GPUs and the buffer rule
-  would never reach the 4B there; without that reading (Safari, Firefox)
-  the adapter's addressable buffer must cover the model's ~3.4 GB. The pick
+  memory. It is nonetheless the **default** on a computer with the memory
+  for it (`models.ts` `defaultLlmForAdapter`): only a model the GPU can
+  bind (`llmFits`) is a candidate, and the 4B needs the probe to have read
+  **6 GiB** of `navigator.deviceMemory` (`LARGE_LLM_MIN_MEMORY_GIB`) on a
+  device that is not a phone or tablet (`Capability.mobile`:
+  `userAgentData.mobile`, else the user agent, an iPad asking for desktop
+  sites by its touch points) -- Chrome reports 8 GiB on many phones, where
+  3.4 GB is most of the memory. Without a `deviceMemory` reading (Safari,
+  Firefox) the default is the 1.7B: the adapter's limit is per buffer and
+  says nothing about the total. A model this GPU cannot bind is greyed in
+  the "GPU model" select (a disabled option, a hint under the select
+  naming it with the buffer numbers: `Translation.vue` `llmUnfit`, the
+  `buffer` or `device` block of `modelBlock`, on a `gpu`-tier device only --
+  elsewhere the choice only keys the route table), so it cannot be chosen
+  and then quietly not run; a stored choice that does not fit (a restored
+  backup, another device) still runs the default instead (`llmChoice`),
+  so a `gpu` tier always means the model in use can load, and its Settings
+  row says why. The pick
   stands in for an unset setting **at read time and is never persisted as a
   choice**, and only on a `gpu`-tier device — the selected model also picks
   the route table, whose non-LLM entries differ between the two, so a device
@@ -82,9 +107,9 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   `translation-languages.txt`, which the beta trimmed to 24 (§ i18n.md
   "Adding a language"). A line in a dropped language
   is no longer detected as that language (franc's candidates are the
-  supported list), so it reads as unplaced; a stored Settings override
-  that is no longer offered is treated as "auto" by the reading-language
-  guard (`reader.ts` `readingLanguage`), and a channel's stored read
+  supported list), so it reads as unplaced; the reading language is the
+  interface's (`reader.ts` `readingLanguage`, `fromLocaleTag`), which
+  maps any tag the supported list lacks to English, and a channel's stored read
   language — the per-channel picker the unification removed — loads as
   plain "on" (`channelStore.ts`). All four scores rest on three cases each
   (`tools/translate-eval/results/2026-09-13-web-weights.md`); the best were
@@ -186,9 +211,104 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   trip flatters benchmark-trained models in chat. Each placement
   applies to the language as source and as target. `LIMITED_LANGUAGES`
   (is lv et hi lt bn hu sk ko) are the languages whose best engine brought back
-  under 55%: the panel's write picker and the Settings override say
+  under 55%: the panel's write picker and the Settings language select say
   "Translations into and out of this language are often wrong." when one is
   chosen — the selected GPU model's list.
+
+### What runs here, and why not
+
+One Vue-free rule answers "can this run on this device, and if not why" for
+every surface, so nothing is offered that the router would refuse and
+nothing the router would take is hidden:
+
+- **Per model** -- `models.ts` `modelBlock(ref, capability, switches, enabled)` returns null or a reason, in the order the user can do least
+  about first: `disabled` (the deploy), `probing` (no probe answer yet),
+  `device` (a capability code: for a GPU model the first of PROBE_FAILED,
+  INSECURE_ORIGIN, NO_WEBGPU, NO_ADAPTER, NO_F16; for a CPU model
+  NO_WASM_SIMD), `buffer` (`{needed, limit}`: the model's largest tensor
+  against the adapter's binding, given to every GPU row, on a cpu-tier
+  SMALL_BUFFER device too, and never when f16 is missing), then `off` (its
+  engine switched off in Settings, or NLLB-200's own opt-in, `engine: "nllb"`). A model the device cannot run is never reported as switched
+  off.
+- **Per pair** -- `router.ts` `explainRoute(table, catalog, input)` is the
+  router: `resolveRoute` is `explainRoute(...).route`. With no route it
+  gives the reason (a candidate's `modelBlock`, `down` for one that failed
+  this session, `download` for a model whose download the user declined,
+  `unserved`) and `polish` for a one-language request. Of several
+  candidates' reasons a switch the user turned off wins (both off is
+  `engine: "all"`), then a declined download, else the best class's. `routeInput(capability, switches, pair)` builds the input from the probe for the service and the
+  UI alike, including WebAssembly SIMD on a gpu-tier device; a UI question
+  with no source yet (`sourceLater`) counts the CPU models as the detector
+  will name one.
+- **At all** -- `router.ts` `translationBlock` (the GPU model in use and
+  the CPU models): null while either runs.
+
+`reader.ts` `pairVerdict(from, to)` and `currentTranslationBlock()` are the
+store glue, `helpers/translateWhy.ts` the words (one whole sentence per
+reason, shown under a lead sentence, never spliced into it). Where it
+shows: Settings -> Translation's model rows ("Can run on this device" /
+"Can't run on this device" with the reason, "Switched off above"; Download
+disabled and described by the reason); the composer's translate dialog and
+the chips' "Retranslate from…" (the confirm disabled, the reason in a polite
+live region that describes it); the panel (a notice when nothing runs, the
+reading switch's On disabled, languages nothing can write in greyed under
+"Send my messages in" with the reason, the note naming the greyed option);
+the header button (dimmed, labelled "Translation can't run here right
+now." on touch as with a pointer, its click opens the panel); the message
+toolbar's Translate (with a pointer disabled, the reason as its tooltip and
+description; under a finger, which shows no tooltip, `aria-disabled` and
+its tap opens the panel with the reason); and a line or strip that failed for
+want of an engine names why. Tests: `test/translate/availability.ts`;
+browser check `tools/scenarios/translate-capability.mjs` (five stubbed
+adapters, also `--mobile`).
+
+### A download asks first
+
+The router sends a request to the best class whether its model is
+downloaded or not, and the service downloads on demand, so one click on the
+header's translate button could start a 1-2 GB download. Before the first
+download of a model that is not on the device, not downloading already and
+never agreed to, the user is asked once (`consent.ts` `DownloadConsent`,
+held by the service): the app's confirm dialog (`ConfirmDialog.vue`, its
+`note`/`cancel`/`primary` options) titled "Download <model>?", the size from
+`ModelRef.sizeBytes` through `friendlysize`, a line about the connection
+when `navigator.connection` reports Save-Data or a cellular link, and
+Download / Not now. The question is asked **when the route is resolved**
+(`service.ts` `resolve`, which `route()` and `translate()`'s own walk go
+through), before the reading queue or the composer arms a request
+deadline, so a dialog left open times nothing out and the queue's engine
+and marker form are chosen with the answer known.
+
+- **Once.** Every request waiting on the same model shares one question,
+  and one dialog is open at a time across models; a channel with fifty
+  queued lines asks once.
+- **Download** is remembered per model in `thelounge.state.translateConsent`
+  (`storedConsent`; `thelounge.state.*` is never in the settings backup).
+  Settings' own Download button is consent already (it shows the size) and
+  records it; deleting a model in Settings takes it back.
+- **Not now** holds implicit downloads back for the rest of the session:
+  that walk, and every later one, takes only a model that needs no
+  download (on the device, agreed to, or downloading already), so the
+  fallback never pops a second dialog for NLLB or an OPUS pair. With none,
+  the request fails with `needsDownloadError(ref)` -- a code and the model
+  as JSON, which `helpers/translateErrors.ts` words as "Needs <model>, a
+  <size> download: get it in Settings → Translation." (the line's reason, in
+  full in its tooltip). The reading queue gets it as a rejected route
+  (`reader.ts`, through `enqueueAt`'s rejection path) or, should
+  `translate()` report it, through `fail()`, which counts it toward no
+  pause (`PAUSE_AFTER_FAILURES` never trips on a declined download). A
+  Retry on a line is a new question (`service.forgetDeclines`).
+- The UI's availability questions (`pairVerdict`) do not read declines:
+  the actions stay offered, and a line or strip says why it did not run.
+- Without a dialog wired (`ServiceDeps.askDownload` absent) every download
+  goes ahead unasked; the in-page fake (`?fakeTranslate`) asks only when
+  the URL also has `askDownloads`.
+
+Tests: `test/translate/consent.ts`, `test/translate/service.ts` "download
+consent"; browser check `tools/scenarios/translate-capability.mjs` (one
+question for a channel's lines, Not now naming the model on each line, no
+pause) and `tools/scenarios/translate-consent.mjs` (the fake: Not now
+falling back to a downloaded OPUS pair).
 
 ## Reading a channel
 
@@ -268,8 +388,7 @@ all read `<Source> → <Target>` -- no "from", "to", "into" or "reads back
 as" -- and every language name in them and in their titles is
 `languageName(code, readingLanguage())`: the reading language
 (`reader.ts` `readingLanguage`, the one helper the composer uses too --
-the interface's language, or the Settings `translateTo` override when one
-is set). A user who reads
+the interface's language; there is no separate reading override). A user who reads
 English sees "French → English", one who reads German sees "Französisch →
 Englisch". The chip menu's actions keep their wording ("Retranslate from
 French") with the names chosen the same way; the language pickers keep
@@ -590,8 +709,8 @@ translation is the composer's read-back (§ Writing in a channel): it is
 kept, and left out of the requeue, when it is already in the reading
 language; when it is not it goes with the rest and the line is translated
 again like any other. The same requeue runs for every reading-on channel
-when the reading language itself moves -- the Settings override changed,
-or the interface's did and the override follows it (`reader.ts`
+when the reading language itself moves -- the interface's language
+changed, in Settings or through the dev globe (`reader.ts`
 `restartAllReading`). That path calls `requeueReading` itself: reading is
 already on, so `setReading` would return at its no-op guard and retranslate
 nothing. The language reading started in is recorded in `initReader`, so
@@ -644,7 +763,8 @@ that turns reading **on** opens the panel with it, so the reader sees and
 can adjust the languages at once (a click that turns reading off only
 turns it off); on touch there is no
 right-click, so the **tap** opens the panel (whose first control is the
-reading switch) and the button's label says "Translation settings". The
+reading switch) and the button's label says "Translation settings" (or,
+when nothing here can translate, that it cannot run). The
 channel menu's "Translation..." reaches it on both. It closes on the X, on
 Done, on Escape, and -- the anchored panel only, since the sheet has no
 outside -- on a click outside it; the caret goes back to the translate
@@ -667,8 +787,8 @@ is in: the panel's lists, the composer's translate-into dialog and the
 chip menu's retranslate-from dialog all call `languageName(code, readingLanguage())` (`Intl.DisplayNames` in the reading language, the
 bundled English table behind it), so an English interface offers "French"
 and not "Français". The one list that keeps the endonym is the interface's
-own language selector (`LanguageSelect.vue` -- Settings -> Appearance, the
-Settings -> Translation override and the sidebar globe, `languageEndonym()`):
+own language selector (`LanguageSelect.vue` -- Settings -> Translation's
+language select and the dev build's sidebar globe, `languageEndonym()`):
 someone looking for a language to read the app in is looking for its own
 name.
 
@@ -680,8 +800,8 @@ Vue-free and i18n-free -- `models.ts`, `service.ts` and `capability.ts`
 return **codes** (a model's label, a load note's phase, a device verdict's
 reason) and the component that shows one maps it to a key, with a prose
 fallback for a code it does not know. Three consequences worth keeping:
-the Settings -> Translation language override is `LanguageSelect.vue`, the
-same control the sidebar globe and Appearance use, so there is one list of
+the Settings -> Translation language select is `LanguageSelect.vue`, the
+same control the dev build's sidebar globe uses, so there is one list of
 codes and not two that could disagree; the channel menu's "Translation…"
 is offered only where the deploy has translation at all
 (`reader.ts` `translationAvailable`); and the composer strip's live region
@@ -716,10 +836,16 @@ target, session-only, so the model's phrasing stays consistent across a
 conversation without ever touching persisted storage.
 
 The language the user reads in is **one language everywhere**
-(`reader.ts` `readingLanguage`): the interface's, since the reading and
-interface selections unified -- with the Settings → Translation override
-(`translateTo`, default "auto") as the exception a reader who wants
-translations into something else sets for themselves. Reading itself
+(`reader.ts` `readingLanguage`): the interface's. One setting, `locale`,
+chosen in Settings → Translation (it stays there when a deploy turns
+translation off), is both the language the app is written in and the one
+messages are translated into; the old `translateTo` reading override is
+gone (`settings.ts` `migrateReadingToLocale` moved a pinned one into
+`locale` and deleted it). One consequence: the reading language can only
+be one of the interface's languages (the 24 of
+`translation-languages.txt`), not any of the ~50 the engines support -- a
+Finnish or Hebrew reader cannot have lines translated into Finnish or
+Hebrew until the interface offers that language. Reading itself
 stays on or off per channel; the language does not, which is why the
 composer and the reader cannot disagree the way the per-channel picker
 once let them (a channel reading English while the global named German
@@ -867,9 +993,14 @@ the panel's target moving; the strip comes up as it does for a write
 target and the next Enter sends what it holds. The dialog preselects the
 channel's last one-off language, else its write target (`lastOnceTarget`;
 the last pick is kept with the channel's record, `channelStore.ts` `once`,
-so it survives a reload and travels in the settings backup), and, with
-neither, **the language the interface is in** -- what the user reads and
-writes, rather than whatever the list happens to sort first. The dialog also asks what to translate **from**,
+so it survives a reload and travels in the settings backup), else a
+language the channel declares, else **the language the interface is in**
+(the cleanup pass), else the first supported language that is not it --
+each only where this device serves it from the reading language
+(`outgoing.ts` `onceTargetDefault`, the router's `pairVerdict`), so a
+device without the GPU model never opens on a disabled cleanup pass. When
+nothing routes at all the last pick, else the interface's language, stands
+and the dialog says why. The dialog also asks what to translate **from**,
 preselected to the language the user reads, with "Detect automatically"
 as the write target has it. **The same language twice is a cleanup**: a
 draft already in the language it is asked into is not sent as typed the
@@ -993,7 +1124,18 @@ its reading target. Before this the memory was bare pairs: after a German
 session every French write, and every reading prompt, still told the model
 to render "thanks" as "danke". A stored legacy pair carries no language and
 is dropped on load (the memory starts over once), as is an entry whose `to`
-is not a supported language or whose `from` is neither `null` nor one. Typing again, walking input history, Escape, the strip's own Edit
+is not a supported language or whose `from` is neither `null` nor one.
+
+**A query's terms are private.** A term is a whole short line the user sent,
+so in a query (`channelStore.ts` `isPrivateKey`: the key's name is a nick,
+not a `#&!+` channel) it is what was said in private, and it follows the
+query log's rules: none is recorded while `keepPrivateConversations` is
+off, switching it off drops every query's terms (`forgetPrivateTerms`, the
+store's copy reloaded), closing a query drops its own (`forgetTerms` from
+the reader's `part` handler; the record's switches stay), and the settings
+backup carries channels' terms but never a query's (`withoutPrivateTerms`).
+
+Typing again, walking input history, Escape, the strip's own Edit
 button and parting the channel all invalidate the strip; the next Enter
 starts over.
 
@@ -1378,22 +1520,25 @@ only caller:
 packages the browser build never loads, and both make `yarn install` more
 than a download of JavaScript:
 
-- **`onnxruntime-node` (pinned 1.24.3)** runs a postinstall script that
-  fetches the native runtime for the host platform — about 371 MB under
-  `node_modules/onnxruntime-node/bin/napi-v6/`. The install needs network
-  access to that CDN, not only to the npm registry, and a machine behind a
-  proxy that allows only the registry fails there.
-- **`sharp` (^0.34.5)** installs a platform prebuilt; where none exists for
-  the platform/libc it falls back to a `node-gyp` build, which needs a
-  toolchain.
+- **`onnxruntime-node` (pinned 1.24.3)** ships its CPU runtime for every
+  platform in the npm tarball (~220 MB unpacked) and runs a postinstall
+  script that, on Linux x64 only, fetches the CUDA 12 and TensorRT
+  providers from NuGet (~316 MB under
+  `node_modules/onnxruntime-node/bin/napi-v6/linux/x64/`;
+  `script/install-metadata.js`). That fetch needs network access beyond
+  the npm registry. Nothing in the repository uses CUDA:
+  `ONNXRUNTIME_NODE_INSTALL=skip` skips it, and the Pages workflow's
+  install sets it.
+- **`sharp` (^0.34.5)** installs a platform prebuilt (`@img/sharp-*`
+  optional dependencies); its install script only checks for one and,
+  where none exists for the platform/libc, falls back to a `node-gyp`
+  build, which needs a toolchain.
 
-**`yarn install --ignore-scripts` is not a safe shortcut.** It skips the
-`onnxruntime-node` download, so the package is present but has no binary,
-and anything that loads it (`tools/i18n/fill.ts`, `tools/translate-llm.ts`,
-and any `require` of `@huggingface/transformers` under Node) throws at
-import. The browser bundle is unaffected — it only ever reaches
-`onnxruntime-web` — so a CI job that does nothing but `yarn build` can get
-away with it; a job that runs the Node-side translation tools cannot.
+`yarn install --ignore-scripts` skips both scripts. The browser bundle is
+unaffected -- it only ever reaches `onnxruntime-web` -- and the Node-side
+tools (`tools/i18n/fill.ts`, `tools/translate-llm.ts`) run on the CPU
+runtime the tarball carries; only a platform without a sharp prebuilt is
+left without sharp.
 
 **`onnxruntime-web` is a nightly pin** (`1.26.0-dev.20260416-b7804b056c`,
 transitively, from `@huggingface/transformers`): it is what ships in
@@ -1402,6 +1547,40 @@ the registry, and an upgrade of `@huggingface/transformers` moves it
 without notice — re-run the CPU-model browser check
 (`SEANCE_REAL_MODELS=1 node tools/browser-drive.mjs tools/scenarios/translate-cpu-real.mjs`)
 after any such bump.
+
+## Licences
+
+The code the build ships: `@huggingface/transformers` 4.2.0 and
+`@mlc-ai/web-llm` 0.2.85 are Apache-2.0, `onnxruntime-web` (and the
+`js/ort/` wasm it loads) MIT, `franc` and its three helpers (the `js/franc.js`
+chunk) MIT -- all compatible with Seance's MIT. Neither Apache-2.0 package
+carries a NOTICE file; their builds carry no notice either, so
+`webpack.config.ts` (`chunkNotices`) writes one into
+`js/translate-worker.js.LICENSE.txt`, as it does for the markdown chunks.
+
+The weights are fetched at run time from Hugging Face (or the deploy's
+`translation.modelBase` mirror), never bundled, and come under their own
+licences (the model cards, 2026-10-28): Qwen3 1.7B and 4B Apache-2.0,
+Helsinki-NLP's OPUS-MT pairs Apache-2.0 (the weights CC-BY-4.0 upstream),
+and **NLLB-200 (distilled 600M) CC-BY-NC-4.0** -- non-commercial.
+
+So NLLB-200 is **opt-in**: Settings → Translation's "Use NLLB-200 for
+languages the other models do not cover" (`translateNllb`, under the CPU
+models' switch, with a line naming the licence) is off by default, for new
+users and existing ones alike -- a stored settings object that never chose
+reads as off, and a settings backup made before the switch existed restores
+it off. Off, the router passes over every `nllb` candidate
+(`RouteInput.allowNllb`, `modelBlock`'s `{kind: "off", engine: "nllb"}`):
+the OPUS-MT pairs come before NLLB in every shipped row anyway
+(`test/translate/routes.ts`), the GPU model serves the rest where it runs,
+and a pair only NLLB could serve here -- a language without an OPUS pair on
+a device without the GPU model -- is unavailable with the reason "This needs
+NLLB-200, which is switched off in Settings → Translation." The NLLB row
+says "Switched off above" and can still be downloaded ahead of use.
+`translationBlock` counts the CPU models with NLLB on, so the opt-in never
+makes translation as a whole unavailable. A deploy can still point
+`translation.cpu.nllb` at a model it may use (`docs/resources/branding.md`
+§ Translation); the same switch governs it.
 
 ## Weights
 

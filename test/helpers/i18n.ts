@@ -12,6 +12,7 @@ import {
 	bestLocale,
 	interpolate,
 	isRTL,
+	isTraditionalChinese,
 	resolvableTags,
 	setCatalog,
 	setWarnMissing,
@@ -20,6 +21,7 @@ import {
 	untranslatedKeys,
 	warnFragmentJoin,
 	frameSegments,
+	framePieces,
 } from "../../client/js/i18n/core";
 import {activate, useOverlayLoader} from "../../client/js/i18n";
 import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
@@ -76,6 +78,43 @@ describe("i18n core", () => {
 		expect(bestLocale(["xx-YY", "de-DE"], ["en", "de"])).to.equal("de"); // a later preference wins when an earlier has no match
 	});
 
+	it("never resolves Traditional Chinese to the Simplified catalog", () => {
+		const available = ["en", "ja", "pt", "zh"];
+		// What Chrome sends from Taiwan: the bare base appended after the
+		// regional tag must not reach zh either.
+		expect(bestLocale(["zh-TW", "zh", "en-US", "en"], available)).to.equal("en");
+		expect(bestLocale(["zh-TW"], available)).to.equal("en");
+		expect(bestLocale(["zh-HK", "zh"], available)).to.equal("en");
+		expect(bestLocale(["zh-MO"], available)).to.equal("en");
+		expect(bestLocale(["zh-Hant"], available)).to.equal("en");
+		expect(bestLocale(["zh-Hant-CN"], available), "the script beats the region").to.equal("en");
+		expect(bestLocale(["zh_TW"], available)).to.equal("en");
+		// A later preference still wins, an explicitly Simplified one included.
+		expect(bestLocale(["zh-TW", "zh", "ja"], available)).to.equal("ja");
+		expect(bestLocale(["zh-TW", "zh-CN"], available)).to.equal("zh");
+		expect(bestLocale(["zh-HK", "zh-Hans"], available)).to.equal("zh");
+		// Simplified readers keep zh.
+		expect(bestLocale(["zh"], available)).to.equal("zh");
+		expect(bestLocale(["zh-CN"], available)).to.equal("zh");
+		expect(bestLocale(["zh-SG"], available)).to.equal("zh");
+		expect(bestLocale(["zh-Hans-TW"], available), "the script beats the region").to.equal("zh");
+		expect(bestLocale(["zh-Hans-HK", "en"], available)).to.equal("zh");
+		// A Traditional catalog, were one shipped, would match its own tag.
+		expect(bestLocale(["zh-TW", "zh"], [...available, "zh-TW"])).to.equal("zh-TW");
+		// European Portuguese keeps the Brazilian catalog.
+		expect(bestLocale(["pt-PT"], available)).to.equal("pt");
+	});
+
+	it("tells Traditional Chinese tags from Simplified ones", () => {
+		for (const tag of ["zh-TW", "zh-hk", "zh-MO", "zh-Hant", "zh-Hant-TW", "zh-Hant-CN"]) {
+			expect(isTraditionalChinese(tag), tag).to.equal(true);
+		}
+
+		for (const tag of ["zh", "zh-CN", "zh-SG", "zh-Hans", "zh-Hans-TW", "ja-TW", "en-HK", ""]) {
+			expect(isTraditionalChinese(tag), tag).to.equal(false);
+		}
+	});
+
 	it("auto-resolution may pick a dev-only locale in development, never in production", () => {
 		// available.ts lists every compiled catalog whatever the build mode
 		// is (the generated file is tracked), so this filter over
@@ -90,30 +129,34 @@ describe("i18n core", () => {
 	});
 
 	it("the pre-paint script and the core agree on RTL tags", () => {
-		const html = readFileSync("client/index.html", "utf8");
-		const inline = /\/\^\(([^)]*)\)\\b\//.exec(html)?.[1] ?? "";
+		const source = readFileSync("client/js/prepaint.js", "utf8");
+		const inline = /\/\^\(([^)]*)\)\\b\//.exec(source)?.[1] ?? "";
 		const fromHtml = new Set(inline.split("|"));
 		expect([...fromHtml].sort()).to.deep.equal([...RTL_TAGS].sort());
 	});
 
-	/** Execute the pre-paint script as the build would ship it: the first
-	 * inline `<script>` of client/index.html, with `__AVAILABLE_LOCALES__`
-	 * substituted from client/locales/tags.json (webpack bakes a
-	 * comma-joined tag list at the same spot). The sandbox stubs the three
-	 * globals the script touches; lang/dir start empty, so "still empty"
-	 * means the script left them untouched. */
+	/** Execute the pre-paint script as the build would ship it:
+	 * client/js/prepaint.js, with `__AVAILABLE_LOCALES__` substituted from
+	 * client/locales/tags.json (webpack bakes a comma-joined tag list at the
+	 * same spot as it copies the file). The sandbox stubs the three globals
+	 * the script touches; lang/dir start empty, so "still empty" means the
+	 * script left them untouched. */
 	function runPrePaint(stored: object, languages: string[]): {lang: string; dir: string} {
-		const html = readFileSync("client/index.html", "utf8");
-		const source = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1];
+		const source = readFileSync("client/js/prepaint.js", "utf8");
 		const tags = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
 		const root = {lang: "", dir: ""};
 
-		expect(source, "the pre-paint script is index.html's first inline script").to.exist;
-		vm.runInNewContext(source!.replace("__AVAILABLE_LOCALES__", tags.join(",")), {
-			localStorage: {getItem: () => JSON.stringify(stored)},
-			navigator: {languages},
-			document: {documentElement: root},
-		});
+		expect(source, "the pre-paint script carries its locale marker").to.contain(
+			'"__AVAILABLE_LOCALES__"'
+		);
+		vm.runInNewContext(
+			source.replace('"__AVAILABLE_LOCALES__"', JSON.stringify(tags.join(","))),
+			{
+				localStorage: {getItem: () => JSON.stringify(stored)},
+				navigator: {languages},
+				document: {documentElement: root},
+			}
+		);
 
 		return root;
 	}
@@ -138,6 +181,35 @@ describe("i18n core", () => {
 			dir: isRTL(tag) ? "rtl" : "ltr",
 		});
 		expect(runPrePaint({locale: "auto"}, ["en-GB"])).to.deep.equal({lang: "en", dir: "ltr"});
+	});
+
+	it("the pre-paint script and bestLocale agree on Traditional Chinese", () => {
+		// The pre-paint copy of the rule runs before the bundle: were it to
+		// claim zh where boot activates en, <html lang> would pick the wrong
+		// CJK fonts until boot. Both resolve the same lists the same way.
+		const tags = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
+		expect(tags, "the baked list ships the Simplified catalog").to.include("zh");
+
+		for (const languages of [
+			["zh-TW", "zh", "en-US", "en"],
+			["zh-HK", "zh"],
+			["zh-Hant-CN"],
+			["zh-TW", "zh", "ja"],
+			["zh-TW", "zh-CN"],
+			["zh-Hans-TW"],
+			["zh-SG"],
+			["zh"],
+			["pt-PT"],
+		]) {
+			// Nothing matched leaves lang as authored (en), which is
+			// bestLocale's own fallback.
+			const want = bestLocale(languages, tags);
+			expect(runPrePaint({}, languages).lang || "en", languages.join(",")).to.equal(want);
+		}
+
+		expect(runPrePaint({}, ["zh-TW", "zh"])).to.deep.equal({lang: "", dir: ""});
+		// An explicit pick of zh is the user's: it activates as chosen.
+		expect(runPrePaint({locale: "zh"}, ["zh-TW"])).to.deep.equal({lang: "zh", dir: "ltr"});
 	});
 
 	it("the pre-paint script leaves lang/dir untouched for an unavailable stored tag", () => {
@@ -321,6 +393,26 @@ describe("i18n dev warnings for dynamic strings", () => {
 		expect(
 			frameSegments(t("frame", {nick: KEEP, modes: KEEP}), ["nick", "modes"])
 		).to.deep.equal(["", " sets mode ", ""]);
+	});
+
+	it("framePieces follows the translation's order of the placeholders", () => {
+		// A translator may put {target} before {nick}; frameSegments returns
+		// the segments in the CALLER's order, so a component with fixed
+		// element positions rendered a raw "{target}" there. framePieces is
+		// what I18nFrame.vue renders, slot by slot, in the frame's order.
+		expect(framePieces("{nick} has kicked {target}", ["nick", "target"])).to.deep.equal([
+			{name: "nick"},
+			" has kicked ",
+			{name: "target"},
+		]);
+		expect(
+			framePieces("{target} は {nick} にキックされました", ["nick", "target"])
+		).to.deep.equal([{name: "target"}, " は ", {name: "nick"}, " にキックされました"]);
+		// A placeholder the caller has no element for stays text.
+		expect(framePieces("on {time} by {nick}", ["nick"])).to.deep.equal([
+			"on {time} by ",
+			{name: "nick"},
+		]);
 	});
 
 	it("the class-3 audit: a {var} frame warns once, naming its values", () => {

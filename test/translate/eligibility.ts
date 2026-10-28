@@ -170,6 +170,24 @@ describe("translate/eligibility", () => {
 		expect(isEligible(msg({self: true, text: "Hallo"}), {nicks})).to.equal(true);
 	});
 
+	it("counts the stripped text it is handed, and strips nothing for a line it rules out first", () => {
+		let calls = 0;
+
+		const plain = (text: string) => () => {
+			calls += 1;
+			return text;
+		};
+
+		expect(isEligible(msg({text: "Hallo"}), {nicks, plain: plain("")})).to.equal(false);
+		expect(isEligible(msg({text: "🎉"}), {nicks, plain: plain("drei Wörter hier")})).to.equal(
+			true
+		);
+		expect(calls).to.equal(2);
+		expect(isEligible(msg({type: "join"}), {nicks, plain: plain("x")})).to.equal(false);
+		expect(isEligible(msg({pending: true}), {nicks, plain: plain("x")})).to.equal(false);
+		expect(calls).to.equal(2);
+	});
+
 	it("an own line under MIN_WORDS does not", () => {
 		expect(isEligible(msg({self: true, text: "🎉 😂"}), {nicks})).to.equal(false);
 	});

@@ -1,19 +1,29 @@
 // The app's one TranslateService: the real worker (or the in-page fake on
 // a development build opened with ?fakeTranslate), the deploy's
 // config.json, the store's settings and the store's translation slice.
-// Created on first use, so a page that never translates never pays.
+// Created on first use, so a page that never translates starts no worker
+// and loads no model. The device probe does run once a channel shows,
+// since it decides whether the translate button is offered at all -- but
+// never on a deploy that switched translation off (service.ts
+// `capabilities`).
 
 import {getBranding} from "../branding";
 import {BUILD} from "../build";
 import {store} from "../store";
 import {probeOnce} from "./capability";
-import {emptyContext} from "./engine";
+import {emptyContext, type ModelRef} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
 import {buildCatalog} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
 import {ServiceDeps, TranslateService} from "./service";
+import {storedConsent} from "./consent";
+import eventbus from "../eventbus";
+import storage from "../localStorage";
+import {t} from "../i18n/core";
+import friendlysize from "../helpers/friendlysize";
+import {modelDisplayName} from "../helpers/translateWhy";
 
 // Captured at module load (vue.ts imports the router, which statically
 // imports Settings/Translation.vue, before `boot()` runs) rather than read
@@ -54,7 +64,37 @@ function workerUrl(): string {
 	return new URL(`js/translate-worker.js?v=${BUILD}`, document.baseURI).href;
 }
 
-/** Whether the user's stored settings carry `name` at all (a default is not a choice). */
+/**
+ * Whether the connection says it is metered: Save-Data, or a cellular
+ * link (`navigator.connection`, Chromium only; elsewhere it says nothing).
+ */
+function meteredConnection(): boolean {
+	const connection = (navigator as Navigator & {connection?: {saveData?: boolean; type?: string}})
+		.connection;
+
+	return !!connection && (connection.saveData === true || connection.type === "cellular");
+}
+
+/** The download question, in the app's confirm dialog (ConfirmDialog.vue). */
+function askDownload(ref: ModelRef): Promise<boolean> {
+	const model = modelDisplayName(ref);
+
+	return new Promise((resolve) => {
+		eventbus.emit(
+			"confirm-dialog",
+			{
+				title: t("translate.consent.title", {model}),
+				text: t("translate.consent.text", {model, size: friendlysize(ref.sizeBytes)}),
+				note: meteredConnection() ? t("translate.consent.metered") : undefined,
+				button: t("translate.model.download"),
+				cancel: t("translate.consent.notNow"),
+				primary: true,
+			},
+			(yes: boolean) => resolve(yes)
+		);
+	});
+}
+
 function create(): TranslateService {
 	const branding = getBranding().translation ?? {};
 	const fake = useFake();
@@ -67,16 +107,31 @@ function create(): TranslateService {
 			}
 
 			const worker = new Worker(workerUrl());
+			const client = new TranslateClient(worker as unknown as MainPort);
 
-			return {
-				client: new TranslateClient(worker as unknown as MainPort),
-				terminate: () => worker.terminate(),
-			};
+			// A script that will not load (a 404, a CSP) or a throw at its top
+			// level is an `error` here and nothing else: without this every
+			// request waited on a worker that would never answer.
+			worker.addEventListener("error", (event) => {
+				client.workerError((event as Partial<ErrorEvent>).message ?? "");
+			});
+
+			return {client, terminate: () => worker.terminate()};
 		},
 		probe: () => (fake ? Promise.resolve(FAKE_CAPABILITY) : probeOnce()),
 		setTimeout: (fn, ms) => window.setTimeout(fn, ms),
 		clearTimeout: (handle) => window.clearTimeout(handle as number),
 	};
+
+	// The question before a download nobody started by name (consent.ts):
+	// the app's confirm dialog, Download / Not now. The in-page fake asks
+	// only when the page was opened with ?askDownloads too, so the fake's
+	// scenarios that are not about it run unasked.
+	if (!fake || new URLSearchParams(initialSearch).has("askDownloads")) {
+		deps.askDownload = askDownload;
+		deps.consent = storedConsent(storage);
+	}
+
 	// An unset GPU model ("") is no choice: it resolves every time it is read
 	// — the deploy's model, else what the device probe fits, else the shipped
 	// default (models.ts `llmChoice`) — so a later deploy default, and a
@@ -93,16 +148,21 @@ function create(): TranslateService {
 			ortBase: new URL("js/ort/", document.baseURI).href,
 			enabled: branding.enabled !== false,
 		},
-		{llm: store.state.settings.translateLlm, cpu: store.state.settings.translateCpu}
+		{
+			llm: store.state.settings.translateLlm,
+			cpu: store.state.settings.translateCpu,
+			nllb: !!store.state.settings.translateNllb,
+		}
 	);
 
 	store.watch(
 		() =>
-			[store.state.settings.translateLlm, store.state.settings.translateCpu] as [
-				boolean,
-				boolean
-			],
-		([llm, cpu]) => created.setSettings({llm, cpu})
+			[
+				store.state.settings.translateLlm,
+				store.state.settings.translateCpu,
+				!!store.state.settings.translateNllb,
+			] as [boolean, boolean, boolean],
+		([llm, cpu, nllb]) => created.setSettings({llm, cpu, nllb})
 	);
 	// A switch takes effect at once (service.ts `setLlmModel`): the old model
 	// unloads once its running requests are done, later requests route anew.

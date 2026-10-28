@@ -165,7 +165,15 @@ export function wordCount(text: string): number {
 		.filter((word) => word !== "").length;
 }
 
-export function isEligible(msg: EligibilityMsg, opts: {nicks: string[]}): boolean {
+/**
+ * `plain`, when given, is the line's `plainTextOf` already computed: the
+ * reader strips a line once and hands the same text to detection, since the
+ * strip runs the whole Markdown layout.
+ */
+export function isEligible(
+	msg: EligibilityMsg,
+	opts: {nicks: string[]; plain?: () => string}
+): boolean {
 	// Own lines are read too: a line from before a switch-on, a rejoin or a
 	// reload is as much of the channel as anyone's. The one own line the
 	// pipeline leaves alone -- a posted translation that keeps its
@@ -175,5 +183,5 @@ export function isEligible(msg: EligibilityMsg, opts: {nicks: string[]}): boolea
 		return false;
 	}
 
-	return wordCount(plainTextOf(msg.text, opts.nicks)) >= MIN_WORDS;
+	return wordCount(opts.plain ? opts.plain() : plainTextOf(msg.text, opts.nicks)) >= MIN_WORDS;
 }

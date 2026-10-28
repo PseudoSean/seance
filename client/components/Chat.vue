@@ -79,7 +79,7 @@
 					>
 						<button
 							class="translate"
-							:class="{on: translationOn}"
+							:class="{on: translationOn, unavailable: translationBlocked}"
 							:aria-label="translateLabel"
 							:aria-pressed="touch ? undefined : translationOn"
 							:aria-expanded="translationPanelOpen"
@@ -187,6 +187,7 @@ import {
 	setReading,
 	showOriginal,
 	translationAvailable as translationAvailableNow,
+	currentTranslationBlock,
 } from "../js/translate/reader";
 import {topicEntryId} from "../js/translate/topic";
 import {languageName} from "../js/translate/languages";
@@ -410,7 +411,17 @@ export default defineComponent({
 		// panel there and the button says so; the click keeps toggling
 		// reading where there is a pointer.
 		const touch = hasVirtualKeyboard();
+		// Nothing here can translate (router.ts `translationBlock`): the button
+		// stays, says so, and opens the panel, whose banner gives the reason.
+		const translationBlocked = computed(() => !!currentTranslationBlock());
 		const translateLabel = computed(() => {
+			// Before the touch label: a tap opens the panel either way, but
+			// the button's name should not promise settings when nothing
+			// here can translate.
+			if (translationBlocked.value) {
+				return t("translate.unavailable.lead");
+			}
+
 			if (touch) {
 				return t("translate.header.settings");
 			}
@@ -470,7 +481,7 @@ export default defineComponent({
 		};
 
 		const onTranslateClick = () => {
-			if (touch) {
+			if (touch || translationBlocked.value) {
 				openTranslationPanel();
 			} else {
 				toggleTranslation();
@@ -556,6 +567,7 @@ export default defineComponent({
 			translationPanelOpen,
 			translationAvailable,
 			translationOn,
+			translationBlocked,
 			translateLabel,
 			touch,
 			onTranslateClick,

@@ -4,9 +4,12 @@
 // Vue-free catalog resolution — mocha loads this file, so: no Vue, no DOM,
 // no storage (test/helpers/i18n.ts). The Vue/activation side lives in
 // index.ts; the settings wiring in settings.ts; the pre-paint copy of the
-// RTL set in client/index.html is pinned by test/helpers/i18n.ts.
+// RTL set in client/js/prepaint.js is pinned by test/helpers/i18n.ts.
 
 import enCatalog from "../../locales/en.json";
+import {isTraditionalChinese} from "./traditionalChinese";
+
+export {isTraditionalChinese};
 
 /** Sentinel var value for frame-splitting call sites: "this placeholder is
  * known — leave it in the template". Components that split a translated
@@ -26,7 +29,7 @@ let catalog: Catalog = enCatalog;
 let tag = "en";
 
 /** Tags whose writing systems flow right-to-left. The pre-paint script in
- * client/index.html carries the same list — test/helpers/i18n.ts pins them
+ * client/js/prepaint.js carries the same list — test/helpers/i18n.ts pins them
  * together. */
 export const RTL_TAGS = new Set(["ar", "fa", "he", "ur", "ps", "sd", "ug", "yi", "qqx"]);
 
@@ -383,13 +386,52 @@ if (DEV_I18N) {
 	(globalThis as unknown as Record<string, unknown>).__tDynC = tDynC;
 }
 
-/** Split a translated frame on its {placeholders}, in order: the segments
+/** One piece of a translated frame: literal text, or the named
+ * placeholder an element stands in. */
+export type FramePiece = string | {name: string};
+
+/** Split a translated frame on the named {placeholders} in the order the
+ * TRANSLATION puts them -- "{target} は {nick} にキックされました" is as good a
+ * frame as the English order. A placeholder not in `names` stays text. What
+ * I18nFrame.vue renders, each name through the slot of that name; the
+ * order-agnostic form of frameSegments, for any frame with two or more
+ * elements. */
+export function framePieces(template: string, names: readonly string[]): FramePiece[] {
+	const pieces: FramePiece[] = [];
+	let last = 0;
+
+	for (const match of template.matchAll(/\{(\w+)\}/g)) {
+		if (!names.includes(match[1])) {
+			continue;
+		}
+
+		const at = match.index ?? 0;
+
+		if (at > last) {
+			pieces.push(template.slice(last, at));
+		}
+
+		pieces.push({name: match[1]});
+		last = at + match[0].length;
+	}
+
+	if (last < template.length) {
+		pieces.push(template.slice(last));
+	}
+
+	return pieces;
+}
+
+/** Split a translated frame on ONE {placeholder}: the segments
  * a component renders around the inline elements (the interactive
  * <Username>, a parsed hostmask) — so a translator writes one whole
  * sentence with the verbatim value where it belongs, and the interactive
  * element lands inside it. segments.length === names.length + 1. compile
  * guarantees every placeholder survives translation, so a miss here is a
- * degraded render, never a silent one. */
+ * degraded render, never a silent one. The segments come back in the
+ * order of `names`, which a component renders its elements in -- so with
+ * two or more names a translation that reorders them breaks the line: use
+ * framePieces (I18nFrame.vue) there. */
 export function frameSegments(template: string, names: string[]): string[] {
 	const segments: string[] = [];
 	let rest = template;
@@ -411,13 +453,36 @@ export function frameSegments(template: string, names: string[]): string[] {
 	return segments;
 }
 
-/** "auto" resolution: exact tag first, then base language, then en. */
+/** "auto" resolution: exact tag first, then base language, then en.
+ *
+ * The one exception to the base match: the only Chinese catalog is
+ * Simplified (`zh`), and a reader of Traditional is better served by
+ * English than by a script they did not ask for — so a Traditional tag
+ * (`zh-TW`, `zh-HK`, `zh-MO`, `zh-Hant-*`) never falls to `zh`, and
+ * neither does a bare `zh` after one (Chrome appends the base to every
+ * regional tag: `zh-TW, zh, en-US, en`). An explicitly Simplified tag
+ * later in the list (`zh-CN`, `zh-Hans`) still picks it. A Traditional
+ * catalog, should one ever ship, matches its own tag exactly. */
 export function bestLocale(preferred: readonly string[], available: readonly string[]): string {
+	let traditional = false;
+
 	for (const want of preferred) {
+		const isTraditional = isTraditionalChinese(want);
+
+		if (isTraditional) {
+			traditional = true;
+		} else if (traditional && want.toLowerCase() === "zh") {
+			continue;
+		}
+
 		const exact = available.find((candidate) => candidate.toLowerCase() === want.toLowerCase());
 
 		if (exact) {
 			return exact;
+		}
+
+		if (isTraditional) {
+			continue;
 		}
 
 		const base = want.split("-")[0].toLowerCase();

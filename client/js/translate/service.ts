@@ -6,15 +6,26 @@
 // CPU_IDLE_UNLOAD_MS; a tier switched off in Settings unloads at once;
 // everything goes at once when translation is not in use anywhere
 // (`setInUse`) and nothing is in flight, and on pagehide. The last model
-// going takes the worker with it. Model views feed Settings. Vue-free:
-// index.ts wires the real worker, the store and the settings.
+// going takes the worker with it. Model views feed Settings. A model that
+// is not downloaded yet is downloaded only once the user has agreed to it
+// (consent.ts, asked through `ServiceDeps.askDownload` when the route is
+// resolved); Settings' own Download is that agreement. Vue-free: index.ts
+// wires the real worker, the store, the settings and the dialog.
 
 import {Capability} from "./capability";
+import {ConsentStore, DownloadConsent, memoryConsent, needsDownloadError} from "./consent";
 import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
-import {EngineName, LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
+import {
+	BATCH_REFUSED,
+	EngineName,
+	LoadProgress,
+	ModelRef,
+	TranslateChunk,
+	TranslateRequest,
+} from "./engine";
 import {ABORTED} from "./outgoing";
 import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
-import {Route, RouteTable, mergeRoutes, resolveRoute} from "./router";
+import {Route, RouteTable, explainRoute, mergeRoutes, routeInput} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
 
 /** A loaded GPU model with no request for this long gives its memory back. */
@@ -22,12 +33,37 @@ export const GPU_IDLE_UNLOAD_MS = 3 * 60 * 1000;
 /** A loaded CPU model with no request for this long gives its memory back. */
 export const CPU_IDLE_UNLOAD_MS = 5 * 60 * 1000;
 export const TRANSLATION_UNAVAILABLE = "no translation engine can take this request";
+/**
+ * How long a route waits for the worker to say what is downloaded
+ * (`cacheOrDeadline`). Generous on purpose: past it the router no longer
+ * prefers a downloaded model inside its class, and a first, uncached start
+ * of the multi-MiB worker on a slow phone line can take a while.
+ */
+export const CACHE_WAIT_MS = 60 * 1000;
 
 export interface ServiceDeps {
 	createClient(): {client: TranslateClient; terminate(): void};
 	probe(): Promise<Capability>;
 	setTimeout(fn: () => void, ms: number): unknown;
 	clearTimeout(handle: unknown): void;
+	/**
+	 * The question before a model nobody downloaded by name is downloaded
+	 * (consent.ts): true to download it, false for "not now". Absent, every
+	 * download goes ahead unasked (the tests that are not about consent).
+	 */
+	askDownload?(ref: ModelRef): Promise<boolean>;
+	/** Where the yeses are remembered; in memory when absent. */
+	consent?: ConsentStore;
+}
+
+/**
+ * A route, or why there is none that needs no declined download: `refused`
+ * is the model the best route would have downloaded, when "not now" is
+ * what left the request without one.
+ */
+export interface RouteResolution {
+	route: Route | null;
+	refused: ModelRef | null;
 }
 
 export interface ServiceOptions {
@@ -51,6 +87,8 @@ export interface ServiceOptions {
 export interface ServiceSettings {
 	llm: boolean;
 	cpu: boolean;
+	/** NLLB-200 switched on: its licence is non-commercial, so it is opt-in. */
+	nllb: boolean;
 }
 
 export type ModelStatus = "idle" | "downloading" | "ready" | "failed";
@@ -99,7 +137,9 @@ export class TranslateService {
 	private nextId = 1;
 	private views = new Map<string, ModelView>();
 	private listeners = new Set<(views: ModelView[]) => void>();
-	private workerErrorListeners = new Set<(message: string) => void>();
+	private workerErrorListeners = new Set<(message: string | null) => void>();
+	/** `workerDied` reported a worker that never started; a later answer clears it. */
+	private deadReported = false;
 	private generation = 0;
 	private disposed = false;
 	/** Once per service: which models are downloaded, for the router's in-class preference. */
@@ -131,6 +171,8 @@ export class TranslateService {
 	/** Whether translation is wanted anywhere (reader.ts `translationInUse`); unset, it always is. */
 	private inUse: (() => boolean) | null = null;
 	private usageTimer: unknown = null;
+	/** The download question (consent.ts); null when no dialog was wired. */
+	private consent: DownloadConsent | null;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -143,6 +185,9 @@ export class TranslateService {
 
 		this.selectedLlm = options.selectedLlm ?? null;
 		this.table = this.buildTable();
+		this.consent = deps.askDownload
+			? new DownloadConsent((ref) => deps.askDownload!(ref), deps.consent ?? memoryConsent())
+			: null;
 	}
 
 	get enabled(): boolean {
@@ -152,6 +197,14 @@ export class TranslateService {
 	/** The catalog as it stands: `catalog.llm` is the selected GPU model. */
 	get catalog(): ModelCatalog {
 		return this.options.catalog;
+	}
+
+	/**
+	 * The route table for the selected GPU model, deploy overrides merged:
+	 * what the UI asks `explainRoute` against before it offers an action.
+	 */
+	get routeTable(): RouteTable {
+		return this.table;
 	}
 
 	/**
@@ -287,6 +340,23 @@ export class TranslateService {
 	}
 
 	capabilities(): Promise<Capability> {
+		// A deploy that switched translation off never asks the GPU or the
+		// storage anything: the probe starts adapter enumeration in the GPU
+		// process, and a channel view reads availability on every load.
+		// Nothing shows the capability while disabled (Settings says so and
+		// stops there; models.ts `modelBlock` answers "disabled" first).
+		if (!this.capability && !this.options.enabled) {
+			this.capability = Promise.resolve({
+				tier: "none",
+				reasons: [],
+				f16: false,
+				maxBufferBytes: 0,
+				deviceMemoryGiB: null,
+				storageQuotaBytes: null,
+				mobile: false,
+			});
+		}
+
 		if (!this.capability) {
 			this.capability = this.deps
 				.probe()
@@ -369,26 +439,98 @@ export class TranslateService {
 		to: string,
 		hint: string | null = null
 	): Promise<Route | null> {
+		return (await this.resolve(from, to, hint)).route;
+	}
+
+	/**
+	 * `route`, with the model a declined download left the request without
+	 * (`RouteResolution.refused`). A route whose model is not on the device
+	 * and was never agreed to asks first (`ServiceDeps.askDownload`), once
+	 * per model however many requests wait on it; after a "not now" the
+	 * walk takes only what needs no download -- a downloaded model, one
+	 * agreed to, one downloading already -- for this request and every
+	 * later one this session, so a channel's queued lines ask once and the
+	 * fallback never asks about a second model. Every caller routes through
+	 * here before its request deadline is armed (the queue's `enqueueAt`,
+	 * the composer's `route`), so an unanswered dialog times nothing out.
+	 */
+	async resolve(
+		from: string | null,
+		to: string,
+		hint: string | null = null
+	): Promise<RouteResolution> {
 		if (!this.options.enabled) {
-			return null;
+			return {route: null, refused: null};
 		}
 
 		const capability = await this.capabilities();
 
 		if (capability.tier !== "none") {
-			await this.primeCache();
+			await this.cacheOrDeadline();
 		}
 
-		return resolveRoute(this.table, this.options.catalog, {
-			from,
-			hint,
-			to,
-			tier: capability.tier,
-			allowLlm: this.settings.llm,
-			allowCpu: this.settings.cpu,
-			down: this.down,
+		const consent = this.consent;
+		let cachedOnly = !!consent?.anyDeclined;
+
+		const input = (refuse: boolean) => ({
+			...routeInput(capability, this.settings, {from, to, hint}, this.down),
 			cached: (ref: ModelRef) => this.views.get(ref.id)?.cached === true,
+			refuse: refuse ? (ref: ModelRef) => this.needsConsent(ref) : undefined,
 		});
+
+		for (;;) {
+			const route = explainRoute(this.table, this.options.catalog, input(cachedOnly)).route;
+
+			if (!route) {
+				// What the request was left without: the route it would have
+				// taken with the download allowed. Not the walk's own reason,
+				// which may name a switch further down (NLLB-200 off) while
+				// the model the user declined is what would have served.
+				return {
+					route: null,
+					refused: cachedOnly
+						? explainRoute(this.table, this.options.catalog, input(false)).route?.ref ??
+						  null
+						: null,
+				};
+			}
+
+			if (!consent || !this.needsConsent(route.ref)) {
+				return {route, refused: null};
+			}
+
+			const yes = await consent.ask(route.ref, () => this.needsConsent(route.ref));
+
+			// Yes: route again, the model now agreed to (the selection or the
+			// cache may have moved meanwhile). Not now: again, taking only
+			// what needs no download.
+			if (!yes) {
+				cachedOnly = true;
+			}
+		}
+	}
+
+	/**
+	 * Whether `ref`'s download needs the user's yes first: not on the device,
+	 * not downloading already (a Settings download in flight is joined, not
+	 * started), and never agreed to.
+	 */
+	private needsConsent(ref: ModelRef): boolean {
+		if (!this.consent) {
+			return false;
+		}
+
+		const view = this.views.get(ref.id);
+
+		return !view?.cached && view?.status !== "downloading" && !this.consent.granted(ref.id);
+	}
+
+	/**
+	 * A Retry on a line, an explicit act: the session's "not now" is over,
+	 * and the next route that needs a download asks again.
+	 */
+	forgetDeclines(): void {
+		this.consent?.forgetDeclines();
 	}
 
 	/**
@@ -468,7 +610,7 @@ export class TranslateService {
 
 		try {
 			for (;;) {
-				const route = await this.route(request.from, request.to, hint);
+				const {route, refused} = await this.resolve(request.from, request.to, hint);
 
 				// After the teardown check: a worker torn down while the route
 				// resolved is the truer report of the two.
@@ -477,6 +619,12 @@ export class TranslateService {
 				}
 
 				checkAborted();
+
+				// "Not now" to the download this request needed: the reason
+				// names the model and its size (helpers/translateErrors.ts).
+				if (!route && refused) {
+					throw new Error(needsDownloadError(refused));
+				}
 
 				if (!route) {
 					throw new Error(
@@ -505,6 +653,14 @@ export class TranslateService {
 					await this.whenLlm(() => !this.otherLlmWork(waitingFor));
 					checkAborted();
 					continue;
+				}
+
+				// A batch made for the GPU model that now routes elsewhere (the
+				// model switched off, or down after a failed load): say so
+				// before posting, rather than loading a seq2seq model only to
+				// have it refuse. The caller sends the lines one at a time.
+				if (request.lines && route.ref.engine !== "llm") {
+					throw new TranslateError(BATCH_REFUSED, "request");
 				}
 
 				const client = this.client();
@@ -636,6 +792,14 @@ export class TranslateService {
 		try {
 			const states = await this.client().models();
 
+			// A fresh worker answered after one that never started (the deploy
+			// finished, the page came back online): what Settings says about
+			// the dead one is over. Null clears it.
+			if (this.deadReported) {
+				this.deadReported = false;
+				this.reportWorkerError(null);
+			}
+
 			for (const state of states) {
 				const view = this.views.get(state.ref.id);
 
@@ -664,6 +828,26 @@ export class TranslateService {
 		}
 	}
 
+	/**
+	 * The cache question, waited for at most CACHE_WAIT_MS: a worker that
+	 * started but never answers would otherwise hold every route -- the
+	 * reading lines and the composer's strip before its own deadline is
+	 * armed -- for good. Past it the route counts every model as absent, and
+	 * the request's own deadline is what fails it.
+	 */
+	private async cacheOrDeadline(): Promise<void> {
+		let handle: unknown = null;
+		const deadline = new Promise<void>((resolve) => {
+			handle = this.deps.setTimeout(resolve, CACHE_WAIT_MS);
+		});
+
+		try {
+			await Promise.race([this.primeCache(), deadline]);
+		} finally {
+			this.deps.clearTimeout(handle);
+		}
+	}
+
 	private primeCache(): Promise<void> {
 		if (!this.cacheKnown) {
 			this.cacheKnown = this.models().then(
@@ -689,8 +873,12 @@ export class TranslateService {
 		return () => this.listeners.delete(listener);
 	}
 
-	/** Errors the worker reports for itself: a configure that threw, a handler that did. */
-	onWorkerError(listener: (message: string) => void): () => void {
+	/**
+	 * Errors the worker reports for itself: a configure that threw, a
+	 * handler that did, a worker that never started. Null: the last of
+	 * those is over (a fresh worker answered).
+	 */
+	onWorkerError(listener: (message: string | null) => void): () => void {
 		this.workerErrorListeners.add(listener);
 
 		return () => this.workerErrorListeners.delete(listener);
@@ -698,6 +886,9 @@ export class TranslateService {
 
 	async download(ref: ModelRef): Promise<void> {
 		const view = this.view(ref);
+
+		// Settings' Download, which shows the size: the user's yes.
+		this.consent?.grant(ref.id);
 
 		view.status = "downloading";
 		view.fraction = 0;
@@ -788,6 +979,8 @@ export class TranslateService {
 			}
 
 			await this.client().deleteModel(ref);
+			// Deleted on purpose: downloading it again is a new question.
+			this.consent?.revoke(ref.id);
 			view.cached = false;
 			view.status = "idle";
 			view.fraction = 0;
@@ -913,18 +1106,49 @@ export class TranslateService {
 		}
 
 		if (!this.worker) {
-			this.worker = this.deps.createClient();
+			const worker = this.deps.createClient();
 
-			this.worker.client.onWorkerError = (message: string) => {
-				for (const listener of this.workerErrorListeners) {
-					listener(message);
-				}
-			};
-
-			this.worker.client.configure(this.options.catalog, this.options.ortBase);
+			this.worker = worker;
+			worker.client.onWorkerError = (message: string) => this.reportWorkerError(message);
+			worker.client.onDead = (detail: string) => this.workerDied(worker, detail);
+			worker.client.configure(this.options.catalog, this.options.ortBase);
 		}
 
 		return this.worker.client;
+	}
+
+	private reportWorkerError(message: string | null): void {
+		for (const listener of this.workerErrorListeners) {
+			listener(message);
+		}
+	}
+
+	/**
+	 * A worker that never started (client.ts `workerError`). What it was
+	 * asked fails as unavailable -- a real failure, which the reading queue
+	 * counts toward a pause, not the WORKER_DISPOSED it puts back and
+	 * retries a second later, which against a script that will not load
+	 * was a fresh worker every second -- and the worker is dropped without
+	 * the teardown's generation step (nothing ran on it), so the next call
+	 * asks for a fresh one: a deploy that finishes, or a page back online,
+	 * is picked up without a reload. Settings says so too.
+	 */
+	private workerDied(worker: {client: TranslateClient; terminate(): void}, detail: string): void {
+		if (this.worker !== worker) {
+			return;
+		}
+
+		const message = detail ? `${TRANSLATION_UNAVAILABLE}: ${detail}` : TRANSLATION_UNAVAILABLE;
+
+		this.worker = null;
+		this.clearIdle();
+		this.clearEngineTimer("llm");
+		this.clearEngineTimer("seq2seq");
+		this.loadedEngines.clear();
+		worker.client.fail(new Error(message));
+		worker.terminate();
+		this.deadReported = true;
+		this.reportWorkerError(message);
 	}
 
 	private teardown(): void {

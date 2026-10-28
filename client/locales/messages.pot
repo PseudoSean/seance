@@ -1670,12 +1670,6 @@ msgctxt "help.about"
 msgid "About"
 msgstr ""
 
-#. Word between the two version numbers inside the compare links of the help window's past-release list. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.and"
-msgid "and"
-msgstr ""
-
 #. Description of the # autocompletion trigger in the help window: typing # suggests channel names.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.channel"
@@ -1694,10 +1688,10 @@ msgctxt "help.autocomplete.disabled"
 msgid "Autocompletion can be disabled in settings."
 msgstr ""
 
-#. Description of the : autocompletion trigger in the help window; a code fragment with a smiley example follows it. Ends mid-sentence.
+#. Description of the : autocompletion trigger in the help window. {example} is a smiley shown as a code fragment (:) ), kept verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.emoji"
-msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like"
+msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like {example})"
 msgstr ""
 
 #. Heading of the autocompletion section of the help window; explains the prefix characters that open suggestion lists.
@@ -1706,34 +1700,10 @@ msgctxt "help.autocomplete.heading"
 msgid "Autocompletion"
 msgstr ""
 
-#. First part of the autocompletion intro in the help window; keycap symbols (arrow up) follow it. Ends mid-sentence.
+#. Autocompletion intro in the help window, one paragraph. {up} and {down} are the arrow-key keycaps (↑ ↓), {tab} and {enter} the Tab and Enter keycaps, each rendered as a keycap element where its placeholder stands; order them as your language needs.
 #: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introA"
-msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the"
-msgstr ""
-
-#. Word between the two arrow keycaps inside the autocompletion intro in the help window. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introB"
-msgid "and"
-msgstr ""
-
-#. Continuation of the autocompletion intro in the help window, after the two arrow keycaps; the Tab and Enter keycaps follow it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introC"
-msgid "keys to highlight an item, and insert it by pressing"
-msgstr ""
-
-#. Word between the Tab and Enter keycaps inside the autocompletion intro in the help window. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introD"
-msgid "or"
-msgstr ""
-
-#. End of the autocompletion intro in the help window, after the Tab and Enter keycaps; the parenthesized phrase offers clicking as the third way.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introE"
-msgid "(or by clicking the desired item)."
+msgctxt "help.autocomplete.intro"
+msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the {up} and {down} keys to highlight an item, and insert it by pressing {tab} or {enter} (or by clicking the desired item)."
 msgstr ""
 
 #. Description of the @ autocompletion trigger in the help window: typing @ suggests user names.
@@ -1742,28 +1712,10 @@ msgctxt "help.autocomplete.nick"
 msgid "Nickname"
 msgstr ""
 
-#. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
+#. Help window sentence shown when the running build is newer than its release. {app} is the app's name (verbatim); {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v.
 #: client/components/Windows/Help.vue
-msgctxt "help.behindDevelop"
-msgid "to see what you are missing"
-msgstr ""
-
-#. Word that starts the link in the help window's compare items; the two version numbers being compared follow it inside the same link. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.between"
-msgid "between"
-msgstr ""
-
-#. End of the help window's past-release sentence, after the link naming the source commit. {version} is the release number the build follows, kept with its v. Keep the comma.
-#: client/components/Windows/Help.vue
-msgctxt "help.builtAfter"
-msgid ", after v{version}"
-msgstr ""
-
-#. Part of the sentence in the help window shown when the running build is newer than its release; the app's name precedes it and a link naming the source commit follows. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.builtFrom"
-msgid "is built from"
+msgctxt "help.builtFromCommit"
+msgid "{app} is built from {commit}, after v{version}."
 msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window; the alternative command follows it as a code fragment. Keep the trailing colon.
@@ -1784,22 +1736,16 @@ msgctxt "help.commands.away"
 msgid "Mark yourself as away with an optional message."
 msgstr ""
 
-#. Start of the /back command description in the help window; a code fragment with the /away command follows it. Ends mid-sentence.
+#. Description of the /back command in the help window. {command} is the /away command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.back"
-msgid "Remove your away status (set with"
+msgid "Remove your away status (set with {command})."
 msgstr ""
 
-#. Start of the /ban command description in the help window; a code fragment with the +b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /ban command in the help window. {mode} is the channel mode +b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.banA"
-msgid "Ban ("
-msgstr ""
-
-#. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.banB"
-msgid ") a user from the current channel. This can be a nickname or a hostmask."
+msgctxt "help.commands.ban"
+msgid "Ban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
 msgstr ""
 
 #. Description of the /banlist command in the help window.
@@ -1814,43 +1760,25 @@ msgctxt "help.commands.cleartopic"
 msgid "Clear the topic in the current channel."
 msgstr ""
 
-#. Description of the /collapse command in the help window; a code fragment with the /expand command follows it. Ends mid-sentence.
+#. Description of the /collapse command in the help window. {command} is the /expand command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.collapse"
-msgid "Collapse all previews in the current channel (opposite of"
+msgid "Collapse all previews in the current channel (opposite of {command})"
 msgstr ""
 
-#. Start of the /connect command description in the help window; a code fragment with the port parameter follows it. Ends mid-sentence.
+#. Description of the /connect command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.connectA"
-msgid "Connect to a new IRC network. If"
+msgctxt "help.commands.connect"
+msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
 msgstr ""
 
-#. Middle of the /connect command description in the help window, after the port parameter; a code fragment with the plus sign follows it. Ends mid-sentence.
+#. Description of the /ctcp command in the help window. {ctcp} is the abbreviation CTCP (never translated, an element with its expansion as tooltip); {link} is a link whose text is help.commands.ctcpLink ('the dedicated Wikipedia article') — write this frame so that phrase fits where {link} stands.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.connectB"
-msgid "starts with a"
+msgctxt "help.commands.ctcp"
+msgid "Send a {ctcp} request. Read more about this on {link}."
 msgstr ""
 
-#. End of the /connect command description in the help window, after the plus-sign code fragment; TLS stays verbatim.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.connectC"
-msgid "sign, the connection will be made secure using TLS."
-msgstr ""
-
-#. Start of the /ctcp command description in the help window; the CTCP abbreviation follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.ctcpA"
-msgid "Send a"
-msgstr ""
-
-#. Continuation of the /ctcp command description in the help window, after the CTCP abbreviation; the link text follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.ctcpB"
-msgid "request. Read more about this on"
-msgstr ""
-
-#. Text of the link at the end of the /ctcp command description in the help window; it opens the external Wikipedia article. Mid-sentence.
+#. Text of the link at the end of the /ctcp command description in the help window (help.commands.ctcp, where it stands for {link}); it opens the Wikipedia article on CTCP. Use the form that fits that frame in your language.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
@@ -1862,28 +1790,16 @@ msgctxt "help.commands.ctcpTitle"
 msgid "Client-to-client protocol"
 msgstr ""
 
-#. Start of the /deop command description in the help window; a code fragment with the -o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /deop command in the help window. {mode} is the channel mode -o, rendered as a code element; 'op' is IRC channel-operator status (keep the catalog's usual term).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.deopA"
-msgid "Remove op ("
+msgctxt "help.commands.deop"
+msgid "Remove op ({mode}) from one or several users in the current channel."
 msgstr ""
 
-#. Continuation of the /deop command description in the help window, after the -o code fragment. Starts with the closing parenthesis.
+#. Description of the /devoice command in the help window. {mode} is the channel mode -v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.deopB"
-msgid ") from one or several users in the current channel."
-msgstr ""
-
-#. Start of the /devoice command description in the help window; a code fragment with the -v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.devoiceA"
-msgid "Remove voice ("
-msgstr ""
-
-#. Continuation of the /devoice command description in the help window, after the -v code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.devoiceB"
-msgid ") from one or several users in the current channel."
+msgctxt "help.commands.devoice"
+msgid "Remove voice ({mode}) from one or several users in the current channel."
 msgstr ""
 
 #. Description of the /disconnect command in the help window.
@@ -1892,10 +1808,10 @@ msgctxt "help.commands.disconnectLong"
 msgid "Disconnect from the current network with an optionally-provided message."
 msgstr ""
 
-#. Description of the /expand command in the help window; a code fragment with the /collapse command follows it. Ends mid-sentence.
+#. Description of the /expand command in the help window. {command} is the /collapse command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.expand"
-msgid "Expand all previews in the current channel (opposite of"
+msgid "Expand all previews in the current channel (opposite of {command})"
 msgstr ""
 
 #. Heading of the commands section of the help window; one row per slash command with its syntax and description.
@@ -1916,16 +1832,10 @@ msgctxt "help.commands.ignorelist"
 msgid "Load the list of ignored users for the current network."
 msgstr ""
 
-#. Start of the /invite command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
+#. Description of the /invite command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.inviteA"
-msgid "Invite a user to the specified channel. If"
-msgstr ""
-
-#. Continuation of the /invite command description in the help window, after the channel-parameter code fragment.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.inviteB"
-msgid "is omitted, user will be invited to the current channel."
+msgctxt "help.commands.invite"
+msgid "Invite a user to the specified channel. If {channel} is omitted, user will be invited to the current channel."
 msgstr ""
 
 #. Description of the /join command in the help window.
@@ -1940,22 +1850,10 @@ msgctxt "help.commands.kick"
 msgid "Kick a user from the current channel."
 msgstr ""
 
-#. Start of the /kickban command description in the help window; a code fragment with the +b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /kickban command in the help window. {mode} is the channel mode +b and {ban} the command /ban, each rendered as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.kickbanA"
-msgid "Kick and ban ("
-msgstr ""
-
-#. Middle of the /kickban command description in the help window, after the +b code fragment; a code fragment with the /ban command follows it. Starts with the closing parenthesis. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.kickbanB"
-msgid ") a user from the current channel. Unlike"
-msgstr ""
-
-#. End of the /kickban command description in the help window, after the /ban code fragment. Starts with a comma.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.kickbanC"
-msgid ", only nicknames (and not host masks) can be used."
+msgctxt "help.commands.kickban"
+msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
 msgstr ""
 
 #. Description of the /list command in the help window.
@@ -1982,10 +1880,10 @@ msgctxt "help.commands.msg"
 msgid "Send a message to the specified channel."
 msgstr ""
 
-#. Description of the /mute command in the help window; a code fragment with the /unmute command follows it. Ends mid-sentence.
+#. Description of the /mute command in the help window. {command} is the /unmute command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mute"
-msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with"
+msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with {command}."
 msgstr ""
 
 #. Description of the /nick command in the help window.
@@ -2000,28 +1898,16 @@ msgctxt "help.commands.notice"
 msgid "Sends a notice message to the specified channel."
 msgstr ""
 
-#. Start of the /op command description in the help window; a code fragment with the +o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /op command in the help window. {mode} is the channel mode +o, rendered as a code element; 'op' is IRC channel-operator status (keep the catalog's usual term).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.opA"
-msgid "Give op ("
+msgctxt "help.commands.op"
+msgid "Give op ({mode}) to one or several users in the current channel."
 msgstr ""
 
-#. Continuation of the /op command description in the help window, after the +o code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.opB"
-msgid ") to one or several users in the current channel."
-msgstr ""
-
-#. Start of the /part command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
+#. Description of the /part command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.part"
-msgid "Close the specified channel or private message window, or the current channel if"
-msgstr ""
-
-#. End of the /part command description in the help window, after the channel-parameter code fragment.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.partB"
-msgid "is omitted."
+msgid "Close the specified channel or private message window, or the current channel if {channel} is omitted."
 msgstr ""
 
 #. Description of the /query command in the help window.
@@ -2060,28 +1946,16 @@ msgctxt "help.commands.slap"
 msgid "Slap someone in the current channel with a trout!"
 msgstr ""
 
-#. Start of the /topic command description in the help window; a code fragment with the newtopic parameter follows it. Ends mid-sentence.
+#. Description of the /topic command in the help window. {newtopic} is the command's parameter (the word 'newtopic' as a code element).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.topicA"
-msgid "Get the topic in the current channel. If"
+msgctxt "help.commands.topic"
+msgid "Get the topic in the current channel. If {newtopic} is specified, sets the topic in the current channel."
 msgstr ""
 
-#. End of the /topic command description in the help window, after the newtopic-parameter code fragment.
+#. Description of the /unban command in the help window. {mode} is the channel mode -b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.topicB"
-msgid "is specified, sets the topic in the current channel."
-msgstr ""
-
-#. Start of the /unban command description in the help window; a code fragment with the -b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.unbanA"
-msgid "Unban ("
-msgstr ""
-
-#. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.unbanB"
-msgid ") a user from the current channel. This can be a nickname or a hostmask."
+msgctxt "help.commands.unban"
+msgid "Unban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
 msgstr ""
 
 #. Description of the /unignore command in the help window.
@@ -2090,46 +1964,22 @@ msgctxt "help.commands.unignore"
 msgid "Unblock messages from the specified user on the current network. This can be a nickname or a hostmask."
 msgstr ""
 
-#. Start of the /unmute command description in the help window; a code fragment with the /mute command follows it. Ends mid-sentence.
+#. Description of the /unmute command in the help window. {mute} is the command /mute as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.unmuteA"
-msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See"
+msgctxt "help.commands.unmute"
+msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See {mute} for more information."
 msgstr ""
 
-#. End of the /unmute command description in the help window, after the /mute code fragment.
+#. Description of the /ver command in the help window. {ctcp} is the abbreviation CTCP (never translated) and {command} the literal command /ctcp nick version as a code element; VERSION stays verbatim.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.unmuteB"
-msgid "for more information."
+msgctxt "help.commands.ver"
+msgid "Ask a user which client they run: a {ctcp} VERSION request, the same as {command}. The answer shows where you asked."
 msgstr ""
 
-#. Start of the /ver command description in the help window; the CTCP abbreviation follows it. Ends mid-sentence.
+#. Description of the /voice command in the help window. {mode} is the channel mode +v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.verA"
-msgid "Ask a user which client they run: a"
-msgstr ""
-
-#. Middle of the /ver command description in the help window: follows the CTCP abbreviation, and the literal command '/ctcp nick version' follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.verB"
-msgid "VERSION request, the same as"
-msgstr ""
-
-#. Last sentence of the /ver command description in the help window; a whole sentence on its own.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.verC"
-msgid "The answer shows where you asked."
-msgstr ""
-
-#. Start of the /voice command description in the help window; a code fragment with the +v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.voiceA"
-msgid "Give voice ("
-msgstr ""
-
-#. Continuation of the /voice command description in the help window, after the +v code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.voiceB"
-msgid ") to one or several users in the current channel."
+msgctxt "help.commands.voice"
+msgid "Give voice ({mode}) to one or several users in the current channel."
 msgstr ""
 
 #. Help page, description of the /who command. {mask} is an example wildcard mask shown as code (nick!user@host); keep it.
@@ -2144,16 +1994,22 @@ msgctxt "help.commands.whois"
 msgid "Retrieve information about the given user on the current network."
 msgstr ""
 
-#. Word inside the link of the help window's past-release sentence; the linked text names the source code commit the running build was made from, and the commit hash follows it. Mid-sentence.
+#. Text of the link naming the source commit a build was made from, in the help and changelog windows. {hash} is the commit hash (verbatim, a code element).
 #: client/components/Windows/Help.vue
-msgctxt "help.commitLink"
-msgid "commit"
+msgctxt "help.commitHash"
+msgid "commit {hash}"
 msgstr ""
 
-#. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
+#. Second item of the help window's past-release list (comparing the running build with the development branch). {range} is a link whose text is help.range ('between 1a2b3c4 and develop').
 #: client/components/Windows/Help.vue
-msgctxt "help.compare"
-msgid "Compare"
+msgctxt "help.compareBehind"
+msgid "Compare {range} to see what you are missing"
+msgstr ""
+
+#. First item of the help window's past-release list. {range} is a link whose text is help.range ('between v5.2.0 and 1a2b3c4').
+#: client/components/Windows/Help.vue
+msgctxt "help.compareSince"
+msgid "Compare {range} to see what changed since the release"
 msgstr ""
 
 #. Label of the documentation link in the Help window.
@@ -2161,12 +2017,6 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr ""
-
-#. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.formatting.as"
-msgid "Mark all text typed after this shortcut as"
 msgstr ""
 
 #. The example word shown in bold lettering in the help window's Ctrl+B formatting description; it demonstrates the formatting. Lowercase mid-sentence.
@@ -2181,34 +2031,22 @@ msgctxt "help.formatting.colorHere"
 msgid "here"
 msgstr ""
 
-#. First part of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
+#. First paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP1a"
-msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range"
+msgctxt "help.formatting.colorP1"
+msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range {range} to select the desired color, or use the autocompletion menu to choose a color name (see below)."
 msgstr ""
 
-#. Continuation of the Ctrl+K description in the help window's formatting section, after the code fragment with the numeric range.
+#. Second paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP1b"
-msgid "to select the desired color, or use the autocompletion menu to choose a color name (see below)."
+msgctxt "help.formatting.colorP2"
+msgid "Background color can be specified by putting a comma and another integer in the range {range} after the foreground color number (autocompletion works too)."
 msgstr ""
 
-#. Start of the second paragraph of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
+#. Last paragraph of the Ctrl+K description in the help window. {link} is a link to an external IRC color reference whose text is help.formatting.colorHere ('here'); write the frame so that word fits it.
 #: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP2a"
-msgid "Background color can be specified by putting a comma and another integer in the range"
-msgstr ""
-
-#. Continuation of the second paragraph of the Ctrl+K description in the help window's formatting section, after the code fragment with the numeric range.
-#: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP2b"
-msgid "after the foreground color number (autocompletion works too)."
-msgstr ""
-
-#. Start of the last paragraph of the Ctrl+K description in the help window's formatting section; the link text follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorRef"
-msgid "A color reference can be found"
+msgctxt "help.formatting.colorReference"
+msgid "A color reference can be found {link}."
 msgstr ""
 
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
@@ -2221,6 +2059,12 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
+msgstr ""
+
+#. Description of a text-formatting shortcut in the help window. {style} is the style's name (help.formatting.bold, italic, underline, strikethrough or monospace: 'bold', 'italics', 'underlined', 'struck through', 'monospaced'), shown in that style where the placeholder stands; write the frame so those words fit it.
+#: client/components/Windows/Help.vue
+msgctxt "help.formatting.markAs"
+msgid "Mark all text typed after this shortcut as {style}."
 msgstr ""
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
@@ -2294,6 +2138,12 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.privacy"
 msgid "Privacy policy"
+msgstr ""
+
+#. Text of a link in the help window's past-release list that compares two versions on the source host. {from} and {to} are version names or commit hashes (verbatim, code elements). It fills {range} in help.compareSince and help.compareBehind.
+#: client/components/Windows/Help.vue
+msgctxt "help.range"
+msgid "between {from} and {to}"
 msgstr ""
 
 #. Link beside the version number in the help window's title line; opens the changelog window. Mid-sentence between parentheses.
@@ -2414,12 +2264,6 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleUserlist"
 msgid "Toggle channel user list."
-msgstr ""
-
-#. Purpose clause ending the first compare item of the help window's past-release list (comparing the release with the running build). Starts lowercase because it follows the link.
-#: client/components/Windows/Help.vue
-msgctxt "help.sinceRelease"
-msgid "to see what changed since the release"
 msgstr ""
 
 #. Title of the help window: its heading, its dialog aria-label, and the accessible name of the whole page.
@@ -3801,16 +3645,16 @@ msgctxt "msg.ctcpTitle"
 msgid "Client-to-client protocol"
 msgstr ""
 
-#. System message announcing a channel's modes (324). The mode string in <b> is protocol text and stays verbatim.
+#. System message announcing a channel's modes (324). {modes} is the mode string (e.g. +nt), shown in bold; protocol text, kept verbatim.
 #: client/components/MessageTypes/mode_channel.vue
 msgctxt "msg.modeChannelIs"
-msgid "Channel mode is"
+msgid "Channel mode is {modes}"
 msgstr ""
 
-#. System message announcing the reader's own user modes (221). The mode string in <b> is protocol text and stays verbatim.
+#. System message announcing the reader's own user modes (221). {modes} is the mode string (e.g. +iwx), shown in bold; protocol text, kept verbatim.
 #: client/components/MessageTypes/mode_user.vue
 msgctxt "msg.modeUserIs"
-msgid "Your user mode is"
+msgid "Your user mode is {modes}"
 msgstr ""
 
 #. Lobby error when the server refused a nick as taken (433) and gave no reason of its own; shown as '<nick>: <reason>'. Lowercase mid-sentence by position.
@@ -3855,16 +3699,10 @@ msgctxt "msg.topicIs"
 msgid "The topic is:"
 msgstr ""
 
-#. System message naming who set the topic (333). Renders before the setter's name (direction-isolated in <bdi>); the time follows through the next fragment.
+#. System line naming who set the channel topic and when (numeric 333). {nick} is the setter's nick, VERBATIM user content, rendered as the interactive username element where the placeholder stands; {time} is the pre-formatted date and time. Order them as your language needs.
 #: client/components/MessageTypes/topic_set_by.vue
-msgctxt "msg.topicSetBy"
-msgid "Topic set by"
-msgstr ""
-
-#. Topic-set-by system message, after the setter's name. {time} is the pre-formatted timestamp of when the topic was set; keep it in the position the language's preposition wants.
-#: client/components/MessageTypes/topic_set_by.vue
-msgctxt "msg.topicSetOn"
-msgid "on {time}"
+msgctxt "msg.topicSet"
+msgid "Topic set by {nick} on {time}"
 msgstr ""
 
 #. Channel message answering a topic request when the channel has none (331).
@@ -11113,16 +10951,10 @@ msgctxt "search.results.scopeNote"
 msgid "Only messages loaded in this session are searched — older history is not searched."
 msgstr ""
 
-#. Second fragment of the search-results window header, rendered after the styled channel-name element; the search term itself follows the header. The element (the channel's or query window's name — user content, never translated) sits between this fragment and the one before it. Word order inside each fragment is free; the fragments cannot cross the element. Ends mid-sentence.
-#: client/components/Windows/SearchResults.vue:21
-msgctxt "search.results.searchingInAfter"
-msgid "for"
-msgstr ""
-
-#. First fragment of the search-results window header, rendered before the styled channel-name element. That element (the channel's or query window's name — user content, never translated, like a <Username>) sits between this fragment and the one after it. Word order inside each fragment is free; the fragments cannot cross the element.
-#: client/components/Windows/SearchResults.vue:19
-msgctxt "search.results.searchingInBefore"
-msgid "Searching in"
+#. Header of the search-results window. {channel} is the channel or conversation name (VERBATIM, a styled element); the search term itself is shown right after this text, in its own element, so the phrase ends where the term begins.
+#: client/components/Windows/SearchResults.vue
+msgctxt "search.results.searchingIn"
+msgid "Searching in {channel} for"
 msgstr ""
 
 #. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
@@ -11265,22 +11097,10 @@ msgctxt "settings.aliases.headRuns"
 msgid "Runs"
 msgstr ""
 
-#. Joins the last two entries of the alias-body variable list ($2- or $*). Single word; the spaces around it come from the template.
+#. Intro paragraph of Settings → Aliases. {example} is an example alias invocation such as /wave (a code element); {first}, {rest} and {all} are the argument tokens $1, $2- and $*, each a code element.
 #: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.introOr"
-msgid "or"
-msgstr ""
-
-#. Intro fragment (Settings -> Aliases): leads into the example alias invocation that follows in code style; the fragment ends where the example begins.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.introOwn"
-msgid "An alias is a slash command of your own. Typing"
-msgstr ""
-
-#. Intro fragment between the example invocation and the variable list: what defining an alias does. Sits in front of the $1 token.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.introRuns"
-msgid "runs what you define here — one command per line, with the arguments filled in where the body says"
+msgctxt "settings.aliases.intro"
+msgid "An alias is a slash command of your own. Typing {example} runs what you define here — one command per line, with the arguments filled in where the body says {first}, {rest} or {all}."
 msgstr ""
 
 #. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
@@ -11295,22 +11115,10 @@ msgctxt "settings.aliases.namePlaceholder"
 msgid "name"
 msgstr ""
 
-#. Nested-alias fragment between the two example commands: the first command can be rewritten as the second.
+#. Paragraph of Settings → Aliases on nested aliases. {command} is the example /join and {expansion} the example /join #lobby $*, each a code element: an alias named join can expand to the built-in /join without calling itself again.
 #: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.nestedBecomes"
-msgid "can become"
-msgstr ""
-
-#. Nested-alias fragment: aliases may call other aliases and shadow built-in commands; the two example commands follow in code style.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.nestedMain"
-msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it —"
-msgstr ""
-
-#. Nested-alias fragment: closes the example — shadowing a built-in does not recurse for ever.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.nestedTail"
-msgid "without looping."
+msgctxt "settings.aliases.nested"
+msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
 msgstr ""
 
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
@@ -11377,10 +11185,10 @@ msgctxt "settings.aliases.varChan"
 msgid "the current channel or query"
 msgstr ""
 
-#. Variable reference fragment: introduces the $$ escape, which follows in code style as a single dollar sign.
+#. Settings > Aliases variable reference, describing the $$ escape: it expands to a single dollar sign. {character} is that dollar sign, shown in code style.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varLiteral"
-msgid "a literal"
+msgid "a literal {character}"
 msgstr ""
 
 #. Variable reference: what $me expands to.
@@ -11791,10 +11599,10 @@ msgctxt "settings.appearance.sampleSlide"
 msgid "Yes! Slide it until this is comfortable."
 msgstr ""
 
-#. First word of the checkbox label in Settings > Appearance that displays the server's Message Of The Day; the untranslated acronym 'MOTD' follows it as a marked abbreviation, so only this word is translated.
+#. Checkbox label in Settings > Appearance that displays the server's Message Of The Day when connecting. {motd} is the untranslated acronym 'MOTD', rendered as a marked abbreviation with a tooltip: put it where your grammar needs the object (for example 'MOTD anzeigen', 'MOTD を表示').
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.showMotd"
-msgid "Show"
+msgid "Show {motd}"
 msgstr ""
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps include the seconds as well as hours and minutes.
@@ -11899,16 +11707,10 @@ msgctxt "settings.appearance.trustedHeading"
 msgid "Always shown"
 msgstr ""
 
-#. First part of the help line under the always-shown list in Settings > Appearance; the second part and the words 'Always show' (the name of the button on any media preview) follow it. Ends mid-sentence.
+#. Help line under the always-shown list in Settings > Appearance. {button} is the name of the preview button (settings.appearance.trustedButtonName, 'Always show'), rendered emphasized where the placeholder stands.
 #: client/components/Settings/Appearance.vue
-msgctxt "settings.appearance.trustedHelpA"
-msgid "Media in these scopes loads without asking. Add one with"
-msgstr ""
-
-#. Last part of the help line under the always-shown list in Settings > Appearance, after the words 'Always show' marking the preview button's name. Ends the sentence.
-#: client/components/Settings/Appearance.vue
-msgctxt "settings.appearance.trustedHelpB"
-msgid "on any preview."
+msgctxt "settings.appearance.trustedHelp"
+msgid "Media in these scopes loads without asking. Add one with {button} on any preview."
 msgstr ""
 
 #. Subheading in the always-shown media list of Settings > Appearance above the user account entries.
@@ -12968,6 +12770,12 @@ msgctxt "translate.capability.none"
 msgid "Translation cannot run on this device."
 msgstr ""
 
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Lowercase start, short phrase like the other reasons in the list.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.capability.reason.gpuLimits"
+msgid "GPU shader limits too low"
+msgstr ""
+
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the page is not served securely. WebGPU, HTTPS and localhost are technical names.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.insecureOrigin"
@@ -13056,6 +12864,30 @@ msgstr ""
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOn"
 msgid "Sending in {language} · click to stop"
+msgstr ""
+
+#. Extra line in the dialog asking before a translation model is downloaded, shown only when the browser reports a cellular connection or Data Saver: a warning that the download may cost data.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.metered"
+msgid "Your connection is metered or set to save data."
+msgstr ""
+
+#. Button in the dialog asking before a translation model is downloaded: declines the download for now. The translation then uses a model already on the device, or fails saying which model it needs. Keep it short (a button).
+#: client/js/translate/index.ts
+msgctxt "translate.consent.notNow"
+msgid "Not now"
+msgstr ""
+
+#. Body of the dialog asking before a translation model is downloaded (title 'Download {model}?'). {model} is the model's name as Settings lists it; {size} its download size with its unit, e.g. '938.4 MiB' or '2.1 GiB'. The buttons are 'Not now' and 'Download'.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.text"
+msgid "Translating this needs {model}, a {size} download. It is kept on this device, so it is downloaded only once."
+msgstr ""
+
+#. Title of the dialog that asks before a translation model is downloaded for the first time, because a translation (reading a channel, the composer, a message's Translate) needs it and it is not on this device yet. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)' or 'OPUS-MT German → English (CPU)'.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.title"
+msgid "Download {model}?"
 msgstr ""
 
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
@@ -13255,6 +13087,18 @@ msgctxt "translate.menu.translateNow"
 msgid "Translate"
 msgstr ""
 
+#. Said once by a screen reader (a polite live region in Settings > Translation) when a model's download or load ends. {model} is the model's name as its row shows it, e.g. 'NLLB-200 600M (CPU, 200 languages)'; {state} is the row's new state, e.g. 'Downloaded' or 'Failed: …'.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.announce"
+msgid "{model}: {state}"
+msgstr ""
+
+#. Settings → Translation, a model's row: status line saying this translation model cannot work on the user's device; the reason follows on the next line as a sentence of its own. Short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.cantRun"
+msgid "Can't run on this device"
+msgstr ""
+
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
@@ -13297,8 +13141,9 @@ msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
 msgstr ""
 
-#. Under one GPU model in the model list of Settings → Translation, when this device cannot load it: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Its Download button is greyed out.
+#. Reason a GPU translation model cannot load here: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Shown under the model's row in Settings → Translation (its Download button greyed out) and, after a lead sentence such as 'Correcting a message needs the GPU model.', wherever an action needing that model is unavailable.
 #: client/components/Settings/Translation.vue
+#: client/js/helpers/translateWhy.ts
 msgctxt "translate.model.needsBuffer"
 msgid "Needs a GPU buffer of {needed}; this device binds at most {limit}"
 msgstr ""
@@ -13327,10 +13172,35 @@ msgctxt "translate.model.percent"
 msgid "{percent}%"
 msgstr ""
 
+#. Settings → Translation, a model's row: status line saying this translation model works on the user's device. Short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.runsHere"
+msgid "Can run on this device"
+msgstr ""
+
+#. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.switchedOff"
+msgid "Switched off above"
+msgstr ""
+
 #. Label of the compact equals-icon chip shown in place of a translation that failed because the engine returned the source line as its own answer. Also the chip's tooltip and aria-label; the reason text beside it only appears in development builds.
 #: client/components/TranslationLine.vue
 msgctxt "translate.notTranslated"
 msgid "Not translated"
+msgstr ""
+
+#. Lead sentence when a translation is unavailable for a language pair (the composer's translate dialog, the translation panel's 'Send my messages in'); the reason follows as a sentence of its own. {from} and {to} are language names, already in the interface language.
+#: client/components/SourceLanguagePicker.vue
+#: client/components/TranslationPanel.vue
+msgctxt "translate.pair.unavailable"
+msgid "Nothing on this device can translate {from} into {to}."
+msgstr ""
+
+#. Lead sentence in the composer's translate dialog when the source is 'Detect automatically' and no engine here translates into the chosen language; the reason follows as a sentence of its own. {to} is a language name, already in the interface language.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.pair.unavailableInto"
+msgid "Nothing on this device can translate into {to}."
 msgstr ""
 
 #. The placeholder option of the picker that adds a language to the list of languages spoken in this conversation, in the translation panel.
@@ -13367,6 +13237,12 @@ msgstr ""
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
+msgstr ""
+
+#. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
+#: client/components/TranslationPanel.vue
+msgctxt "translate.panel.ownLanguageNeedsGpu"
+msgid "{language} is greyed out: correcting a message needs the GPU model."
 msgstr ""
 
 #. Explanatory note under the reading switch in the translation panel.
@@ -13477,10 +13353,11 @@ msgctxt "translate.picker.sameLanguage"
 msgid "Same language: spelling and grammar are corrected instead."
 msgstr ""
 
-#. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language but the on-device language model that does the correcting cannot run here (switched off in Settings, or no capable GPU).
+#. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the GPU model can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
+#: client/components/TranslationPanel.vue
 msgctxt "translate.picker.sameLanguageNeedsGpu"
-msgid "Correcting a message needs the GPU model, which is off or not available on this device."
+msgid "Correcting a message needs the GPU model."
 msgstr ""
 
 #. Button that translates the draft into the language picked in the composer's translate-into dialog.
@@ -13561,6 +13438,12 @@ msgctxt "translate.settings.gpuModelHint"
 msgid "The larger model translates more naturally, needs about 3.4 GB of graphics memory and is slower."
 msgstr ""
 
+#. Line under the GPU model select in Settings → Translation, for a model that is greyed out in the select because this device's GPU cannot hold it. {model} is the model's name, e.g. 'Qwen3 4B'. Followed by a sentence of its own giving the reason, e.g. 'It needs a GPU that binds 185.5 MiB in one buffer; this one binds 160 MiB.'
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.gpuModelUnfit"
+msgid "{model} can't run on this device."
+msgstr ""
+
 #. Heading of the Translation tab in Settings.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.heading"
@@ -13571,6 +13454,12 @@ msgstr ""
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.inUse"
 msgid "In use"
+msgstr ""
+
+#. Label of the language select in Settings > Translation when the deployment has translation turned off: there it only chooses the language the interface is written in.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.interfaceLanguageLabel"
+msgid "Interface language"
 msgstr ""
 
 #. Introductory paragraph of the Translation tab in Settings, explaining that translation runs locally.
@@ -13603,6 +13492,12 @@ msgctxt "translate.settings.models"
 msgid "Models"
 msgstr ""
 
+#. Line under the 'Use NLLB-200 …' switch in Settings → Translation, naming the model's licence, which is why the switch is off by default. NLLB-200 and CC BY-NC 4.0 are names, never translated.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.nllbLicence"
+msgid "NLLB-200 is licensed CC BY-NC 4.0: for non-commercial use only."
+msgstr ""
+
 #. Label of the checkbox in Settings → Translation that allows the smaller main-processor models. CPU is the usual abbreviation for the main processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
@@ -13613,6 +13508,12 @@ msgstr ""
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
+msgstr ""
+
+#. Switch in Settings → Translation, under 'Use the CPU models where they are the better choice': lets the router use the NLLB-200 model (CPU, 200 languages). Off by default. NLLB-200 is a model name, never translated.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.useNllb"
+msgid "Use NLLB-200 for languages the other models do not cover"
 msgstr ""
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
@@ -13711,10 +13612,108 @@ msgctxt "translate.topic.showTranslation"
 msgid "Show the translated topic"
 msgstr ""
 
+#. Lead sentence of the per-channel translation panel's notice, and the channel header translate button's label, when no translation engine can run (both switched off, or a device that runs neither); the reason follows as a sentence of its own.
+#: client/components/TranslationPanel.vue
+#: client/components/Chat.vue
+msgctxt "translate.unavailable.lead"
+msgid "Translation can't run here right now."
+msgstr ""
+
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"
 msgid "the line came back unchanged"
+msgstr ""
+
+#. Reason nothing can translate: the user turned off both engine switches. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.allOff"
+msgid "Both the GPU model and the CPU models are switched off in Settings → Translation."
+msgstr ""
+
+#. Reason a translation cannot run: the user turned off the 'Use the CPU models' switch. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.cpuOff"
+msgid "The CPU models are switched off in Settings → Translation."
+msgstr ""
+
+#. Reason a translation cannot run: the one model that serves it failed to load earlier in this session and is skipped until the page is reloaded. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.down"
+msgid "The model for this failed to load earlier; reload the page to try it again."
+msgstr ""
+
+#. Reason a GPU translation model cannot run: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.gpuLimits"
+msgid "This GPU's shader limits are too low for the GPU models."
+msgstr ""
+
+#. Reason a GPU translation model cannot run: the page is plain HTTP. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebGPU', 'HTTPS' and 'localhost'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.insecureOrigin"
+msgid "WebGPU needs the app served over HTTPS (or from localhost), so the GPU models can't run here."
+msgstr ""
+
+#. Reason a translation cannot run: the user turned off the 'Use the GPU model' switch. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.llmOff"
+msgid "The GPU model is switched off in Settings → Translation."
+msgstr ""
+
+#. Reason a translation did not run: the user answered 'Not now' when asked to download the model it needs, and it is not on this device yet. Shown under a translated line that failed (cut at about 120 characters there, so keep it short), in the composer's translation strip and in the translation controls. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)'; {size} its download size with its unit, e.g. '938.4 MiB'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.needsDownload"
+msgid "Needs {model}, a {size} download: get it in Settings → Translation."
+msgstr ""
+
+#. Reason a translation cannot run: only the NLLB-200 model serves this language pair here, and the user has not switched it on (it is off by default because its licence is non-commercial). Shown wherever a translation action is unavailable, as a sentence of its own. NLLB-200 is a model name, never translated. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.nllbOff"
+msgid "This needs NLLB-200, which is switched off in Settings → Translation."
+msgstr ""
+
+#. Reason a GPU translation model cannot run: WebGPU exists but returned no graphics adapter. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noAdapter"
+msgid "This browser has WebGPU but found no GPU it can use."
+msgstr ""
+
+#. Reason a GPU translation model cannot run: the graphics card lacks half-precision (16-bit floating point) shader support. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noF16"
+msgid "This GPU has no 16-bit float shaders, which the GPU models need."
+msgstr ""
+
+#. Reason the CPU translation models cannot run. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebAssembly SIMD'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noWasmSimd"
+msgid "This browser has no WebAssembly SIMD, which the CPU models need."
+msgstr ""
+
+#. Reason a GPU translation model cannot run. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'WebGPU' is a browser API name, keep it.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noWebgpu"
+msgid "This browser has no WebGPU, which the GPU models need."
+msgstr ""
+
+#. Reason nothing can translate: the app's check of the device's GPU and CPU features threw an error. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.probeFailed"
+msgid "Checking what this device can run failed, so translation is off."
+msgstr ""
+
+#. Shown while the app is still checking the device's GPU and CPU features, before any translation model can be judged; also the status line of each model row in Settings → Translation meanwhile.
+#: client/js/helpers/translateWhy.ts
+#: client/components/Settings/Translation.vue
+msgctxt "translate.why.probing"
+msgid "Still checking what this device can run…"
+msgstr ""
+
+#. Reason a translation cannot run: no installed translation model translates between the two languages asked for. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.unserved"
+msgid "No model on this device covers this pair of languages."
 msgstr ""
 
 #. Translation panel, channel languages field. {channel} is the channel's name (#seance).
@@ -13773,16 +13772,18 @@ msgctxt "upload.cancelled"
 msgid "Upload cancelled"
 msgstr ""
 
+#. Confirmation button of the upload dialog when several files are queued (so in practice the count is 2 or more); clicking sends them all to the chat server. {count} is the number of files.
+#: client/components/UploadPreview.vue
+msgctxt "upload.confirmCount"
+msgid "Upload {count} file"
+msgid_plural "Upload {count} files"
+msgstr[0] ""
+msgstr[1] ""
+
 #. Intro line of the upload confirmation dialog; asks the user to check the files and warns that every uploaded file is reachable through its link.
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmHint"
 msgid "Check that this is what you meant to share, then upload. Anyone who can open the link will be able to see it."
-msgstr ""
-
-#. Confirmation button of the upload dialog when several files are queued; clicking sends them all to the chat server.
-#: client/components/UploadPreview.vue
-msgctxt "upload.confirmMany"
-msgid "Upload {count} files"
 msgstr ""
 
 #. Confirmation button of the upload confirmation dialog when one file is queued; clicking sends it to the chat server.
@@ -14209,34 +14210,16 @@ msgctxt "windows.changelog.back"
 msgid "« Help"
 msgstr ""
 
-#. Word inside the link of the changelog's past-release sentence: the linked text names the source code commit the running build was made from; the commit hash follows it. Mid-sentence.
+#. Changelog window paragraph. {readNotes} is a link whose text is windows.changelog.readNotesLink ('Read the notes for v5.2.0') and {allReleases} a link whose text is windows.changelog.allReleasesLink ('see all releases').
 #: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.commitLink"
-msgid "commit"
+msgctxt "windows.changelog.notBundledLine"
+msgid "Release notes are not bundled with the build. {readNotes} or {allReleases}."
 msgstr ""
 
-#. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
+#. Changelog window sentence shown when the running build is newer than its release. {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v; {since} is a link whose text is windows.changelog.sinceReleaseLink ('what changed since the release').
 #: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.notBundled"
-msgid "Release notes are not bundled with the build."
-msgstr ""
-
-#. Word joining the two links of the changelog window's last paragraph (the release notes and the list of all releases). Mid-sentence.
-#: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.or"
-msgid "or"
-msgstr ""
-
-#. Start of the sentence in the changelog window shown when the running build is newer than its release; what follows names the source commit and the changes since the release. Ends mid-sentence.
-#: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.pastRelease"
-msgid "This build is"
-msgstr ""
-
-#. Middle of the changelog's past-release sentence, after the link naming the source commit; introduces the link that lists what changed since the release. {version} is the release number the build follows. Keep the comma, colon and the v.
-#: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.pastReleaseAfter"
-msgid ", after v{version}:"
+msgctxt "windows.changelog.pastReleaseLine"
+msgid "This build is {commit}, after v{version}: {since}."
 msgstr ""
 
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.

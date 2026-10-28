@@ -4,6 +4,7 @@ import {buildCatalog} from "../../client/js/translate/models";
 import {
 	candidatesFor,
 	classesOf,
+	explainRoute,
 	mergeRoutes,
 	resolveRoute,
 	type RouteInput,
@@ -38,6 +39,7 @@ function input(overrides: Partial<RouteInput> = {}): RouteInput {
 		tier: "gpu",
 		allowLlm: true,
 		allowCpu: true,
+		allowNllb: true,
 		down: new Set(),
 		...overrides,
 	};
@@ -172,6 +174,47 @@ describe("translate/router", () => {
 		expect(
 			resolveRoute(table, catalog, input({from: "sw", down: new Set(["nllb"])}))?.candidate
 		).to.equal("llm");
+	});
+
+	it("passes over a candidate whose download is refused, naming its model", () => {
+		const refuseAll = () => true;
+		// Nothing may be downloaded and nothing is: no route, the best class's model named.
+		const none = explainRoute(table, catalog, input({refuse: refuseAll}));
+
+		expect(none.route).to.equal(null);
+		expect(none.why).to.deep.equal({kind: "download", ref: catalog.llm});
+		// What is on the device still runs.
+		expect(
+			resolveRoute(
+				table,
+				catalog,
+				input({
+					cached: isCached(catalog.nllb.id),
+					refuse: (ref) => ref.id !== catalog.nllb.id,
+				})
+			)?.candidate
+		).to.equal("nllb");
+		// A switch the user turned off outranks it as the reason.
+		expect(
+			explainRoute(
+				table,
+				catalog,
+				input({allowLlm: false, allowCpu: false, refuse: refuseAll})
+			).why
+		).to.deep.equal({kind: "off", engine: "all"});
+	});
+
+	it("passes over NLLB-200 until it is switched on", () => {
+		expect(
+			resolveRoute(table, catalog, input({from: "sw", allowNllb: false}))?.candidate
+		).to.equal("llm");
+		expect(
+			explainRoute(table, catalog, input({from: "sw", tier: "cpu", allowNllb: false})).why
+		).to.deep.equal({kind: "off", engine: "nllb"});
+		// The OPUS pair needs no NLLB.
+		expect(
+			resolveRoute(table, catalog, input({tier: "cpu", allowNllb: false}))?.candidate
+		).to.equal("opus:de-en");
 	});
 
 	it("skips a candidate the catalog has no model for", () => {

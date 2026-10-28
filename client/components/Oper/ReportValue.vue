@@ -45,7 +45,7 @@
 			:title="tCount('oper.report.bytes', one.v)"
 			>{{ bytes(one.v) }}</span
 		>
-		<span v-else-if="one.t === 'number'" class="oper-number">{{ one.v.toLocaleString() }}</span>
+		<span v-else-if="one.t === 'number'" class="oper-number">{{ number(one.v) }}</span>
 		<span v-else-if="one.t === 'chips'" class="oper-chips"
 			><span v-for="chip in one.v" :key="chip" class="oper-chip-static">{{
 				chip
@@ -66,6 +66,7 @@ import type {ClientNetwork} from "../../js/types";
 import {formatBytes, formatDuration, formatExpiry, relativeTime} from "../../js/helpers/operFormat";
 import {openOperTargetMenu} from "../../js/helpers/operMenu";
 import {formatDateTime} from "../../js/i18n/dates";
+import {formatNumber} from "../../js/i18n/numbers";
 import useNow from "../../js/hooks/use-now";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
@@ -116,6 +117,9 @@ export default defineComponent({
 			expiry: (ms: number) => formatExpiry(ms, now.value),
 			duration: formatDuration,
 			bytes: formatBytes,
+			// The app's language writes the digits and the grouping, not the
+			// browser's (toLocaleString() is the browser locale).
+			number: formatNumber,
 		};
 	},
 });

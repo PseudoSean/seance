@@ -87,7 +87,7 @@
 					t("message.editedBadge")
 				}}</span>
 				<TranslationLine
-					v-if="channel && (!message.redacted || revealed)"
+					v-if="hasTranslationEntry && channel && (!message.redacted || revealed)"
 					:message="message"
 					:channel="channel"
 					:network="network"
@@ -179,7 +179,7 @@
 					t("message.editedBadge")
 				}}</span>
 				<TranslationLine
-					v-if="channel && (!message.redacted || revealed)"
+					v-if="hasTranslationEntry && channel && (!message.redacted || revealed)"
 					:message="message"
 					:channel="channel"
 					:network="network"
@@ -509,6 +509,11 @@ export default defineComponent({
 			return "message-" + (props.message.type || "invalid"); // TODO: force existence of type in sharedmsg
 		});
 
+		// Every row of every channel is a Message, and almost none has a
+		// translation entry: the row mounts no TranslationLine until it has
+		// one (each of its states, the skipped chip included, is an entry).
+		const hasTranslationEntry = computed(() => !!store.state.translations[props.message.id]);
+
 		// A finished, shown translation is the bright line; the original dims
 		// (docs/resources/translation.md § Reading a channel). Pending,
 		// failed, dropped or hidden ("Show original only") keep the original
@@ -650,6 +655,7 @@ export default defineComponent({
 			canAct,
 			translated,
 			unchanged,
+			hasTranslationEntry,
 		};
 	},
 });

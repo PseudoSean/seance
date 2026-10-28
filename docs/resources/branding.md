@@ -243,6 +243,14 @@ Seance can translate messages on the user's device (`client/js/translate/`, `doc
 
 **Threads.** The CPU models run several times faster with multi-threaded WebAssembly, which the browser only allows on a cross-origin-isolated page. A deploy that can set response headers sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` on `index.html`; with `require-corp` instead, every cross-origin resource the page loads (link previews, the uploader, a mirror on another origin) must also send `Cross-Origin-Resource-Policy: cross-origin`. Without the headers everything still works, single-threaded. The CPU engine reports whether it got threads in its status snapshot (`threads` on the worker's `status` reply); no screen shows it yet, so a deploy checks `crossOriginIsolated` in the browser console.
 
+**Content-Security-Policy.** A deploy that sends one has to let three things through, or translation fails on every model load (and only there — the rest of the app needs nothing beyond `'self'` for scripts):
+
+- `script-src 'wasm-unsafe-eval'` (beside `'self'`): every engine compiles WebAssembly in `js/translate-worker.js` — ONNX Runtime (`js/ort/`) for the CPU models, WebLLM's model library and tokenizer for the GPU ones. It allows WebAssembly compilation and nothing else; nothing in the app needs `'unsafe-eval'` or `'unsafe-inline'` (there is no inline script: the pre-paint language script is `js/prepaint.js`).
+- `connect-src` for the hosts the models come from: `https://huggingface.co` and `https://*.hf.co` (the `cdn-lfs*` redirects), and `https://raw.githubusercontent.com` for the GPU library — or the `modelBase` mirror instead of all three.
+- `worker-src 'self'`, for the translation worker and, on a cross-origin-isolated page, ONNX Runtime's thread workers (started from `js/ort/` itself).
+
+Serve `.wasm` as `application/wasm`. The Electron shell (`shells/electron/main.js`) sends exactly such a policy: `'wasm-unsafe-eval'` in `script-src`, `https:` in `connect-src` and `.wasm` in its MIME table (`test/tests/electronShell.ts`). Checked in headless Chromium under that policy: ONNX Runtime's build instantiates in a worker and the pre-paint script sets an Arabic page's direction, with no violation reported; the multi-threaded path was not exercised.
+
 ## Files a rebranded deploy overwrites in `public/`
 
 `config.json` covers the app itself. Icons and the manifest are static files; replace them with your own after building (or before, in `client/`, so the build copies them):

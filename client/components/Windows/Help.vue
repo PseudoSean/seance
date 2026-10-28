@@ -31,30 +31,56 @@
 
 				<template v-if="pastRelease">
 					<p>
-						{{ appName }} {{ t("help.builtFrom") }}
-						<a :href="source.commit" target="_blank" rel="noopener"
-							>{{ t("help.commitLink") }} <code>{{ build.gitCommit }}</code></a
-						>{{ t("help.builtAfter", {version: build.release}) }}.
+						<I18nFrame
+							:text="
+								t('help.builtFromCommit', {
+									app: appName,
+									commit: KEEP,
+									version: build.release,
+								})
+							"
+							><template v-slot:commit
+								><a :href="source.commit" target="_blank" rel="noopener"
+									><I18nFrame :text="t('help.commitHash', {hash: KEEP})"
+										><template v-slot:hash
+											><code>{{ build.gitCommit }}</code></template
+										></I18nFrame
+									></a
+								></template
+							></I18nFrame
+						>
 					</p>
 
 					<ul>
 						<li>
-							{{ t("help.compare") }}
-							<a :href="source.sinceRelease" target="_blank" rel="noopener"
-								>{{ t("help.between") }} <code>v{{ build.release }}</code>
-								{{ t("help.and") }}
-								<code>{{ build.gitCommit }}</code></a
+							<I18nFrame :text="t('help.compareSince', {range: KEEP})"
+								><template v-slot:range
+									><a :href="source.sinceRelease" target="_blank" rel="noopener"
+										><I18nFrame :text="t('help.range', {from: KEEP, to: KEEP})"
+											><template v-slot:from
+												><code>v{{ build.release }}</code></template
+											><template v-slot:to
+												><code>{{ build.gitCommit }}</code></template
+											></I18nFrame
+										></a
+									></template
+								></I18nFrame
 							>
-							{{ t("help.sinceRelease") }}
 						</li>
 						<li>
-							{{ t("help.compare") }}
-							<a :href="source.behindDevelop" target="_blank" rel="noopener"
-								>{{ t("help.between") }} <code>{{ build.gitCommit }}</code>
-								{{ t("help.and") }}
-								<code>develop</code></a
+							<I18nFrame :text="t('help.compareBehind', {range: KEEP})"
+								><template v-slot:range
+									><a :href="source.behindDevelop" target="_blank" rel="noopener"
+										><I18nFrame :text="t('help.range', {from: KEEP, to: KEEP})"
+											><template v-slot:from
+												><code>{{ build.gitCommit }}</code></template
+											><template v-slot:to
+												><code>develop</code></template
+											></I18nFrame
+										></a
+									></template
+								></I18nFrame
 							>
-							{{ t("help.behindDevelop") }}
 						</li>
 					</ul>
 				</template>
@@ -291,23 +317,26 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.formatting.colorP1a") }}
-						<code>0—15</code>
-						{{ t("help.formatting.colorP1b") }}
+						<I18nFrame :text="t('help.formatting.colorP1', {range: KEEP})"
+							><template v-slot:range><code>0—15</code></template></I18nFrame
+						>
 					</p>
 					<p>
-						{{ t("help.formatting.colorP2a") }}
-						<code>0—15</code>
-						{{ t("help.formatting.colorP2b") }}
+						<I18nFrame :text="t('help.formatting.colorP2', {range: KEEP})"
+							><template v-slot:range><code>0—15</code></template></I18nFrame
+						>
 					</p>
 					<p>
-						{{ t("help.formatting.colorRef") }}
-						<a
-							href="https://modern.ircdocs.horse/formatting.html#colors"
-							target="_blank"
-							rel="noopener"
-							>{{ t("help.formatting.colorHere") }}</a
-						>.
+						<I18nFrame :text="t('help.formatting.colorReference', {link: KEEP})"
+							><template v-slot:link
+								><a
+									href="https://modern.ircdocs.horse/formatting.html#colors"
+									target="_blank"
+									rel="noopener"
+									>{{ t("help.formatting.colorHere") }}</a
+								></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -319,9 +348,13 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.formatting.as") }}
-						<span class="irc-bold">{{ t("help.formatting.bold") }}</span
-						>.
+						<I18nFrame :text="t('help.formatting.markAs', {style: KEEP})"
+							><template v-slot:style
+								><span class="irc-bold">{{
+									t("help.formatting.bold")
+								}}</span></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -333,9 +366,13 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.formatting.as") }}
-						<span class="irc-underline">{{ t("help.formatting.underline") }}</span
-						>.
+						<I18nFrame :text="t('help.formatting.markAs', {style: KEEP})"
+							><template v-slot:style
+								><span class="irc-underline">{{
+									t("help.formatting.underline")
+								}}</span></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -347,9 +384,13 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.formatting.as") }}
-						<span class="irc-italic">{{ t("help.formatting.italic") }}</span
-						>.
+						<I18nFrame :text="t('help.formatting.markAs', {style: KEEP})"
+							><template v-slot:style
+								><span class="irc-italic">{{
+									t("help.formatting.italic")
+								}}</span></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -361,11 +402,13 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.formatting.as") }}
-						<span class="irc-strikethrough">{{
-							t("help.formatting.strikethrough")
-						}}</span
-						>.
+						<I18nFrame :text="t('help.formatting.markAs', {style: KEEP})"
+							><template v-slot:style
+								><span class="irc-strikethrough">{{
+									t("help.formatting.strikethrough")
+								}}</span></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -377,9 +420,13 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.formatting.as") }}
-						<span class="irc-monospace">{{ t("help.formatting.monospace") }}</span
-						>.
+						<I18nFrame :text="t('help.formatting.markAs', {style: KEEP})"
+							><template v-slot:style
+								><span class="irc-monospace">{{
+									t("help.formatting.monospace")
+								}}</span></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -399,11 +446,15 @@
 			<h2>{{ t("help.autocomplete.heading") }}</h2>
 
 			<p>
-				{{ t("help.autocomplete.introA") }}
-				<kbd>↑</kbd> {{ t("help.autocomplete.introB") }} <kbd>↓</kbd>
-				{{ t("help.autocomplete.introC") }} <kbd>Tab</kbd>
-				{{ t("help.autocomplete.introD") }} <kbd>Enter</kbd>
-				{{ t("help.autocomplete.introE") }}
+				<I18nFrame
+					:text="
+						t('help.autocomplete.intro', {up: KEEP, down: KEEP, tab: KEEP, enter: KEEP})
+					"
+					><template v-slot:up><kbd>↑</kbd></template
+					><template v-slot:down><kbd>↓</kbd></template
+					><template v-slot:tab><kbd>Tab</kbd></template
+					><template v-slot:enter><kbd>Enter</kbd></template></I18nFrame
+				>
 			</p>
 			<p>{{ t("help.autocomplete.disabled") }}</p>
 
@@ -440,8 +491,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.autocomplete.emoji") }}
-						<code>:)</code>)
+						<I18nFrame :text="t('help.autocomplete.emoji', {example: KEEP})"
+							><template v-slot:example><code>:)</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -462,7 +514,11 @@
 					<code>/back</code>
 				</div>
 				<div class="description">
-					<p>{{ t("help.commands.back") }} <code>/away</code>).</p>
+					<p>
+						<I18nFrame :text="t('help.commands.back', {command: KEEP})"
+							><template v-slot:command><code>/away</code></template></I18nFrame
+						>
+					</p>
 				</div>
 			</div>
 
@@ -472,7 +528,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.banA") }} <code>+b</code>{{ t("help.commands.banB") }}
+						<I18nFrame :text="t('help.commands.ban', {mode: KEEP})"
+							><template v-slot:mode><code>+b</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -492,8 +550,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.collapse") }}
-						<code>/expand</code>)
+						<I18nFrame :text="t('help.commands.collapse', {command: KEEP})"
+							><template v-slot:command><code>/expand</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -504,9 +563,10 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.connectA") }} <code>port</code>
-						{{ t("help.commands.connectB") }}
-						<code>+</code> {{ t("help.commands.connectC") }}
+						<I18nFrame :text="t('help.commands.connect', {port: KEEP, plus: KEEP})"
+							><template v-slot:port><code>port</code></template
+							><template v-slot:plus><code>+</code></template></I18nFrame
+						>
 					</p>
 					<p>{{ t("help.commands.alias") }} <code>/server</code></p>
 				</div>
@@ -518,14 +578,17 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.ctcpA") }} <abbr :title="ctcpTitle">CTCP</abbr>
-						{{ t("help.commands.ctcpB") }}
-						<a
-							href="https://en.wikipedia.org/wiki/Client-to-client_protocol"
-							target="_blank"
-							rel="noopener"
-							>{{ t("help.commands.ctcpLink") }}</a
-						>.
+						<I18nFrame :text="t('help.commands.ctcp', {ctcp: KEEP, link: KEEP})"
+							><template v-slot:ctcp><abbr :title="ctcpTitle">CTCP</abbr></template
+							><template v-slot:link
+								><a
+									href="https://en.wikipedia.org/wiki/Client-to-client_protocol"
+									target="_blank"
+									rel="noopener"
+									>{{ t("help.commands.ctcpLink") }}</a
+								></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -536,9 +599,12 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.verA") }} <abbr :title="ctcpTitle">CTCP</abbr>
-						{{ t("help.commands.verB") }} <code>/ctcp nick version</code>.
-						{{ t("help.commands.verC") }}
+						<I18nFrame :text="t('help.commands.ver', {ctcp: KEEP, command: KEEP})"
+							><template v-slot:ctcp><abbr :title="ctcpTitle">CTCP</abbr></template
+							><template v-slot:command
+								><code>/ctcp nick version</code></template
+							></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -549,7 +615,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.deopA") }} <code>-o</code>{{ t("help.commands.deopB") }}
+						<I18nFrame :text="t('help.commands.deop', {mode: KEEP})"
+							><template v-slot:mode><code>-o</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -560,8 +628,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.devoiceA") }} <code>-v</code
-						>{{ t("help.commands.devoiceB") }}
+						<I18nFrame :text="t('help.commands.devoice', {mode: KEEP})"
+							><template v-slot:mode><code>-v</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -581,8 +650,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.expand") }}
-						<code>/collapse</code>)
+						<I18nFrame :text="t('help.commands.expand', {command: KEEP})"
+							><template v-slot:command><code>/collapse</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -593,8 +663,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.inviteA") }}
-						<code>channel</code> {{ t("help.commands.inviteB") }}
+						<I18nFrame :text="t('help.commands.invite', {channel: KEEP})"
+							><template v-slot:channel><code>channel</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -645,9 +716,10 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.kickbanA") }} <code>+b</code
-						>{{ t("help.commands.kickbanB") }} <code>/ban</code
-						>{{ t("help.commands.kickbanC") }}
+						<I18nFrame :text="t('help.commands.kickban', {mode: KEEP, ban: KEEP})"
+							><template v-slot:mode><code>+b</code></template
+							><template v-slot:ban><code>/ban</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -697,7 +769,11 @@
 					<code>/mute [...channel]</code>
 				</div>
 				<div class="description">
-					<p>{{ t("help.commands.mute") }} <code>/unmute</code>.</p>
+					<p>
+						<I18nFrame :text="t('help.commands.mute', {command: KEEP})"
+							><template v-slot:command><code>/unmute</code></template></I18nFrame
+						>
+					</p>
 				</div>
 			</div>
 
@@ -724,7 +800,11 @@
 					<code>/op nick [...nick]</code>
 				</div>
 				<div class="description">
-					<p>{{ t("help.commands.opA") }} <code>+o</code>{{ t("help.commands.opB") }}</p>
+					<p>
+						<I18nFrame :text="t('help.commands.op', {mode: KEEP})"
+							><template v-slot:mode><code>+o</code></template></I18nFrame
+						>
+					</p>
 				</div>
 			</div>
 
@@ -734,8 +814,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.part") }}
-						<code>channel</code> {{ t("help.commands.partB") }}
+						<I18nFrame :text="t('help.commands.part', {channel: KEEP})"
+							><template v-slot:channel><code>channel</code></template></I18nFrame
+						>
 					</p>
 					<p>{{ t("help.commands.aliases") }} <code>/close</code>, <code>/leave</code></p>
 				</div>
@@ -805,8 +886,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.topicA") }} <code>newtopic</code>
-						{{ t("help.commands.topicB") }}
+						<I18nFrame :text="t('help.commands.topic', {newtopic: KEEP})"
+							><template v-slot:newtopic><code>newtopic</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -826,8 +908,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.unbanA") }} <code>-b</code
-						>{{ t("help.commands.unbanB") }}
+						<I18nFrame :text="t('help.commands.unban', {mode: KEEP})"
+							><template v-slot:mode><code>-b</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -849,8 +932,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.unmuteA") }} <code>/mute</code>
-						{{ t("help.commands.unmuteB") }}
+						<I18nFrame :text="t('help.commands.unmute', {mute: KEEP})"
+							><template v-slot:mute><code>/mute</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -861,8 +945,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.voiceA") }} <code>+v</code
-						>{{ t("help.commands.voiceB") }}
+						<I18nFrame :text="t('help.commands.voice', {mode: KEEP})"
+							><template v-slot:mode><code>+v</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -872,7 +957,11 @@
 					<code>/who [mask] [flags]</code>
 				</div>
 				<div class="description">
-					<p>{{ whoParts[0] }}<code>nick!user@host</code>{{ whoParts[1] }}</p>
+					<p>
+						<I18nFrame :text="t('help.commands.who', {mask: KEEP})"
+							><template v-slot:mask><code>nick!user@host</code></template></I18nFrame
+						>
+					</p>
 				</div>
 			</div>
 
@@ -892,24 +981,22 @@
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
-import {frameSegments, KEEP} from "../../js/i18n/core";
+import {KEEP} from "../../js/i18n/core";
 import {buildIdentityOf, isPastRelease, sourceLinks} from "../../js/helpers/sourceLinks";
 import SidebarToggle from "../SidebarToggle.vue";
+import I18nFrame from "../I18nFrame.vue";
 
 export default defineComponent({
 	name: "Help",
 	components: {
 		SidebarToggle,
+		I18nFrame,
 	},
 	setup() {
 		const store = useStore();
 		const {t} = useI18n();
 		const title = computed(() => t("help.title"));
 		const ctcpTitle = computed(() => t("help.commands.ctcpTitle"));
-		// /who's description, cut around its example mask.
-		const whoParts = computed(() =>
-			frameSegments(t("help.commands.who", {mask: KEEP}), ["mask"])
-		);
 		const isApple = navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i) || false;
 		const isTouch = navigator.maxTouchPoints > 0;
 		const appName = computed(() => store.state.branding.appName);
@@ -928,7 +1015,7 @@ export default defineComponent({
 		return {
 			title,
 			ctcpTitle,
-			whoParts,
+			KEEP,
 			appName,
 			build,
 			isApple,

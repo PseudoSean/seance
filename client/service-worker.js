@@ -85,6 +85,7 @@ const shellPaths = [
 	"manifest.webmanifest",
 	"config.json",
 	"favicon.ico",
+	`js/prepaint.js?v=${cacheName}`,
 	`js/loading-error-handlers.js?v=${cacheName}`,
 	`js/bundle.vendor.js?v=${cacheName}`,
 	`js/bundle.js?v=${cacheName}`,

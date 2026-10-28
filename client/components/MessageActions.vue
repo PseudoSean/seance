@@ -61,10 +61,17 @@
 			type="button"
 			class="msg-action msg-action-translate"
 			:aria-label="translateLabel"
-			:title="translateLabel"
-			:aria-haspopup="hiddenTranslation ? undefined : 'menu'"
+			:title="translateBlocked || translateLabel"
+			:aria-haspopup="hiddenTranslation || translateBlocked ? undefined : 'menu'"
+			:disabled="!!translateBlocked && !explainOnTap"
+			:aria-disabled="translateBlocked && explainOnTap ? 'true' : undefined"
+			:aria-describedby="translateBlocked ? translateWhyId : undefined"
 			@click.stop="translate"
 		/>
+		<!-- Why it is off, for a screen reader as well as the tooltip. -->
+		<span v-if="canTranslate && translateBlocked" :id="translateWhyId" class="sr-only">{{
+			translateBlocked
+		}}</span>
 		<button
 			v-if="canEdit"
 			type="button"
@@ -94,6 +101,7 @@
 			v-if="sourcePickerOpen"
 			:anchor="translateButton"
 			:candidates="channelLanguages"
+			:to="readingLanguage()"
 			@pick="translateFrom"
 			@close="sourcePickerOpen = false"
 		/>
@@ -115,10 +123,13 @@ import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
 import {
 	channelTranslation,
+	currentTranslationBlock,
+	readingLanguage,
 	retranslate,
 	showOriginal,
 	translationAvailable,
 } from "../js/translate/reader";
+import {translateWhyText} from "../js/helpers/translateWhy";
 import {quickReactions, RECENTS_CHANGED, rememberReaction} from "../js/helpers/reactionRecents";
 import {isTouchInput, onInputKindChange} from "../js/helpers/inputModality";
 import {ChanType} from "../../shared/types/chan";
@@ -273,6 +284,9 @@ export default defineComponent({
 		// selects and copies as it always has, and does not get the button —
 		// on a touchscreen laptop, whichever was used last decides.
 		const canCopyText = computed(() => sharedTouch().value && !!props.message.text);
+		// A blocked Translate stays tappable under a finger (and says why);
+		// under a mouse it is disabled with the reason as its tooltip.
+		const explainOnTap = computed(() => sharedTouch().value);
 		const copyText = () => copy(props.message.text ?? "");
 
 		// Only plain text can be edited (the IRC layer resends it tagged).
@@ -323,6 +337,21 @@ export default defineComponent({
 				hiddenTranslation.value
 			);
 		});
+
+		// Nothing here can translate (both engines switched off, say): the
+		// action stays on offer, disabled, with the reason -- not missing,
+		// and not a request that fails a moment later. Showing a hidden
+		// translation again needs no engine.
+		const translateBlocked = computed(() => {
+			if (hiddenTranslation.value) {
+				return "";
+			}
+
+			const block = currentTranslationBlock();
+
+			return block ? translateWhyText(block) : "";
+		});
+		const translateWhyId = `msg-translate-why-${props.message.id}`;
 
 		// Fetch the catalog chunk while the pointer is on its way to the button,
 		// so the grid is there the moment the picker opens.
@@ -386,6 +415,15 @@ export default defineComponent({
 		};
 
 		const translate = (event: MouseEvent) => {
+			// Blocked under a finger: the tooltip that says why never shows
+			// there, so the tap opens the channel's translation panel, whose
+			// notice gives the reason and the way to Settings.
+			if (translateBlocked.value) {
+				store.commit("translationPanelFor", props.channel.id);
+				emit("done");
+				return;
+			}
+
 			if (hiddenTranslation.value) {
 				// Showing it again must not cost a new translation, and there
 				// is nothing to choose: no menu on this one.
@@ -473,6 +511,10 @@ export default defineComponent({
 			canEdit,
 			canDelete,
 			canTranslate,
+			translateBlocked,
+			translateWhyId,
+			explainOnTap,
+			readingLanguage,
 			codeBlocks,
 			copied,
 			toolbarLabel,

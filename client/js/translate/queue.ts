@@ -20,7 +20,9 @@
 // Vue-free; reader.ts feeds it and writes its updates to the store.
 
 import {WORKER_DISPOSED} from "./client";
+import {parseNeedsDownload} from "./consent";
 import {
+	BATCH_REFUSED,
 	EngineName,
 	type LineContext,
 	PromptContext,
@@ -126,7 +128,11 @@ export type QueueUpdate =
 	| {status: "dropped"};
 
 export interface QueueDeps {
-	/** `hint` is the item's `routeHint`: a seq2seq route takes it as the source. */
+	/**
+	 * `hint` is the item's `routeHint`: a seq2seq route takes it as the
+	 * source. A rejection fails the line with its message and counts toward
+	 * no pause (a download the user declined, consent.ts).
+	 */
 	route(from: string | null, to: string, hint: string | null): Promise<EngineName | null>;
 	translate(
 		req: Omit<TranslateRequest, "id" | "model">,
@@ -362,12 +368,15 @@ export class TranslateQueue {
 	 * the automatic bare retry never un-pauses one. `noRouteError`: what a
 	 * route that finds no engine reports instead of NO_ROUTE (the bare
 	 * retry's judged failure, which is what the line actually suffered).
+	 * `seq`: the place in line, given by a caller putting several items
+	 * back at the front in their order (`resplit`).
 	 */
 	private enqueueAt(
 		item: QueueItem,
 		front: boolean,
 		resumePaused = front,
-		noRouteError = NO_ROUTE
+		noRouteError = NO_ROUTE,
+		seq?: number
 	): void {
 		const generation = this.generation(item.chanId);
 		const globalGeneration = this.globalGeneration;
@@ -390,7 +399,7 @@ export class TranslateQueue {
 				const queued: Queued = {
 					item,
 					engine,
-					seq: front ? -++this.seq : ++this.seq,
+					seq: seq ?? (front ? -++this.seq : ++this.seq),
 					info: renderMarkers(
 						protectedOf(item),
 						engine === "llm" ? LLM_MARKERS : "placeholder"
@@ -672,6 +681,8 @@ export class TranslateQueue {
 			// written.
 			if (!aborted && notAFailure(message)) {
 				this.requeue(engine, batch);
+			} else if (!aborted && batch.length > 1 && message === BATCH_REFUSED) {
+				this.resplit(batch);
 			} else if (aborted && !timedOut) {
 				for (const q of batch) {
 					this.deps.onUpdate(q.item.id, {status: "dropped"});
@@ -933,6 +944,13 @@ export class TranslateQueue {
 			this.deps.onUpdate(q.item.id, {status: "failed", error: message});
 		}
 
+		// A download the user said "not now" to (consent.ts) is their answer,
+		// not the engine failing: it counts toward no pause, or a channel of
+		// queued lines would take the engine out for a minute.
+		if (parseNeedsDownload(message)) {
+			return;
+		}
+
 		const count = (this.failures.get(engine) ?? 0) + 1;
 
 		this.failures.set(engine, count);
@@ -993,6 +1011,23 @@ export class TranslateQueue {
 				this.pump();
 			}, REQUEUE_WAIT_MS)
 		);
+	}
+
+	/**
+	 * A batch the route sent to an engine that does not batch: the GPU
+	 * model was switched off, or failed to load and was marked down, after
+	 * the lines were batched for it (the service routes again at run time).
+	 * Not the engine's failure -- nothing is failed and nothing counts
+	 * toward a pause -- so every line goes back to the front as a single,
+	 * in its order, and is routed again: its marker form is the new
+	 * engine's (`enqueueAt` renders it), not the LLM's it was batched with.
+	 */
+	private resplit(batch: Queued[]): void {
+		const base = (this.seq += batch.length);
+
+		batch.forEach((q, index) => {
+			this.enqueueAt({...q.item, single: true}, true, false, NO_ROUTE, -(base - index));
+		});
 	}
 
 	/** Missing spans (spans.ts) are appended only to the final text: a

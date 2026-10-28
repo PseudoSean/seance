@@ -19,6 +19,7 @@
 			:anchor="chip"
 			:selected="entry.from"
 			:candidates="entry.candidates"
+			:to="entry.to"
 			@pick="pickSource"
 			@close="pickerOpen = false"
 		/>
@@ -43,6 +44,7 @@
 			:anchor="chip"
 			:selected="entry.from"
 			:candidates="entry.candidates"
+			:to="entry.to"
 			@pick="pickSource"
 			@close="pickerOpen = false"
 		/>
@@ -60,9 +62,12 @@
 					t("translate.unchangedReason")
 				}}</span>
 			</button>
+			<!-- The reason's tooltip is the reason in full (the line cuts it
+			     at REASON_MAX), in words: a declined download's raw error is
+			     a code and the model as JSON. -->
 			<template v-else>
 				{{ t("translate.failed") }}
-				<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
+				<span v-if="entry.error" class="msg-translation-reason" :title="reasonText">{{
 					shortReason(reasonText)
 				}}</span>
 				<button
@@ -98,7 +103,14 @@ import {devtoolsAvailable} from "../js/devtools";
 import eventbus from "../js/eventbus";
 import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
-import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
+import {
+	pairVerdict,
+	readingLanguage,
+	retranslate,
+	retryTranslation,
+	showOriginal,
+} from "../js/translate/reader";
+import {translateWhyText} from "../js/helpers/translateWhy";
 import {ANSWERED, DEGENERATE, NARRATION, UNCHANGED} from "../js/translate/outgoing";
 import {languageName} from "../js/translate/languages";
 import {directionText} from "../js/translate/labels";
@@ -144,7 +156,12 @@ export default defineComponent({
 				return t("translate.reason.degenerate");
 			}
 
-			return translateErrorText(error);
+			return translateErrorText(error, () => {
+				const line = entry.value;
+				const verdict = line ? pairVerdict(line.from || null, line.to) : null;
+
+				return verdict && !verdict.route ? translateWhyText(verdict.why) : "";
+			});
 		});
 		// Every language the line names is named in the language its reader
 		// reads (the channel's reading language, else the global one), not

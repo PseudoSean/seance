@@ -1,6 +1,7 @@
 import type {TypedStore} from "./store";
 import {mirrorPushPrefs} from "./push-prefs";
 import {activate} from "./i18n";
+import {setHour12Source} from "./i18n/dates";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {normalizeOwnMessageStyle} from "./helpers/ownMessages";
 import {normalizePsWords} from "./helpers/psWords";
@@ -9,6 +10,7 @@ import storage from "./localStorage";
 import {normalizeSceneMotion, themeScene} from "./themeScene";
 import {setQueryLogEnabled} from "./irc/querylog";
 import {setClosedQueriesKept} from "./irc/closedQueries";
+import {forgetPrivateTerms, loadAll} from "./translate/channelStore";
 import {setKeepAlive} from "./helpers/keepAlive";
 import {effectiveTheme} from "./helpers/themeAppearance";
 import {currentPlatform, PLATFORM_DEFAULTS} from "./helpers/platformDefaults";
@@ -187,6 +189,11 @@ const defaultConfig = {
 	// at load; a stored setting is assigned over it (store-settings.ts).
 	use12hClock: {
 		default: prefersTwelveHourClock(),
+		// Every timestamp that names no clock (tooltips, ban lists, whois, the
+		// oper cards) reads this one through the getter, reactively.
+		apply(store: TypedStore) {
+			setHour12Source(() => !!store.state.settings.use12hClock);
+		},
 	},
 	statusMessages: {
 		default: "condensed",
@@ -213,6 +220,14 @@ const defaultConfig = {
 	},
 	translateCpu: {
 		default: true,
+	},
+	/** NLLB-200 among the CPU models (translate/models.ts). Off until the
+	 * user switches it on, for new and existing users alike: its licence is
+	 * CC-BY-NC-4.0 (non-commercial use only), so a stored settings object
+	 * that never chose (one saved before the setting existed) reads as off.
+	 * The OPUS-MT pairs and the GPU model serve without it. */
+	translateNllb: {
+		default: false,
 	},
 	/** Which GPU model (translate/models.ts LLM_CHOICES, or the deploy's own) the
 	 * LLM candidate runs. "" until the user picks one, and a stored id that is no
@@ -322,13 +337,21 @@ const defaultConfig = {
 	},
 	// Keep the recent lines of private conversations in this browser so they
 	// come back after a reload (irc/querylog.ts). Off deletes what is kept
-	// and keeps nothing more; applyAll runs this at boot too, before any
+	// (the translation terms learnt in queries included) and keeps nothing
+	// more; applyAll runs this at boot too, before any
 	// network is created, so a page with it off restores nothing.
 	keepPrivateConversations: {
 		default: true,
 		apply(store: TypedStore, value: boolean) {
 			setQueryLogEnabled(value);
 			setClosedQueriesKept(value); // the closed ones' names too, here and shared
+
+			// And the translation terms learnt in queries: whole short lines
+			// the user sent in private (translate/writer.ts records none
+			// while this is off). The store's copy is what prompts read.
+			if (!value && forgetPrivateTerms()) {
+				store.commit("translateChannelsLoaded", loadAll());
+			}
 		},
 	},
 	userStyles: {

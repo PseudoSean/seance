@@ -1,9 +1,13 @@
 <template>
 	<span class="content">
-		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
-		}}<abbr :title="ctcpTitle">CTCP</abbr>{{ parts[2]
-		}}<span class="ctcp-message"><ParsedMessage :text="message.ctcpMessage" /></span
-		>{{ parts[3] }}
+		<I18nFrame :text="frame"
+			><template v-slot:nick
+				><bdi><Username :user="message.from" /></bdi></template
+			><template v-slot:ctcp><abbr :title="ctcpTitle">CTCP</abbr></template
+			><template v-slot:message
+				><span class="ctcp-message"
+					><ParsedMessage :text="message.ctcpMessage" /></span></template
+		></I18nFrame>
 	</span>
 </template>
 
@@ -13,13 +17,15 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments, KEEP} from "../../js/i18n/core";
+import {KEEP} from "../../js/i18n/core";
+import I18nFrame from "../I18nFrame.vue";
 
 export default defineComponent({
 	name: "MessageTypeRequestCTCP",
 	components: {
 		ParsedMessage,
 		Username,
+		I18nFrame,
 	},
 	props: {
 		network: {
@@ -33,17 +39,13 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
-		const parts = computed(() =>
-			frameSegments(t("system.ctcpRequest", {nick: KEEP, ctcp: KEEP, message: KEEP}), [
-				"nick",
-				"ctcp",
-				"message",
-			])
+		const frame = computed(() =>
+			t("system.ctcpRequest", {nick: KEEP, ctcp: KEEP, message: KEEP})
 		);
 		const ctcpTitle = computed(() => t("msg.ctcpTitle"));
 
 		return {
-			parts,
+			frame,
 			t,
 			ctcpTitle,
 		};

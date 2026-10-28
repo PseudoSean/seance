@@ -2,7 +2,11 @@
 	<span class="content">
 		<p>
 			<bdi><Username :user="{nick: message.whois.nick}" /></bdi>
-			<span v-if="message.whois.whowas"> {{ t("whois.offline") }}</span>
+			<!-- The phrase follows the nick: its space is ours to give (the
+			     template compiler drops a leading whitespace-only text). -->
+			<template v-if="message.whois.whowas"
+				>{{ " " }}<span>{{ t("whois.offline") }}</span></template
+			>
 		</p>
 
 		<!-- Each dt/dd pair is wrapped in a div (valid in a dl) so the label

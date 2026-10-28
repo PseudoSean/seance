@@ -1,5 +1,6 @@
 import {expect} from "chai";
-import {QWEN3_1_7B_ID, QWEN3_4B_ID} from "../../client/js/translate/models";
+import {DEFAULT_OPUS_PAIRS, QWEN3_1_7B_ID, QWEN3_4B_ID} from "../../client/js/translate/models";
+import {classesOf} from "../../client/js/translate/router";
 import {
 	DEFAULT_ROUTES,
 	LIMITED_LANGUAGES,
@@ -20,6 +21,25 @@ import {
 } from "../../client/js/translate/routes.default";
 
 describe("translate/routes.default", () => {
+	// OPUS-MT (Apache-2.0 code, CC-BY weights) before NLLB-200 (CC-BY-NC-4.0)
+	// wherever a pair exists, in either model's table: NLLB is only ever the
+	// class after the pair's own model.
+	it("puts an OPUS-MT pair ahead of NLLB-200 wherever the pair exists", () => {
+		for (const id of [QWEN3_1_7B_ID, QWEN3_4B_ID]) {
+			const table = routesFor(id);
+
+			for (const pair of Object.keys(DEFAULT_OPUS_PAIRS)) {
+				const [from, to] = pair.split("-");
+				const classes = classesOf(table[to][from]);
+				const opus = classes.findIndex((group) => group.includes(`opus:${pair}`));
+				const nllb = classes.findIndex((group) => group.includes("nllb"));
+
+				expect(opus, `${id} ${pair}`).to.be.at.least(0);
+				expect(nllb, `${id} ${pair}`).to.be.greaterThan(opus);
+			}
+		}
+	});
+
 	it("routesFor gives each GPU model its table, 1.7B's for any other id", () => {
 		expect(routesFor(QWEN3_1_7B_ID)).to.equal(DEFAULT_ROUTES);
 		expect(routesFor("gemma-3-1b-it-q4f16_1-MLC")).to.equal(DEFAULT_ROUTES);

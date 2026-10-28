@@ -3,9 +3,17 @@
 		<h2>{{ t("settings.appearance.messagesHeading") }}</h2>
 		<div>
 			<label class="opt">
-				<input v-switch :checked="store.state.settings.motd" type="checkbox" name="motd" />
-				{{ t("settings.appearance.showMotd") }}
-				<abbr :title="motdTitle">MOTD</abbr>
+				<input
+					v-switch
+					:checked="store.state.settings.motd"
+					type="checkbox"
+					name="motd"
+				/>{{ " "
+				}}<I18nFrame :text="t('settings.appearance.showMotd', {motd: KEEP})"
+					><template v-slot:motd
+						><abbr :title="motdTitle">MOTD</abbr></template
+					></I18nFrame
+				>
 			</label>
 		</div>
 		<div>
@@ -109,9 +117,11 @@
 					</button>
 				</div>
 				<p class="trusted-hosts-help">
-					{{ t("settings.appearance.trustedHelpA") }}
-					<em>{{ t("settings.appearance.trustedButtonName") }}</em>
-					{{ t("settings.appearance.trustedHelpB") }}
+					<I18nFrame :text="t('settings.appearance.trustedHelp', {button: KEEP})"
+						><template v-slot:button
+							><em>{{ t("settings.appearance.trustedButtonName") }}</em></template
+						></I18nFrame
+					>
 				</p>
 				<template v-for="group in trustedGroups" :key="group.kind">
 					<div v-if="group.entries.length > 0" class="trusted-group">
@@ -470,6 +480,8 @@ textarea#user-specified-css-input {
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
+import {KEEP} from "../../js/i18n/core";
+import I18nFrame from "../I18nFrame.vue";
 import {normalizeSceneMotion, SCENE_MOTIONS, type SceneMotion} from "../../js/themeScene";
 import {normalizePsWords, psWords, type PsWords} from "../../js/helpers/psWords";
 import {
@@ -503,7 +515,7 @@ type TrustedEntry = {key: string; name: string; network: string};
 
 export default defineComponent({
 	name: "AppearanceSettings",
-	components: {},
+	components: {I18nFrame},
 	setup() {
 		const store = useStore();
 		const {t} = useI18n();
@@ -732,6 +744,7 @@ export default defineComponent({
 		);
 
 		return {
+			KEEP,
 			sceneMotions: SCENE_MOTIONS,
 			psAnimation,
 			sceneMotionLabels,

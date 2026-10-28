@@ -18,14 +18,21 @@ import {addToPot} from "../../tools/i18n/add";
 import {
 	ALLOWED_UNREFERENCED,
 	ALLOWED_DYNAMIC,
+	adjacentFragments,
 	checkPot,
+	opensUnclosed,
 	collectStaticCallSiteKeys,
 } from "../../tools/i18n/check";
 import {POT_PATH} from "../../tools/i18n/paths";
 import {DEV_ONLY_TAGS, readAvailableLocales} from "../../tools/i18n/available-locales";
 import {categoryIndexMap, compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
 import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
-import {PLURAL_RULES, planPluralSlots, pluralEval} from "../../tools/i18n/plural";
+import {
+	countsReadingSlot,
+	PLURAL_RULES,
+	planPluralSlots,
+	pluralEval,
+} from "../../tools/i18n/plural";
 import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
@@ -40,7 +47,7 @@ import {
 } from "../../tools/i18n/fill";
 import {protect, restoreAll} from "../../client/js/translate/spans";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
-import {sweepEntries} from "../../tools/i18n/sweep";
+import {pluralEchoes, sweepEntries} from "../../tools/i18n/sweep";
 import {isSuspectCatalogEntry, repad, slotVerdict} from "../../tools/i18n/quality";
 import {EXPECTED_SCRIPTS, OWN_SCRIPTS} from "../../tools/i18n/scripts";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
@@ -177,6 +184,26 @@ describe("i18n toolchain", () => {
 				readFileSync(join(tmp, "compile-plural", "de.json"), "utf8")
 			);
 			expect(written).to.deep.equal(result.catalogs.de);
+		});
+
+		it("drops a plural whose count-less form CLDR also serves for other counts", () => {
+			// fil's CLDR "one" covers 0, 2, 3, 5, … and ru's covers 21, 31, …:
+			// a "once" compiled there read "once" for five. de's "one" is 1
+			// alone, so the same shape is sound there.
+			expect(new Intl.PluralRules("fil").select(5)).to.equal("one");
+			const warn = sinon.stub(console, "warn");
+
+			try {
+				const result = compileFixture("compile/countless");
+				expect(result.catalogs.fil).to.not.have.property("condensed.away");
+				expect(result.catalogs.de["condensed.away"]).to.deep.equal({
+					one: "einmal als abwesend markiert",
+					other: "{count}-mal als abwesend markiert",
+				});
+				expect(result.warnings.join("\n")).to.match(/condensed\.away.*"one" form/);
+			} finally {
+				warn.restore();
+			}
 		});
 
 		it("prunes a compiled catalog whose tag is no longer a target", () => {
@@ -546,6 +573,29 @@ describe("i18n toolchain", () => {
 			}
 		});
 
+		it("gives the singular only to a slot that n = 1 alone reads, by CLDR", () => {
+			// The runtime picks a slot through Intl.PluralRules, not the gettext
+			// expression: fil's "one" also serves 0, 2, 3, 5, 7, …, ru's and uk's
+			// 21, 31, …, fr's and pt's 0. Those slots translate the plural
+			// text, the one carrying {count}; de's and pl's "one" is 1 alone.
+			const plan = (tag: string) =>
+				planPluralSlots(entry, PLURAL_RULES[tag].nplurals, PLURAL_RULES[tag].expr, tag).map(
+					(slot) => slot.source
+				);
+
+			expect(countsReadingSlot("fil", PLURAL_RULES.fil.expr, 0).slice(0, 6)).to.deep.equal([
+				0, 1, 2, 3, 5, 7,
+			]);
+			expect(plan("fil")).to.deep.equal(["msgidPlural", "msgidPlural"]);
+			expect(plan("ru")).to.deep.equal(["msgidPlural", "msgidPlural", "msgidPlural"]);
+			expect(plan("fr")).to.deep.equal(["msgidPlural", "msgidPlural"]);
+			expect(plan("de")).to.deep.equal(["msgid", "msgidPlural"]);
+			expect(plan("pl")).to.deep.equal(["msgid", "msgidPlural", "msgidPlural"]);
+			// ar: slot 0 is "zero", slot 1 "one" (1 alone) takes the singular.
+			expect(plan("ar")[1]).to.equal("msgid");
+			expect(plan("ar")[0]).to.equal("msgidPlural");
+		});
+
 		it("plans nothing for a singular entry", () => {
 			expect(planPluralSlots({msgid: "Connect"}, 2, "n != 1")).to.deep.equal([]);
 		});
@@ -596,13 +646,49 @@ describe("i18n toolchain", () => {
 			expect(echoed.msgstr).to.deep.equal(["", ""]);
 		});
 
+		it("reports (and keeps) plural forms that are one text across counts", () => {
+			// ru condensed.join had "пользователей" for 2 as well as for 5: the
+			// fill copied one English plural into few and many alike. Not an
+			// error -- a label frame is the same for every count -- so the
+			// report lists it for review and empties nothing.
+			const entry = (key: string, msgstr: string[]) => ({
+				translatorComments: [],
+				context: [],
+				loc: [],
+				flags: [],
+				previous: [],
+				msgctxt: key,
+				msgid: "{count} user has joined",
+				msgidPlural: "{count} users have joined",
+				msgstr,
+			});
+			const echoed = entry("condensed.join", [
+				"{count} пользователь вошёл",
+				"{count} пользователей вошли",
+				"{count} пользователей вошли",
+			]);
+			const sound = entry("condensed.left", [
+				"{count} пользователь вышел",
+				"{count} пользователя вышли",
+				"{count} пользователей вышли",
+			]);
+			expect(pluralEchoes([echoed, sound], PLURAL_RULES.ru, "ru")).to.deep.equal([
+				{key: "condensed.join", slots: [1, 2], counts: [2, 0]},
+			]);
+			expect(echoed.msgstr[1]).to.equal("{count} пользователей вошли");
+			// Two forms (de) cannot disagree that way.
+			expect(pluralEchoes([echoed], PLURAL_RULES.de, "de")).to.deep.equal([]);
+		});
+
 		it("checks every slot of a three-form locale, not just the first two", () => {
 			// Slots >= 2 (ru, pl, uk, cs, sk, ro — and ar's six) were never
 			// brace-checked at all, so a form that ate {count} reached the
 			// compile, which then refuses the whole catalog.
 			const {entries} = sweepFixture("ru");
 			const entry = entries.find((item) => item.msgctxt === "condensed.away");
-			expect(entry?.msgstr).to.deep.equal(["помечено однажды", "помечено {count} раза", ""]);
+			// Slot 0 is emptied too: ru's CLDR "one" also serves 21, 31, …, so
+			// it translates the plural text, and "однажды" has no {count}.
+			expect(entry?.msgstr).to.deep.equal(["", "помечено {count} раза", ""]);
 		});
 
 		it("empties a machine answer that loops, runs away or leaves the script", () => {
@@ -671,6 +757,36 @@ describe("i18n toolchain", () => {
 			// verdict the fill refuses a slot by lives in quality.ts and is
 			// tested here. The fill and the sweep MUST judge by the same one:
 			// a fill that writes back what the sweep empties is a loop.
+			it("refuses a run of English inside an answer, the old msgid's included", () => {
+				// The echo rule sees only an answer that is ALL its current
+				// English; these shipped through it.
+				expect(
+					slotVerdict(
+						"ja",
+						"{nick} is now known as {newNick}",
+						"{nick} が now known as {newNick} になりました"
+					)
+				).to.equal("english");
+				expect(
+					slotVerdict("fr", "{count} users were kicked", "{count} users have been kicked")
+				).to.equal("english");
+				// One quoted menu word, a command in capitals, a word the target
+				// writes itself: not English prose.
+				expect(
+					slotVerdict("fil", "Choose Add to Dock…", "Piliin ang Add to Dock…")
+				).to.equal(null);
+				expect(
+					slotVerdict("pl", "Nobody matches WHO {mask}", "Nikt nie pasuje do WHO {mask}")
+				).to.equal(null);
+				expect(
+					slotVerdict(
+						"de",
+						"{nick} has joined the channel",
+						"{nick} ist dem Kanal beigetreten"
+					)
+				).to.equal(null);
+			});
+
 			it("is what the fill refuses a filled slot by, and the sweep empties one by", () => {
 				expect(slotVerdict("de", "Password", "Passwort")).to.equal(null);
 				expect(slotVerdict("de", "Password", "पासवर्ड")).to.equal("foreign-script");
@@ -825,6 +941,52 @@ describe("i18n toolchain", () => {
 						"Tippe `/alias my_alias` zum Starten"
 					)
 				).to.equal(null);
+			});
+
+			it("refuses a Latin stray the English never had", () => {
+				// Glued to Han, kana or Thai, where the mixed-script rule
+				// cannot see a word: all three shipped in the catalogs.
+				expect(slotVerdict("ja", "Variant", "変iaz")).to.equal("stray-latin");
+				expect(
+					slotVerdict(
+						"ja",
+						"Highlight messages that mention you",
+						"あなたをmentionsするメッセージをハイライトする"
+					)
+				).to.equal("stray-latin");
+				expect(
+					slotVerdict("th", "Toggle Markdown rendering.", "ตั้งค่าการเรnder Markdown")
+				).to.equal("stray-latin");
+				expect(
+					slotVerdict(
+						"ko",
+						"Expand all previews in the current channel (opposite of {command})",
+						"현재 채널의 모든 미리보기를 펼칩니다 (Commands의 반대: {command})"
+					)
+				).to.equal("stray-latin");
+				// Another Latin language inside Arabic prose.
+				expect(
+					slotVerdict(
+						"ar",
+						"Lines others send are shown with a translation underneath.",
+						"تظهر الأ líneas الأخرى مع ترجمة تحتها."
+					)
+				).to.equal("stray-latin");
+
+				// A word of the source, or one it begins (the answer dropped
+				// the ending), an acronym, a hyphenated jargon word, and any
+				// Latin in a Latin-script catalog: copy.
+				expect(
+					slotVerdict("ja", "Toggle Markdown rendering.", "Markdownの表示を切り替える")
+				).to.equal(null);
+				expect(slotVerdict("ko", "Killed {nick}.", "{nick}을(를) kill했습니다.")).to.equal(
+					null
+				);
+				expect(
+					slotVerdict("ko", "The bot that takes G-lines", "G-line을 처리하는 봇")
+				).to.equal(null);
+				expect(slotVerdict("ja", "Connect", "IRCに接続")).to.equal(null);
+				expect(slotVerdict("de", "Variant", "Variante")).to.equal(null);
 			});
 
 			it("refuses a word that mixes two scripts", () => {
@@ -1344,6 +1506,51 @@ describe("i18n toolchain", () => {
 		it("fails a pot entry without a #. context line", () => {
 			const problems = checkPot(potPath, [tree]);
 			expect(problems.missingContext).to.deep.equal(["nocontext.key"]);
+		});
+
+		it("flags English that opens a parenthesis it never closes", () => {
+			// One t() followed by an element is no adjacent pair, so Help's
+			// "(opposite of" + <code>/collapse</code> + ")" passed the scan;
+			// de closed the fragment itself and the page read "…(Opposit von)
+			// /collapse)".
+			expect(
+				opensUnclosed("Expand all previews in the current channel (opposite of")
+			).to.equal(true);
+			expect(opensUnclosed("Expand all previews (opposite of {command})")).to.equal(false);
+			expect(opensUnclosed("Bytes: {count} (of {total})")).to.equal(false);
+			// A placeholder's own text is not the sentence's.
+			expect(opensUnclosed("Shown as {open(}")).to.equal(false);
+		});
+
+		it("flags a sentence cut into t() fragments around an element in a template", () => {
+			// `combined` sees only `+`; Help.vue's "{{ t('connectA') }} <code>port</code>
+			// {{ t('connectB') }}" passed check and reached translators as
+			// "starts with a".
+			expect(
+				adjacentFragments(
+					'<template>\n<p>\n{{ t("a") }} <code>port</code>\n{{ t("b") }}\n</p>\n</template>'
+				)
+			).to.deep.equal([3]);
+			// A fragment inside a link of the same sentence is one too.
+			expect(
+				adjacentFragments('<p>{{ t("a") }}\n<a href="x">{{ t("b") }}</a>.</p>')
+			).to.deep.equal([1]);
+			// Separate elements, a hint beside a label, a line break: not one sentence.
+			expect(
+				adjacentFragments('<p>{{ t("a") }} <code>x</code></p>\n<p>{{ t("b") }}</p>')
+			).to.deep.equal([]);
+			expect(
+				adjacentFragments(
+					'<label>{{ t("a") }} <span class="opt-hint">{{ t("b") }}</span></label>'
+				)
+			).to.deep.equal([]);
+			expect(adjacentFragments('<p>{{ t("a") }}<br />{{ t("b") }}</p>')).to.deep.equal([]);
+			// The script block is not a template.
+			expect(
+				adjacentFragments(
+					'<template><p>{{ t("a") }}</p></template>\n<script>const x = `{{ t("b") }} <i/> {{ t("c") }}`</script>'
+				)
+			).to.deep.equal([]);
 		});
 
 		it("collects a single-quoted key as a call site, not an unreferenced one", () => {

@@ -26,11 +26,23 @@
 			</div>
 
 			<div class="translation-panel-body">
+				<!-- Nothing here can translate (the engines switched off, a
+				     device that runs neither): said first, as two sentences,
+				     with the Settings link below. -->
+				<div
+					v-if="blockedWhy"
+					id="translation-panel-blocked"
+					class="translation-panel-blocked"
+					role="status"
+				>
+					<p>{{ t("translate.unavailable.lead") }}</p>
+					<p>{{ blockedWhy }}</p>
+				</div>
 				<section class="translation-panel-section">
 					<h3>{{ t("translate.panel.reading") }}</h3>
 					<!-- The reading language is not chosen here: it is the
-					     interface's (the unified setting), with the Settings
-					     override as the exception. This is only the switch. -->
+					     interface's (the one `locale` setting, Settings →
+					     Translation). This is only the switch. -->
 					<div class="translation-panel-field">
 						<span class="translation-panel-label">{{
 							t("translate.panel.readIn", {language: name(readingLanguage())})
@@ -39,6 +51,7 @@
 							class="translation-panel-segmented"
 							role="radiogroup"
 							:aria-label="readingLabel"
+							@keydown="onRadioKey"
 						>
 							<button
 								v-for="option in readingChoices"
@@ -47,6 +60,13 @@
 								role="radio"
 								class="translation-panel-segment"
 								:aria-checked="state.read === option.value"
+								:tabindex="state.read === option.value ? 0 : -1"
+								:disabled="option.value && !state.read && !!blockedWhy"
+								:aria-describedby="
+									option.value && blockedWhy
+										? 'translation-panel-blocked'
+										: undefined
+								"
 								@click="setRead(option.value)"
 							>
 								{{ option.label }}
@@ -115,17 +135,34 @@
 						<select
 							name="translateWrite"
 							class="input translation-panel-control"
+							:aria-describedby="
+								writeNote ? 'translation-panel-write-note' : undefined
+							"
 							:value="state.write ?? ''"
 							@change="onWrite"
 						>
 							<option value="">{{ t("translate.panel.off") }}</option>
-							<option v-for="code in languages" :key="code" :value="code">
+							<!-- A language nothing here can write in is on the list,
+							     disabled; the note under the select says why. -->
+							<option
+								v-for="code in languages"
+								:key="code"
+								:value="code"
+								:disabled="writeBlocked(code)"
+							>
 								{{ name(code) }}
 							</option>
 						</select>
 						<span v-if="limited(state.write)" class="translation-panel-limited">{{
 							t("translate.limitedLanguage")
 						}}</span>
+						<span
+							v-if="writeNote"
+							id="translation-panel-write-note"
+							class="translation-panel-why"
+							><span class="translation-panel-why-lead">{{ writeNote.lead }}</span>
+							<span>{{ writeNote.why }}</span></span
+						>
 						<span class="translation-panel-hint">{{
 							t("translate.panel.writeHint")
 						}}</span>
@@ -141,6 +178,7 @@
 							class="translation-panel-segmented"
 							role="radiogroup"
 							aria-labelledby="translation-panel-formality"
+							@keydown="onRadioKey"
 						>
 							<button
 								v-for="option in formalities"
@@ -150,6 +188,7 @@
 								name="translateFormality"
 								class="translation-panel-segment"
 								:aria-checked="state.formality === option.value"
+								:tabindex="state.formality === option.value ? 0 : -1"
 								@click="setFormality(option.value)"
 							>
 								{{ option.label }}
@@ -210,10 +249,13 @@ import {useI18n} from "../js/i18n";
 import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
 import {
 	channelTranslation,
+	currentTranslationBlock,
+	pairVerdict,
 	readingLanguage,
 	setChannelOptions,
 	setReading,
 } from "../js/translate/reader";
+import {translateWhyText} from "../js/helpers/translateWhy";
 import {isLimitedLanguage} from "../js/translate/routes.default";
 import {translateService} from "../js/translate";
 import {llmChoice} from "../js/translate/models";
@@ -320,6 +362,51 @@ export default defineComponent({
 
 		const removeLabel = (code: string) => t("translation.panel.remove", {language: name(code)});
 
+		// Nothing here can translate at all: the banner's reason (router.ts
+		// `translationBlock`), and the reading switch's On is disabled.
+		const blockedWhy = computed(() => {
+			const block = currentTranslationBlock();
+
+			return block ? translateWhyText(block) : "";
+		});
+
+		// Writing in `code` is a translation from the language the user reads
+		// (or, the same language, the cleanup pass): the router's own verdict.
+		const writeVerdict = (code: string) => pairVerdict(readingLanguage(), code);
+		const writeBlocked = (code: string) => !writeVerdict(code).route;
+
+		// Why a language is greyed: the one chosen, when it no longer runs,
+		// else the cleanup pass (the user's own language), which is the one a
+		// GPU-less device greys while every other stays on offer.
+		const writeNote = computed(() => {
+			if (blockedWhy.value) {
+				return null;
+			}
+
+			const reading = readingLanguage();
+			const code =
+				state.value.write && writeBlocked(state.value.write) ? state.value.write : reading;
+			const verdict = writeVerdict(code);
+
+			if (verdict.route) {
+				return null;
+			}
+
+			// The greyed own language under a select that shows something
+			// else (Off, another language): the note names the option it is
+			// about, or it reads as an error about the current choice.
+			const aboutGreyedOption = verdict.polish && state.value.write !== code;
+
+			return {
+				lead: aboutGreyedOption
+					? t("translate.panel.ownLanguageNeedsGpu", {language: name(code)})
+					: verdict.polish
+					? t("translate.picker.sameLanguageNeedsGpu")
+					: t("translate.pair.unavailable", {from: name(reading), to: name(code)}),
+				why: translateWhyText(verdict.why),
+			};
+		});
+
 		const onWrite = (event: Event) => {
 			// A strip already up was translated for the old target: it must not
 			// survive the change, finished or not.
@@ -334,10 +421,87 @@ export default defineComponent({
 		const onVariant = (event: Event) =>
 			setChannelOptions(props.network, props.channel, {variant: valueOf(event).trim()});
 
+		// What Tab can reach inside the panel, in document order.
+		const tabbable = (): HTMLElement[] =>
+			Array.from(
+				panel.value?.querySelectorAll<HTMLElement>(
+					"button, select, input, textarea, a[href], [tabindex]"
+				) ?? []
+			).filter(
+				(el) =>
+					el.tabIndex >= 0 &&
+					!(el as HTMLButtonElement).disabled &&
+					el.getClientRects().length > 0
+			);
+
 		const onKey = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
 				emit("close");
+				return;
 			}
+
+			// The sheet is modal (aria-modal, the whole screen): Tab wraps
+			// inside it instead of walking out into the app hidden under it.
+			// The desktop panel is not modal and lets the focus go.
+			if (event.key !== "Tab" || !phone.value) {
+				return;
+			}
+
+			const items = tabbable();
+
+			if (items.length === 0) {
+				return;
+			}
+
+			const first = items[0];
+			const last = items[items.length - 1];
+			const active = document.activeElement;
+			const inside = !!panel.value && panel.value.contains(active);
+
+			if (event.shiftKey && (!inside || active === first)) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && (!inside || active === last)) {
+				event.preventDefault();
+				first.focus();
+			}
+		};
+
+		// A segmented radiogroup is one Tab stop (the checked radio, a roving
+		// tabindex) and the arrow keys move the choice, as the radiogroup
+		// pattern has it; a disabled choice is stepped over.
+		const onRadioKey = (event: KeyboardEvent) => {
+			const step =
+				event.key === "ArrowRight" || event.key === "ArrowDown"
+					? 1
+					: event.key === "ArrowLeft" || event.key === "ArrowUp"
+					? -1
+					: 0;
+
+			if (step === 0) {
+				return;
+			}
+
+			const group = event.currentTarget as HTMLElement;
+			const radios = Array.from(
+				group.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+			).filter((radio) => !radio.disabled);
+			const at = radios.indexOf(document.activeElement as HTMLButtonElement);
+
+			if (radios.length < 2 || at < 0) {
+				return;
+			}
+
+			event.preventDefault();
+			// The visual order follows the direction: under RTL the next
+			// choice is to the left.
+			const rtl = getComputedStyle(group).direction === "rtl";
+			const horizontal = event.key === "ArrowLeft" || event.key === "ArrowRight";
+			const delta = rtl && horizontal ? -step : step;
+			const next = radios[(at + delta + radios.length) % radios.length];
+
+			next.focus();
+			next.click();
 		};
 
 		const onPointer = (event: MouseEvent) => {
@@ -358,7 +522,9 @@ export default defineComponent({
 			narrowQuery?.addEventListener("change", onNarrow);
 			// Deferred so the click that opened the panel does not close it.
 			pointerTimer = setTimeout(() => document.addEventListener("mousedown", onPointer), 0);
-			panel.value?.querySelector("select")?.focus();
+			// The panel's main control first: the reading switch's checked
+			// choice (one Tab stop), not the second field's select.
+			panel.value?.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')?.focus();
 		});
 		onBeforeUnmount(() => {
 			document.removeEventListener("keydown", onKey);
@@ -382,6 +548,9 @@ export default defineComponent({
 
 		return {
 			t,
+			blockedWhy,
+			writeBlocked,
+			writeNote,
 			panel,
 			phone,
 			state,
@@ -404,6 +573,7 @@ export default defineComponent({
 			setFormality,
 			onFormality,
 			onVariant,
+			onRadioKey,
 		};
 	},
 });
