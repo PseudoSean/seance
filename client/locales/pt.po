@@ -100,7 +100,7 @@ msgstr "Pular para mensagens recentes"
 #: client/components/Chat.vue:67
 msgctxt "chat.mentions"
 msgid "Open your mentions"
-msgstr "Abrir menções"
+msgstr "Abrir suas menções"
 
 #. Badge on the @ button in the channel header when there are more unread mentions than it shows; {count} is the largest number shown (99), so it reads "99+".
 #: client/components/Chat.vue:384
@@ -415,7 +415,7 @@ msgstr "Cancelar"
 #: client/components/ChatInput.vue:68
 msgctxt "composer.cancelEscape"
 msgid "Cancel (Escape)"
-msgstr "Cancelar (Escape)"
+msgstr "Cancelar (Esc)"
 
 #. Tooltip and aria-label of the ✕ button on the upload progress bar above the message input; clicking it aborts the upload in progress.
 #: client/components/ChatInput.vue:45
@@ -482,16 +482,16 @@ msgstr "Escrever para {name}"
 msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
-msgstr[0] "Reconectando a {network} em {seconds}s…"
-msgstr[1] "Reconectando a {network} em {seconds}s…"
+msgstr[0] "Reconectando a {network} em {seconds} s…"
+msgstr[1] "Reconectando a {network} em {seconds} s…"
 
 #. Text of the connection bar shown above the message input while the wait before the retry is the chat server's connection throttle (dialling sooner would be refused and prolong it). {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
 #: client/components/ChatInput.vue:524
 msgctxt "composer.reconnectInThrottled"
 msgid "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
 msgid_plural "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
-msgstr[0] "Reconectando a {network} em {seconds}s: o servidor limita reconexões rápidas."
-msgstr[1] "Reconectando a {network} em {seconds}s: o servidor limita reconexões rápidas."
+msgstr[0] "Reconectando a {network} em {seconds} s: o servidor limita reconexões seguidas."
+msgstr[1] "Reconectando a {network} em {seconds} s: o servidor limita reconexões seguidas."
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
@@ -540,24 +540,24 @@ msgstr "Upload de {file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] ""
-msgstr[1] "marcado longe {count} vezes"
+msgstr[0] "marcado como ausente {count} vez"
+msgstr[1] "marcado como ausente {count} vezes"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] ""
-msgstr[1] "marcado de volta {count} vezes"
+msgstr[0] "marcado como de volta {count} vez"
+msgstr[1] "marcado como de volta {count} vezes"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
-msgstr[0] "{count} usuário alterou o hostname"
-msgstr[1] "{count} usuários alteraram o hostname"
+msgstr[0] "{count} usuário mudou o nome do host"
+msgstr[1] "{count} usuários mudaram o nome do host"
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
 #: client/components/MessageCondensed.vue
@@ -572,8 +572,8 @@ msgstr[1] "{count} usuários entraram"
 msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
-msgstr[0] "{count} usuário foi kickado"
-msgstr[1] "{count} usuários foram kickados"
+msgstr[0] "{count} usuário foi expulso"
+msgstr[1] "{count} usuários foram expulsos"
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -596,14 +596,14 @@ msgstr[1] "{count} modos foram definidos"
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] "{count} usuário alterou o nick"
-msgstr[1] "{count} usuários alteraram o nick"
+msgstr[0] "{count} usuário mudou de apelido"
+msgstr[1] "{count} usuários mudaram de apelido"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.toggle"
 msgid "Toggle status messages"
-msgstr "Alternar mensagens de status"
+msgstr "Mostrar ou ocultar mensagens de status"
 
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 #: client/components/ConfirmDialog.vue
@@ -1703,7 +1703,7 @@ msgstr "Autocompleção"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.intro"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the {up} and {down} keys to highlight an item, and insert it by pressing {tab} or {enter} (or by clicking the desired item)."
-msgstr ""
+msgstr "Para completar automaticamente apelidos, canais, comandos e emoji, digite um dos caracteres abaixo para abrir uma lista de sugestões. Use as teclas {up} e {down} para destacar um item e insira-o pressionando {tab} ou {enter} (ou clicando no item desejado)."
 
 #. Description of the @ autocompletion trigger in the help window: typing @ suggests user names.
 #: client/components/Windows/Help.vue
@@ -1715,7 +1715,7 @@ msgstr "Apelido"
 #: client/components/Windows/Help.vue
 msgctxt "help.builtFromCommit"
 msgid "{app} is built from {commit}, after v{version}."
-msgstr ""
+msgstr "{app} foi compilado a partir do {commit}, posterior à v{version}."
 
 #. Lead-in of the alias line under a command description in the help window; the alternative command follows it as a code fragment. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1745,7 +1745,7 @@ msgstr "Remova seu status de ausência (definido com"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ban"
 msgid "Ban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "Bane ({mode}) um usuário do canal atual. Pode ser um apelido ou uma máscara de host."
 
 #. Description of the /banlist command in the help window.
 #: client/components/Windows/Help.vue
@@ -1769,19 +1769,19 @@ msgstr "Colapse todas as pré-visualizações do canal atual (oposto de"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connect"
 msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
-msgstr ""
+msgstr "Conecta a uma nova rede IRC. Se {port} começar com o sinal {plus}, a conexão será protegida com TLS."
 
 #. Description of the /ctcp command in the help window. {ctcp} is the abbreviation CTCP (never translated, an element with its expansion as tooltip); {link} is a link whose text is help.commands.ctcpLink ('the dedicated Wikipedia article') — write this frame so that phrase fits where {link} stands.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcp"
 msgid "Send a {ctcp} request. Read more about this on {link}."
-msgstr ""
+msgstr "Envia uma solicitação {ctcp}. Saiba mais {link}."
 
 #. Text of the link at the end of the /ctcp command description in the help window (help.commands.ctcp, where it stands for {link}); it opens the Wikipedia article on CTCP. Use the form that fits that frame in your language.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
-msgstr "o artigo de Wikipedia dedicado"
+msgstr "no artigo da Wikipédia sobre o assunto"
 
 #. Expansion of the acronym CTCP, shown as the abbreviation's hover tooltip in the help window's /ctcp command description.
 #: client/components/Windows/Help.vue
@@ -1793,13 +1793,13 @@ msgstr "Protocolo cliente para cliente"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deop"
 msgid "Remove op ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "Remove o op ({mode}) de um ou vários usuários do canal atual."
 
 #. Description of the /devoice command in the help window. {mode} is the channel mode -v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoice"
 msgid "Remove voice ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "Remove a voz ({mode}) de um ou vários usuários do canal atual."
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
@@ -1835,7 +1835,7 @@ msgstr "Carregar a lista de usuários ignorados para a rede atual."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.invite"
 msgid "Invite a user to the specified channel. If {channel} is omitted, user will be invited to the current channel."
-msgstr ""
+msgstr "Convida um usuário para o canal indicado. Se {channel} for omitido, o usuário será convidado para o canal atual."
 
 #. Description of the /join command in the help window.
 #: client/components/Windows/Help.vue
@@ -1853,7 +1853,7 @@ msgstr "Expelir um usuário do canal atual."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickban"
 msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
-msgstr ""
+msgstr "Expulsa e bane ({mode}) um usuário do canal atual. Ao contrário de {ban}, só é possível usar apelidos (não máscaras de host)."
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1901,14 +1901,13 @@ msgstr "Enviar uma mensagem de notificação para o canal especificado."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.op"
 msgid "Give op ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "Dá op ({mode}) a um ou vários usuários do canal atual."
 
 #. Description of the /part command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
-#, fuzzy
 msgctxt "help.commands.part"
 msgid "Close the specified channel or private message window, or the current channel if {channel} is omitted."
-msgstr "Fechar o canal ou janela de mensagem privada especificada, ou o canal atual se"
+msgstr "Fecha o canal ou a conversa privada indicados, ou o canal atual se {channel} for omitido."
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue
@@ -1950,13 +1949,13 @@ msgstr "Botar alguém no canal atual com um truta!"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.topic"
 msgid "Get the topic in the current channel. If {newtopic} is specified, sets the topic in the current channel."
-msgstr ""
+msgstr "Mostra o tópico do canal atual. Se {newtopic} for informado, define o tópico do canal atual."
 
 #. Description of the /unban command in the help window. {mode} is the channel mode -b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unban"
 msgid "Unban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "Remove o banimento ({mode}) de um usuário do canal atual. Pode ser um apelido ou uma máscara de host."
 
 #. Description of the /unignore command in the help window.
 #: client/components/Windows/Help.vue
@@ -1968,19 +1967,19 @@ msgstr "Desbloquear mensagens de um usuário especificado na rede atual. Isso po
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unmute"
 msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See {mute} for more information."
-msgstr ""
+msgstr "Reativa os canais indicados, ou o canal atual se nenhum for informado. Veja {mute} para mais informações."
 
 #. Description of the /ver command in the help window. {ctcp} is the abbreviation CTCP (never translated) and {command} the literal command /ctcp nick version as a code element; VERSION stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ver"
 msgid "Ask a user which client they run: a {ctcp} VERSION request, the same as {command}. The answer shows where you asked."
-msgstr ""
+msgstr "Pergunta a um usuário qual cliente ele usa: uma solicitação {ctcp} VERSION, o mesmo que {command}. A resposta aparece onde você perguntou."
 
 #. Description of the /voice command in the help window. {mode} is the channel mode +v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voice"
 msgid "Give voice ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "Dá voz ({mode}) a um ou vários usuários do canal atual."
 
 #. Help page, description of the /who command. {mask} is an example wildcard mask shown as code (nick!user@host); keep it.
 #: client/components/Windows/Help.vue
@@ -2004,13 +2003,13 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.compareBehind"
 msgid "Compare {range} to see what you are missing"
-msgstr ""
+msgstr "Compare {range} para ver o que está faltando"
 
 #. First item of the help window's past-release list. {range} is a link whose text is help.range ('between v5.2.0 and 1a2b3c4').
 #: client/components/Windows/Help.vue
 msgctxt "help.compareSince"
 msgid "Compare {range} to see what changed since the release"
-msgstr ""
+msgstr "Compare {range} para ver o que mudou desde a versão"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -2035,19 +2034,19 @@ msgstr "aqui"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP1"
 msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range {range} to select the desired color, or use the autocompletion menu to choose a color name (see below)."
-msgstr ""
+msgstr "Colore todo o texto digitado depois deste atalho. Depois de usá-lo, digite um número inteiro no intervalo {range} para escolher a cor, ou use o menu de autocompletar para escolher o nome de uma cor (veja abaixo)."
 
 #. Second paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2"
 msgid "Background color can be specified by putting a comma and another integer in the range {range} after the foreground color number (autocompletion works too)."
-msgstr ""
+msgstr "A cor de fundo é definida colocando uma vírgula e outro número inteiro no intervalo {range} depois do número da cor do texto (o autocompletar também funciona)."
 
 #. Last paragraph of the Ctrl+K description in the help window. {link} is a link to an external IRC color reference whose text is help.formatting.colorHere ('here'); write the frame so that word fits it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorReference"
 msgid "A color reference can be found {link}."
-msgstr ""
+msgstr "Há uma referência de cores {link}."
 
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
 #: client/components/Windows/Help.vue
@@ -2059,13 +2058,13 @@ msgstr "Atalhos de formatação"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "itálicos"
+msgstr "itálico"
 
 #. Description of a text-formatting shortcut in the help window. {style} is the style's name (help.formatting.bold, italic, underline, strikethrough or monospace: 'bold', 'italics', 'underlined', 'struck through', 'monospaced'), shown in that style where the placeholder stands; write the frame so those words fit it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.markAs"
 msgid "Mark all text typed after this shortcut as {style}."
-msgstr ""
+msgstr "Marca todo o texto digitado depois deste atalho como {style}."
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2083,13 +2082,13 @@ msgstr "Marque todos os textos digitados após este atalho para serem redefinido
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.strikethrough"
 msgid "struck through"
-msgstr "Riscado"
+msgstr "tachado"
 
 #. The example word shown underlined in the help window's Ctrl+U formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.underline"
 msgid "underlined"
-msgstr "Sublinhado"
+msgstr "sublinhado"
 
 #. Heading of the touch-gestures section of the help window; lists what swiping on the sidebar does.
 #: client/components/Windows/Help.vue
@@ -2144,7 +2143,7 @@ msgstr "Política de privacidade"
 #: client/components/Windows/Help.vue
 msgctxt "help.range"
 msgid "between {from} and {to}"
-msgstr ""
+msgstr "entre {from} e {to}"
 
 #. Link beside the version number in the help window's title line; opens the changelog window. Mid-sentence between parentheses.
 #: client/components/Windows/Help.vue
@@ -2823,7 +2822,7 @@ msgstr "{file} · Clique para mostrar"
 #: client/components/LinkPreviewToggle.vue
 msgctxt "link.collapse"
 msgid "Collapse preview"
-msgstr "Colapso da pré-visualização"
+msgstr "Recolher prévia"
 
 #. aria-label of the button on a message link preview while the preview is folded; clicking expands the media inline.
 #: client/components/LinkPreviewToggle.vue
@@ -3703,7 +3702,7 @@ msgstr "O assunto é:"
 #: client/components/MessageTypes/topic_set_by.vue
 msgctxt "msg.topicSet"
 msgid "Topic set by {nick} on {time}"
-msgstr ""
+msgstr "Tópico definido por {nick} em {time}"
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -10955,7 +10954,7 @@ msgstr "Apenas mensagens carregadas nesta sessão são buscadas — histórico m
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.searchingIn"
 msgid "Searching in {channel} for"
-msgstr ""
+msgstr "Pesquisando em {channel} por"
 
 #. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
 #: client/components/Windows/SearchResults.vue
@@ -11101,7 +11100,7 @@ msgstr "Funciona"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.intro"
 msgid "An alias is a slash command of your own. Typing {example} runs what you define here — one command per line, with the arguments filled in where the body says {first}, {rest} or {all}."
-msgstr ""
+msgstr "Um alias é um comando de barra seu. Digitar {example} executa o que você define aqui — um comando por linha, com os argumentos inseridos onde o corpo diz {first}, {rest} ou {all}."
 
 #. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
 #: client/components/Settings/Aliases.vue
@@ -11119,7 +11118,7 @@ msgstr "nome"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nested"
 msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
-msgstr ""
+msgstr "Uma linha pode chamar outro alias, e um alias com o nome de um comando embutido o substitui — {command} pode virar {expansion} sem entrar em loop."
 
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
 #: client/components/Settings/Aliases.vue
@@ -11711,7 +11710,7 @@ msgstr "Sempre exibido"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHelp"
 msgid "Media in these scopes loads without asking. Add one with {button} on any preview."
-msgstr ""
+msgstr "Mídias destes escopos carregam sem perguntar. Adicione um com {button} em qualquer prévia."
 
 #. Subheading in the always-shown media list of Settings > Appearance above the user account entries.
 #: client/components/Settings/Appearance.vue
@@ -12253,7 +12252,7 @@ msgstr "A identidade do servidor (sua chave) mudou, então a assinatura de push 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.unsupported"
 msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
-msgstr "As notificações por push não são suportadas por este navegador (precisam do API Push, um serviço worker e um contexto seguro)."
+msgstr "Este navegador não oferece suporte a notificações push (elas precisam da Push API, de um service worker e de um contexto seguro)."
 
 #. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.
 #: client/components/Settings/Notifications.vue
@@ -12348,7 +12347,7 @@ msgstr "Pule para..."
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.language"
 msgid "Display language"
-msgstr "Idioma de exibição"
+msgstr "Idioma da interface"
 
 #. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many messages highlight (mention) the user.
 #: client/components/ChannelWrapper.vue:97
@@ -12630,43 +12629,43 @@ msgstr "{nick} ({count})"
 #: client/components/MessageTypes/away.vue:10
 msgctxt "system.away"
 msgid "{nick} is away"
-msgstr "{nick} está fora"
+msgstr "{nick} está ausente"
 
 #. System line when a user returns from away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 #: client/components/MessageTypes/back.vue:10
 msgctxt "system.back"
 msgid "{nick} is back"
-msgstr "{nick} está de volta"
+msgstr "{nick} voltou"
 
 #. System line tail case: a user's username/hostname changed but neither value arrived (degenerate). {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:4
 msgctxt "system.chghost"
 msgid "{nick} has changed"
-msgstr "{nick} alterou"
+msgstr "{nick} mudou"
 
 #. System line when a user's username AND hostname change together. {nick} and {ident} are VERBATIM user content; {host} is a verbatim technical value; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:12
 msgctxt "system.chghostBoth"
 msgid "{nick} has changed username to {ident} and hostname to {host}"
-msgstr "{nick} alterou o nome de usuário para {ident} e o hostname para {host}"
+msgstr "{nick} mudou o nome de usuário para {ident} e o nome do host para {host}"
 
 #. System line when a user's hostname changes. {nick} is the user's nick (VERBATIM, renders as the interactive username element) and {host} the new hostname (verbatim technical value).
 #: client/components/MessageTypes/chghost.vue:9
 msgctxt "system.chghostHost"
 msgid "{nick} has changed hostname to {host}"
-msgstr "{nick} alterou o hostname para {host}"
+msgstr "{nick} mudou o nome do host para {host}"
 
 #. System line when a user's username (ident) changes. {nick} is the user's nick and {ident} the new username — both VERBATIM, never translate; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:6
 msgctxt "system.chghostIdent"
 msgid "{nick} has changed username to {ident}"
-msgstr "{nick} alterou o nome de usuário para {ident}"
+msgstr "{nick} mudou o nome de usuário para {ident}"
 
 #. System line for an incoming CTCP request. {nick} is the sender's nick (VERBATIM user content, renders as the interactive username element); {ctcp} is the fixed abbreviation CTCP (never translate); {message} is the verbatim CTCP payload.
 #: client/components/MessageTypes/ctcp_request.vue:5
 msgctxt "system.ctcpRequest"
 msgid "{nick} sent a {ctcp} request: {message}"
-msgstr "{nick} enviou uma solicitação de {ctcp}: {message}"
+msgstr "{nick} enviou uma solicitação {ctcp}: {message}"
 
 #. System line when a user invites someone else. {nick} is the inviter's nick and {target} the invited user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands; {channel} is the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:9
@@ -12702,7 +12701,7 @@ msgstr "{nick} define o modo {modes}"
 #: client/components/MessageTypes/nick.vue:6
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr "{nick} agora é conhecido como {newNick}"
+msgstr "{nick} agora se chama {newNick}"
 
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 #: client/components/MessageTypes/part.vue:6
@@ -12714,7 +12713,7 @@ msgstr "{nick} saiu do canal"
 #: client/components/MessageTypes/quit.vue:6
 msgctxt "system.quit"
 msgid "{nick} has quit"
-msgstr "{nick} saiu"
+msgstr "{nick} se desconectou"
 
 #. Reason given when pending token requests (upload tokens) are dropped because the connection closed; shown inside the upload error notice.
 #: client/js/irc/authtoken.ts
@@ -13693,8 +13692,8 @@ msgstr "Upload cancelado"
 msgctxt "upload.confirmCount"
 msgid "Upload {count} file"
 msgid_plural "Upload {count} files"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Enviar {count} arquivo"
+msgstr[1] "Enviar {count} arquivos"
 
 #. Intro line of the upload confirmation dialog; asks the user to check the files and warns that every uploaded file is reachable through its link.
 #: client/components/UploadPreview.vue
@@ -14112,7 +14111,7 @@ msgstr "Sim"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.allReleasesLink"
 msgid "see all releases"
-msgstr "ver todas as versões"
+msgstr "veja todas as versões"
 
 #. aria-label of the changelog window, which shows the app's release notes.
 #: client/components/Windows/Changelog.vue
@@ -14130,25 +14129,25 @@ msgstr "« Ajuda"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.notBundledLine"
 msgid "Release notes are not bundled with the build. {readNotes} or {allReleases}."
-msgstr ""
+msgstr "As notas da versão não vêm incluídas na compilação. {readNotes} ou {allReleases}."
 
 #. Changelog window sentence shown when the running build is newer than its release. {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v; {since} is a link whose text is windows.changelog.sinceReleaseLink ('what changed since the release').
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.pastReleaseLine"
 msgid "This build is {commit}, after v{version}: {since}."
-msgstr ""
+msgstr "Esta compilação é o {commit}, posterior à v{version}: {since}."
 
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.readNotesLink"
 msgid "Read the notes for v{version}"
-msgstr "Leia as notas para v{version}"
+msgstr "Leia as notas da v{version}"
 
 #. Text of the link in the changelog's past-release sentence that opens the list of changes between the release and this build. Mid-sentence.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.sinceReleaseLink"
 msgid "what changed since the release"
-msgstr "o que mudou desde a release"
+msgstr "o que mudou desde a versão"
 
 #. Heading of the changelog window. {version} is the release version number, kept as written (a v followed by the number).
 #: client/components/Windows/Changelog.vue
