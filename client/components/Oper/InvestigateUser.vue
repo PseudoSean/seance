@@ -232,7 +232,8 @@
 				<span class="oper-muted">{{ when(s.time) }} · </span>
 				<Username :user="{nick: s.nick, mode: ''}" :network="network" />
 				<span v-if="s.ip || s.host" class="oper-muted">
-					{{ fromParts(s)[0] }}<code class="oper-mono">{{ s.ip ?? s.host }}</code
+					<!-- The frame follows the nick: its space is ours to give. -->
+					{{ " " + fromParts(s)[0] }}<code class="oper-mono">{{ s.ip ?? s.host }}</code
 					>{{ fromParts(s)[1] }}</span
 				>
 				<span v-else class="oper-muted"> ({{ matchedText(s) }})</span>
