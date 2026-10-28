@@ -1062,6 +1062,10 @@ export function initReader(): void {
 			"translationRemoveMany",
 			target.channel.messages.map((m) => m.id)
 		);
+		// The topic's translation is kept under its own id (topic.ts), not a
+		// message's: a rejoin is a new channel id, so nothing would ever
+		// show or drop this one.
+		forgetTopic(target.channel.id);
 	});
 
 	// Registered before socket-events/quit.ts (import order), so the
@@ -1084,6 +1088,7 @@ export function initReader(): void {
 				arrivals.delete(c.id);
 				generations.delete(c.id);
 				replayBatches.drop(c.id);
+				forgetTopic(c.id);
 			}
 		}
 
