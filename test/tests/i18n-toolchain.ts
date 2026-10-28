@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
-import {parsePo, serializePo} from "../../tools/i18n/po";
+import {parsePo, type PoEntry, serializePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
 import {
 	ALLOWED_UNREFERENCED,
@@ -575,6 +575,27 @@ describe("i18n toolchain", () => {
 			expect(singular?.msgstr[0]).to.equal("接続");
 		});
 
+		it("keeps a plural form that reads as the English when its sibling is translated", () => {
+			// "{count} Byte" is German's singular; refusing it alone sent the
+			// whole key back to English. Both forms echoing is still an echo.
+			const entry = (msgstr: string[]): PoEntry => ({
+				translatorComments: [],
+				context: [],
+				loc: [],
+				flags: [],
+				previous: [],
+				msgctxt: "oper.report.bytes",
+				msgid: "{count} byte",
+				msgidPlural: "{count} bytes",
+				msgstr,
+			});
+			const kept = entry(["{count} Byte", "{count} Byte"]);
+			const echoed = entry(["{count} byte", "{count} bytes"]);
+			sweepEntries([kept, echoed], PLURAL_RULES.de, "de");
+			expect(kept.msgstr).to.deep.equal(["{count} Byte", "{count} Byte"]);
+			expect(echoed.msgstr).to.deep.equal(["", ""]);
+		});
+
 		it("checks every slot of a three-form locale, not just the first two", () => {
 			// Slots >= 2 (ru, pl, uk, cs, sk, ro — and ar's six) were never
 			// brace-checked at all, so a form that ate {count} reached the
@@ -717,6 +738,11 @@ describe("i18n toolchain", () => {
 				expect(slotVerdict("uk", "Close", "Закрити")).to.equal(null);
 				expect(slotVerdict("de", "OK", "OK")).to.equal(null);
 				expect(slotVerdict("de", "{count}", "{count}")).to.equal(null);
+				// Oper jargon is kept as is, so a plural slot can read the
+				// same as the English and still be the translation.
+				expect(slotVerdict("hu", "{count} G-line", "{count} G-line")).to.equal(null);
+				expect(slotVerdict("de", "Kill", "Kill")).to.equal(null);
+				expect(slotVerdict("de", "Kill this user", "Kill this user")).to.equal("unchanged");
 			});
 
 			it("refuses an answer that dropped the source's own padding", () => {

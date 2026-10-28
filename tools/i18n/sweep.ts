@@ -72,6 +72,18 @@ export function sweepEntries(
 						english: source === "msgid" ? entry.msgid : (entry.msgidPlural as string),
 				  }));
 
+		// A plural form can be the English word again ("{count} Byte" in
+		// German, "{count} G-line" anywhere) while its sibling is plainly
+		// translated; the entry as a whole is no echo then, and emptying
+		// that one slot would send the whole key back to English.
+		const translatedSibling = (index: number) =>
+			slots.some(
+				(other) =>
+					other.index !== index &&
+					entry.msgstr[other.index] &&
+					!slotVerdict(tag, other.english, entry.msgstr[other.index])
+			);
+
 		for (const {index, english} of slots) {
 			const text = entry.msgstr[index];
 
@@ -80,6 +92,14 @@ export function sweepEntries(
 			}
 
 			const reason = slotVerdict(tag, english, text);
+
+			if (
+				reason === "unchanged" &&
+				entry.msgidPlural !== undefined &&
+				translatedSibling(index)
+			) {
+				continue;
+			}
 
 			if (reason) {
 				empty(entry, index, reason);
