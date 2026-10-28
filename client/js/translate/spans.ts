@@ -450,6 +450,12 @@ function protectChannels(text: string, spans: Spans): string {
 // The channel's names, whole-word, longest first, never inside a
 // placeholder an earlier stage left. The prompt still lists the names as
 // data, so the model sees both the placeholder and the name it stands for.
+//
+// A big channel hands in a couple of thousand names for every line, so each
+// is lowercased once and filed under its first (lowercased) character: a
+// position only tries the names that can start there. Trying every name at
+// every character cost ~20 ms for a 400-character line at 2000 names, and a
+// history load runs 40 lines back to back.
 function protectNicks(text: string, nicks: string[], spans: Spans): string {
 	const candidates = [...new Set(nicks)]
 		.filter((nick) => nick.length >= 2)
@@ -457,6 +463,21 @@ function protectNicks(text: string, nicks: string[], spans: Spans): string {
 
 	if (candidates.length === 0) {
 		return text;
+	}
+
+	// Longest first within each bucket too: the sort above is stable and
+	// the buckets are filled in its order.
+	const byFirst = new Map<string, {nick: string; lower: string}[]>();
+
+	for (const nick of candidates) {
+		const lowerNick = nick.toLowerCase();
+		const bucket = byFirst.get(lowerNick[0]);
+
+		if (bucket) {
+			bucket.push({nick, lower: lowerNick});
+		} else {
+			byFirst.set(lowerNick[0], [{nick, lower: lowerNick}]);
+		}
 	}
 
 	const lower = text.toLowerCase();
@@ -474,12 +495,14 @@ function protectNicks(text: string, nicks: string[], spans: Spans): string {
 			}
 		}
 
-		const nick = candidates.find(
-			(candidate) =>
-				lower.startsWith(candidate.toLowerCase(), i) &&
-				!isWordChar(text[i - 1]) &&
-				!isWordChar(text[i + candidate.length])
-		);
+		const nick = byFirst
+			.get(lower[i])
+			?.find(
+				(candidate) =>
+					lower.startsWith(candidate.lower, i) &&
+					!isWordChar(text[i - 1]) &&
+					!isWordChar(text[i + candidate.nick.length])
+			)?.nick;
 
 		if (nick) {
 			out += spans.push(text.slice(i, i + nick.length), {kind: "verbatim"});

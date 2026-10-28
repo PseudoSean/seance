@@ -10,7 +10,7 @@
 // setReading/setChannelOptions; the chip and the toolbar call
 // retranslate/showOriginal/retryTranslation.
 
-import {watch} from "vue";
+import {toRaw, watch} from "vue";
 
 import {getBranding} from "../branding";
 import {userLanguageRef} from "../i18n";
@@ -41,6 +41,7 @@ import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queu
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
 import {topicEntryId} from "./topic";
+import {yieldToPage} from "./yieldToPage";
 
 const queues = new Map<string, TranslateQueue>();
 const priors = new Map<string, LanguagePrior>();
@@ -250,7 +251,13 @@ async function queueHistory(
 ): Promise<void> {
 	const generation = generationOf(channel.id);
 
-	for (const message of newestFirst) {
+	for (const [index, message] of newestFirst.entries()) {
+		// A task boundary between two lines (yieldToPage.ts): once the
+		// detector is loaded the whole load would otherwise be one task.
+		if (index > 0) {
+			await yieldToPage();
+		}
+
 		if (!stillCurrent(channel.id, generation)) {
 			return;
 		}
@@ -772,16 +779,26 @@ export async function translateMessage(
 	// capped, and the prompt's `Names:` list is drawn from the lines just
 	// before this one, so the two windows have to end at the same place or a
 	// history line could be told to keep a name nothing fenced.
-	const at = channel.messages.findIndex((m) => m.id === message.id);
+	// Read raw: nothing here is an effect that must track them, and a big
+	// channel's user list read through the store's proxies cost about a
+	// millisecond a line.
+	const users = toRaw(channel.users);
+	const messages = toRaw(channel.messages);
+	const at = messages.findIndex((m) => m.id === message.id);
 	const nicks = namesFor({
-		users: channel.users,
+		users,
 		sender: message.from?.nick,
 		target: channel.name,
-		messages: at >= 0 ? channel.messages.slice(0, at + 1) : channel.messages,
+		messages: at >= 0 ? messages.slice(0, at + 1) : messages,
 	});
 	const generation = generationOf(channel.id);
+	// Stripped once, and only for a line that gets that far: eligibility
+	// counts its words and detection reads it (the strip runs the whole
+	// Markdown layout).
+	let plain: string | undefined;
+	const plainText = () => (plain ??= plainTextOf(message.text ?? "", nicks));
 
-	if (!force && (!initial.read || !isEligible(message, {nicks}))) {
+	if (!force && (!initial.read || !isEligible(message, {nicks, plain: plainText}))) {
 		return;
 	}
 
@@ -795,7 +812,7 @@ export async function translateMessage(
 				confidence: 1,
 				candidates: store.state.translations[message.id]?.candidates ?? [],
 		  }
-		: await detectLanguage(plainTextOf(message.text, nicks), prior, initial.languages, {
+		: await detectLanguage(plainText(), prior, initial.languages, {
 				// The language the reader already reads, so a channel that
 				// declares one other can place a line too short for franc. The
 				// switch is re-read after the await below; this is the target as
