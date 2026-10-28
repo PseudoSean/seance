@@ -3504,13 +3504,13 @@ msgctxt "menu.editTopic"
 msgid "Edit topic"
 msgstr ""
 
-#. Context-menu item that grants an IRC channel role to a user; {name} is the role's name ('operator'), {mode} the mode letter with its plus sign, e.g. +o.
+#. Context-menu item that grants an IRC channel role to a user; {name} is the role's name ('operator'), {mode} the bare mode letter (e.g. o) — the + before it is part of the text, so the item reads (+o).
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveMode"
 msgid "Give {name} (+{mode})"
 msgstr ""
 
-#. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the mode letter with its plus sign, e.g. +z.
+#. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the bare mode letter (e.g. z) — the + before it is part of the text, so the item reads Mode +z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveModeUnknown"
 msgid "Mode +{mode}"
@@ -3606,13 +3606,13 @@ msgctxt "menu.operPanel"
 msgid "Oper panel…"
 msgstr ""
 
-#. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
+#. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the bare mode letter (e.g. o) — the - before it is part of the text, so the item reads (-o).
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeMode"
 msgid "Revoke {name} (-{mode})"
 msgstr ""
 
-#. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the mode letter with its minus sign, e.g. -z.
+#. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the bare mode letter (e.g. z) — the - before it is part of the text, so the item reads Mode -z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
@@ -4084,8 +4084,8 @@ msgstr ""
 #. Oper tools, the kill/ban dialog (kill a user, or G-line, shun or Z-line a mask; IRC jargon, keep as is): preview line, shown in amber: {count} (20 or more) connected users match; {nicks} lists the first 8 nicks (verbatim), {more} how many are not listed. The second part warns that the server refuses such a wide ban unless forced. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/ActionDialog.vue
 msgctxt "oper.action.previewWide"
-msgid "Matches {count} user: {nicks} and {more} more. — the server refuses 20 or more without force."
-msgid_plural "Matches {count} users: {nicks} and {more} more. — the server refuses 20 or more without force."
+msgid "Matches {count} user: {nicks} and {more} more — the server refuses 20 or more without force."
+msgid_plural "Matches {count} users: {nicks} and {more} more — the server refuses 20 or more without force."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -4120,6 +4120,7 @@ msgid "Sending…"
 msgstr ""
 
 #. Oper tools, the kill/ban dialog (kill a user, or G-line, shun or Z-line a mask; IRC jargon, keep as is): result when the ban was sent but listing it back did not find it (yet). {type} is the ban type as IRC names it (G-line, Shun or Z-line — never translated). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/components/Oper/ActionDialog.vue
 msgctxt "oper.action.sentUnlisted"
 msgid "{type} sent; the server does not list it yet."
@@ -4132,24 +4133,28 @@ msgid "The server did not answer."
 msgstr ""
 
 #. Oper tools, the kill/ban dialog (kill a user, or G-line, shun or Z-line a mask; IRC jargon, keep as is): the submit button for a ban. Two words. {type} is the ban type as IRC names it (G-line, Shun or Z-line — never translated). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/components/Oper/ActionDialog.vue
 msgctxt "oper.action.set"
 msgid "Set {type}"
 msgstr ""
 
 #. Oper tools, the kill/ban dialog (kill a user, or G-line, shun or Z-line a mask; IRC jargon, keep as is): confirmation after the server listed the new ban. {duration} is the length in the server's compact units ('1d', '6h', verbatim). {type} is the ban type as IRC names it (G-line, Shun or Z-line — never translated). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/components/Oper/ActionDialog.vue
 msgctxt "oper.action.setFor"
 msgid "{type} set for {duration}."
 msgstr ""
 
 #. Oper tools, the kill/ban dialog (kill a user, or G-line, shun or Z-line a mask; IRC jargon, keep as is): the submit button for a ban sent through the services bot. {bot} is its nick (usually O3, verbatim). {type} is the ban type as IRC names it (G-line, Shun or Z-line — never translated). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/components/Oper/ActionDialog.vue
 msgctxt "oper.action.setVia"
 msgid "Set {type} via {bot}"
 msgstr ""
 
 #. Oper tools, the kill/ban dialog (kill a user, or G-line, shun or Z-line a mask; IRC jargon, keep as is): confirmation after the services bot accepted the ban. {bot} is the bot's nick, {reply} the bot's own reply text (verbatim, never translated). {type} is the ban type as IRC names it (G-line, Shun or Z-line — never translated). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/components/Oper/ActionDialog.vue
 msgctxt "oper.action.setViaDone"
 msgid "{type} set via {bot}: {reply}"
@@ -5251,7 +5256,7 @@ msgstr ""
 #. Muted hint under an oper service alert: it has never been triggered. Lower case, ≤ 25 characters.
 #: client/components/Oper/OperAlerts.vue
 msgctxt "oper.alerts.o3.neverFired"
-msgid "last fired never"
+msgid "never fired"
 msgstr ""
 
 #. Button in the oper panel's Alerts tab: opens the form that creates a new alert on the oper service bot. The ellipsis means a form follows. ≤ 25 characters.
@@ -6941,24 +6946,28 @@ msgid "version '{version}'"
 msgstr ""
 
 #. Oper tools, user investigation card, 'Seen before' list and the one-sentence verdict: what became of a user the server-notice feed saw. {by} is the oper nick or server name that did it (verbatim), {reason} the ban reason as typed by the oper (verbatim, keep the quotes around it), {type} a ban type as the server names it (G-line, Z-line, shun…, never translated). Short phrase, lower case, no final period: it is inserted after a comma in a list row, or ends a sentence. Used for a ban type other than G-line, Z-line or shun. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.fate.banned"
 msgid "{type} set by {by}"
 msgstr ""
 
 #. Oper tools, user investigation card, 'Seen before' list and the one-sentence verdict: what became of a user the server-notice feed saw. {by} is the oper nick or server name that did it (verbatim), {reason} the ban reason as typed by the oper (verbatim, keep the quotes around it), {type} a ban type as the server names it (G-line, Z-line, shun…, never translated). Short phrase, lower case, no final period: it is inserted after a comma in a list row, or ends a sentence. Used for a ban type other than G-line, Z-line or shun. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.fate.bannedReason"
 msgid "{type} set by {by} for '{reason}'"
 msgstr ""
 
 #. Oper tools, user investigation card, 'Seen before' list and the one-sentence verdict: what became of a user the server-notice feed saw. {by} is the oper nick or server name that did it (verbatim), {reason} the ban reason as typed by the oper (verbatim, keep the quotes around it), {type} a ban type as the server names it (G-line, Z-line, shun…, never translated). Short phrase, lower case, no final period: it is inserted after a comma in a list row, or ends a sentence. This is the 'then' form, used inside the verdict sentence after a semicolon: the ban or kill happened back then, not now. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.fate.bannedThen"
 msgid "{type} set then by {by}"
 msgstr ""
 
 #. Oper tools, user investigation card, 'Seen before' list and the one-sentence verdict: what became of a user the server-notice feed saw. {by} is the oper nick or server name that did it (verbatim), {reason} the ban reason as typed by the oper (verbatim, keep the quotes around it), {type} a ban type as the server names it (G-line, Z-line, shun…, never translated). Short phrase, lower case, no final period: it is inserted after a comma in a list row, or ends a sentence. This is the 'then' form, used inside the verdict sentence after a semicolon: the ban or kill happened back then, not now. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.fate.bannedThenReason"
 msgid "{type} set then by {by} for '{reason}'"
@@ -6989,12 +6998,14 @@ msgid "G-lined then by {by} for '{reason}'"
 msgstr ""
 
 #. Oper tools, user investigation card, 'Seen before' list and the one-sentence verdict: what became of a user the server-notice feed saw. {by} is the oper nick or server name that did it (verbatim), {reason} the ban reason as typed by the oper (verbatim, keep the quotes around it), {type} a ban type as the server names it (G-line, Z-line, shun…, never translated). Short phrase, lower case, no final period: it is inserted after a comma in a list row, or ends a sentence. The user tried to connect and was refused by an existing ban. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.fate.hit"
 msgid "hit a {type}"
 msgstr ""
 
 #. Oper tools, user investigation card, 'Seen before' list and the one-sentence verdict: what became of a user the server-notice feed saw. {by} is the oper nick or server name that did it (verbatim), {reason} the ban reason as typed by the oper (verbatim, keep the quotes around it), {type} a ban type as the server names it (G-line, Z-line, shun…, never translated). Short phrase, lower case, no final period: it is inserted after a comma in a list row, or ends a sentence. This is the 'then' form, used inside the verdict sentence after a semicolon: the ban or kill happened back then, not now. The user tried to connect and was refused by an existing ban. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.fate.hitThen"
 msgid "hit then a {type}"
@@ -7511,7 +7522,7 @@ msgstr ""
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. The same nick was seen before from a different address (someone else may have used it). {where} is that IP or host (verbatim), {when} when, {fate} what became of them ('G-lined by rubin'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.verdict.elsewhereFate"
-msgid "Nothing conclusive: the nick was seen from {where} ({when}), and was {fate}."
+msgid "Nothing conclusive: the nick was seen from {where} ({when}); {fate}."
 msgstr ""
 
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. The same nick was seen before from a different address (someone else may have used it). {where} is that IP or host (verbatim), {when} when, {fate} what became of them ('G-lined by rubin'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
@@ -7523,7 +7534,7 @@ msgstr ""
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. The same nick was seen before from a different address (someone else may have used it). {where} is that IP or host (verbatim), {when} when, {fate} what became of them ('G-lined by rubin'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.verdict.elsewhereUnknownFate"
-msgid "Nothing conclusive: the nick was seen from another address ({when}), and was {fate}."
+msgid "Nothing conclusive: the nick was seen from another address ({when}); {fate}."
 msgstr ""
 
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. Someone seen before under another nick very likely is this same person. {nick} is that nick (verbatim), {when} when they were seen (a time, a short weekday or a date), {matches} a comma list of what matched ('same IP, same realname'), {fate} what became of them ('G-lined then by rubin for 'spam''). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
@@ -7539,24 +7550,28 @@ msgid "Likely the same as {nick} ({when}): {matches}; {fate}."
 msgstr ""
 
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. A live ban on the server covers this user. {type} is the ban type (G-line, shun, Z-line — never translated), {mask} the ban mask (verbatim), {by} the oper who set it, {when} how long ago (e.g. '3 d ago'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.verdict.liveBan"
 msgid "Covered by a live {type}: {mask}."
 msgstr ""
 
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. A live ban on the server covers this user. {type} is the ban type (G-line, shun, Z-line — never translated), {mask} the ban mask (verbatim), {by} the oper who set it, {when} how long ago (e.g. '3 d ago'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.verdict.liveBanBy"
 msgid "Covered by a live {type}: {mask} ({by})."
 msgstr ""
 
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. A live ban on the server covers this user. {type} is the ban type (G-line, shun, Z-line — never translated), {mask} the ban mask (verbatim), {by} the oper who set it, {when} how long ago (e.g. '3 d ago'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.verdict.liveBanByWhen"
 msgid "Covered by a live {type}: {mask} ({by}, {when})."
 msgstr ""
 
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. A live ban on the server covers this user. {type} is the ban type (G-line, shun, Z-line — never translated), {mask} the ban mask (verbatim), {by} the oper who set it, {when} how long ago (e.g. '3 d ago'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.verdict.liveBanWhen"
 msgid "Covered by a live {type}: {mask} ({when})."
@@ -7577,7 +7592,7 @@ msgstr ""
 #. Oper tools, user investigation card: the one-sentence verdict under the user's details. A previously seen user shares something weaker with this one. {nick} is that nick (verbatim), {when} when they were seen, {matches} what they share ('the host and the account'), {fate} what became of them ('killed by alice'). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/js/helpers/verdict.ts
 msgctxt "oper.investigate.verdict.weakFate"
-msgid "Nothing conclusive: {nick} ({when}) shares {matches}, and was {fate}."
+msgid "Nothing conclusive: {nick} ({when}) shares {matches}; {fate}."
 msgstr ""
 
 #. Name of a kind of IRC server notice in the oper tools: a row of the Alerts tab (under 'Everything else') and the header of the menu a notice's badge opens. Short, ≤ 40 characters, a name or short phrase (most are plural noun phrases).
@@ -7588,6 +7603,7 @@ msgstr ""
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.activate). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {expires} is when it expires, already phrased ('in 3h', 'never'); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.activate.template"
 msgid "{oper}{server} activated the global {type} on {mask}, expiring {expires}: {reason}"
@@ -7602,6 +7618,7 @@ msgstr ""
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.add). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {expires} is when it expires, already phrased ('in 3h', 'never'); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
 #. A network-wide ban added switched off.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.add.template.deactivatedGlobal"
 msgid "{oper}{server} added a deactivated global {type} on {mask}, expiring {expires}: {reason}"
@@ -7610,6 +7627,7 @@ msgstr ""
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.add). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {expires} is when it expires, already phrased ('in 3h', 'never'); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
 #. A ban added switched off, on one server only.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.add.template.deactivatedLocal"
 msgid "{oper}{server} added a deactivated local {type} on {mask}, expiring {expires}: {reason}"
@@ -7618,6 +7636,7 @@ msgstr ""
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.add). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {expires} is when it expires, already phrased ('in 3h', 'never'); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
 #. A network-wide ban.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.add.template.global"
 msgid "{oper}{server} added a global {type} on {mask}, expiring {expires}: {reason}"
@@ -7626,6 +7645,7 @@ msgstr ""
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.add). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {expires} is when it expires, already phrased ('in 3h', 'never'); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
 #. A ban that applies on one server only.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.add.template.local"
 msgid "{oper}{server} added a local {type} on {mask}, expiring {expires}: {reason}"
@@ -7640,6 +7660,7 @@ msgstr ""
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.deactivate). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
 #. The ban still exists but is switched off.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.deactivate.template.deactivatedGlobal"
 msgid "{oper}{server} deactivated the global {type} on {mask}: {reason}"
@@ -7647,6 +7668,7 @@ msgstr ""
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.deactivate). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.deactivate.template.removedGlobal"
 msgid "{oper}{server} removed the global {type} on {mask}: {reason}"
@@ -7654,6 +7676,7 @@ msgstr ""
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.deactivate). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.deactivate.template.removedLocal"
 msgid "{oper}{server} removed the local {type} on {mask}: {reason}"
@@ -7667,6 +7690,7 @@ msgstr ""
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.forceremove). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {reason} is a reason, verbatim from the server or the oper. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.forceremove.template"
 msgid "{oper}{server} force-removed the {type} on {mask}: {reason}"
@@ -7680,6 +7704,7 @@ msgstr ""
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.hit). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {nick} is the nick of the user it is about (a clickable nick).
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.hit.template"
 msgid "{type} hit {nick}"
@@ -7693,6 +7718,7 @@ msgstr ""
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.modify). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip); {changes} is the server's own list of changes, verbatim. Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.modify.template"
 msgid "{oper}{server} changed the global {type} on {mask}:{changes}"
@@ -7706,6 +7732,7 @@ msgstr ""
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind ban.remove). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {oper} is the nick of the oper who did it; {server} is a server name; {type} is the ban type: G-line, K-line, Z-line, shun or 'channel ban' (translated separately); {mask} is a ban mask (a chip). Only one of the two adjacent placeholders before the verb is ever filled (an oper's nick or a server name): keep them side by side.
+#. {type} is the ban's kind as the server names it, in English (G-line, Z-line, Shun, K-line, Jupe); its grammatical gender in your language is unknown and varies, so write no article, adjective or verb ending that has to agree with it: use a neutral frame, e.g. 'ban ({type})' or '{type}:' — in English it reads 'a {type}'.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.ban.remove.template"
 msgid "{oper}{server} removed the local {type} on {mask}"
@@ -9438,7 +9465,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.AUTH.stop"
-msgid "Stop receiving iauth notices"
+msgid "Stop receiving IAuth notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9454,7 +9481,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.AUTO.stop"
-msgid "Stop receiving automatic bans notices"
+msgid "Stop receiving automatic ban notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9470,7 +9497,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.CONNEXIT.stop"
-msgid "Stop receiving connects and exits notices"
+msgid "Stop receiving connect and exit notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9502,7 +9529,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.GLINE.stop"
-msgid "Stop receiving bans notices"
+msgid "Stop receiving ban notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9566,7 +9593,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.IPMISMATCH.stop"
-msgid "Stop receiving ip mismatches notices"
+msgid "Stop receiving IP mismatch notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9598,7 +9625,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.NICKCHG.stop"
-msgid "Stop receiving nick changes notices"
+msgid "Stop receiving nick change notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9630,7 +9657,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.OLDSNO.stop"
-msgid "Stop receiving server events notices"
+msgid "Stop receiving server event notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9646,7 +9673,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.OPERKILL.stop"
-msgid "Stop receiving oper kills notices"
+msgid "Stop receiving oper kill notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9662,7 +9689,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.SERVKILL.stop"
-msgid "Stop receiving server kills notices"
+msgid "Stop receiving server kill notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9678,7 +9705,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.TCPCOMMON.stop"
-msgid "Stop receiving socket and tls errors notices"
+msgid "Stop receiving socket and TLS error notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9710,7 +9737,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.TOOMANY.stop"
-msgid "Stop receiving too many connections notices"
+msgid "Stop receiving too-many-connections notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9726,7 +9753,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.UNAUTH.stop"
-msgid "Stop receiving refused connections notices"
+msgid "Stop receiving refused connection notices"
 msgstr ""
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
@@ -9742,7 +9769,7 @@ msgstr ""
 #. Keep as is (IRC jargon): OPER, OPMODE, IAuth, WebIRC, IP.
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.WEBIRC.stop"
-msgid "Stop receiving webirc notices"
+msgid "Stop receiving WebIRC notices"
 msgstr ""
 
 #. Menu item on a server notice's badge (oper tools) for a family of server notices without a name of its own: asks the server to stop sending it (clears its snomask bit). {name} is the family's name as the server profile gives it, verbatim. ≤ 50 characters.
