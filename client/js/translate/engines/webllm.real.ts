@@ -11,6 +11,14 @@ import {
 import {ModelRef} from "../engine";
 import {CacheApi, ModelCatalog} from "../models";
 import {MlcLike, ModelRecord, WebLlmDeps, appConfigFor} from "./webllm";
+import {installBufferLimits} from "./gpuLimits";
+
+// Before any reload: WebLLM's device asks for what the adapter can give
+// (gpuLimits.ts). A worker without WebGPU has no GPUAdapter at all.
+installBufferLimits(
+	(globalThis as {GPUAdapter?: {prototype: Parameters<typeof installBufferLimits>[0]}}).GPUAdapter
+		?.prototype
+);
 
 const prebuilt = prebuiltAppConfig.model_list as ModelRecord[];
 
