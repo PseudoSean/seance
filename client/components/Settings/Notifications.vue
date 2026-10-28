@@ -282,6 +282,8 @@ export default defineComponent({
 			t("settings.notifications.highlightExceptionsHelp")
 		);
 		const commaListPlaceholder = computed(() => t("settings.notifications.commaList"));
+		// Two names on frameSegments on purpose: each half is a <label> around
+		// its own time field, so the halves stay in "from … until …" order.
 		const windowParts = computed(() =>
 			frameSegments(t("dnd.scheduleWindow", {start: KEEP, end: KEEP}), ["start", "end"])
 		);
