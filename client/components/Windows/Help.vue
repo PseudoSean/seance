@@ -491,8 +491,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.autocomplete.emoji") }}
-						<code>:)</code>)
+						<I18nFrame :text="t('help.autocomplete.emoji', {example: KEEP})"
+							><template v-slot:example><code>:)</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -513,7 +514,11 @@
 					<code>/back</code>
 				</div>
 				<div class="description">
-					<p>{{ t("help.commands.back") }} <code>/away</code>).</p>
+					<p>
+						<I18nFrame :text="t('help.commands.back', {command: KEEP})"
+							><template v-slot:command><code>/away</code></template></I18nFrame
+						>
+					</p>
 				</div>
 			</div>
 
@@ -545,8 +550,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.collapse") }}
-						<code>/expand</code>)
+						<I18nFrame :text="t('help.commands.collapse', {command: KEEP})"
+							><template v-slot:command><code>/expand</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -644,8 +650,9 @@
 				</div>
 				<div class="description">
 					<p>
-						{{ t("help.commands.expand") }}
-						<code>/collapse</code>)
+						<I18nFrame :text="t('help.commands.expand', {command: KEEP})"
+							><template v-slot:command><code>/collapse</code></template></I18nFrame
+						>
 					</p>
 				</div>
 			</div>
@@ -762,7 +769,11 @@
 					<code>/mute [...channel]</code>
 				</div>
 				<div class="description">
-					<p>{{ t("help.commands.mute") }} <code>/unmute</code>.</p>
+					<p>
+						<I18nFrame :text="t('help.commands.mute', {command: KEEP})"
+							><template v-slot:command><code>/unmute</code></template></I18nFrame
+						>
+					</p>
 				</div>
 			</div>
 

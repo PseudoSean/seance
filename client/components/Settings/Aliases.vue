@@ -82,7 +82,11 @@
 			<dt><code>$me</code></dt>
 			<dd>{{ t("settings.aliases.varMe") }}</dd>
 			<dt><code>$$</code></dt>
-			<dd>{{ t("settings.aliases.varLiteral") }} <code>$</code></dd>
+			<dd>
+				<I18nFrame :text="t('settings.aliases.varLiteral', {character: KEEP})"
+					><template v-slot:character><code>$</code></template></I18nFrame
+				>
+			</dd>
 		</dl>
 		<p class="alias-intro">
 			<I18nFrame :text="t('settings.aliases.nested', {command: KEEP, expansion: KEEP})"

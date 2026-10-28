@@ -1675,11 +1675,11 @@ msgctxt "help.autocomplete.disabled"
 msgid "Autocompletion can be disabled in settings."
 msgstr "การเติมเต็มอัตโนมัติสามารถปิดการใช้งานในตั้งค่าได้"
 
-#. Description of the : autocompletion trigger in the help window; a code fragment with a smiley example follows it. Ends mid-sentence.
+#. Description of the : autocompletion trigger in the help window. {example} is a smiley shown as a code fragment (:) ), kept verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.emoji"
-msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like"
-msgstr "อีโมจิ (หมายเหตุ: ต้องใช้ตัวค้นหาสองตัว เพื่อหลีกเลี่ยงการขัดแย้งกับอีโมจิทั่วไปเช่น"
+msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like {example})"
+msgstr "อีโมจิ (หมายเหตุ: ต้องพิมพ์อักขระค้นหาสองตัว เพื่อไม่ให้ชนกับอีโมติคอนทั่วไปอย่าง {example})"
 
 #. Heading of the autocompletion section of the help window; explains the prefix characters that open suggestion lists.
 #: client/components/Windows/Help.vue
@@ -1723,11 +1723,11 @@ msgctxt "help.commands.away"
 msgid "Mark yourself as away with an optional message."
 msgstr "ระบุตัวเองว่าอยู่นอกเครือด้วยข้อความที่เลือกได้"
 
-#. Start of the /back command description in the help window; a code fragment with the /away command follows it. Ends mid-sentence.
+#. Description of the /back command in the help window. {command} is the /away command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.back"
-msgid "Remove your away status (set with"
-msgstr "ลบสถานะที่อยู่นอกเครือ (ซึ่งถูกตั้งโดย"
+msgid "Remove your away status (set with {command})."
+msgstr "ยกเลิกสถานะไม่อยู่ของคุณ (ที่ตั้งด้วย {command})"
 
 #. Description of the /ban command in the help window. {mode} is the channel mode +b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
@@ -1747,11 +1747,11 @@ msgctxt "help.commands.cleartopic"
 msgid "Clear the topic in the current channel."
 msgstr "ลบหัวข้อในช่องทางปัจจุบัน"
 
-#. Description of the /collapse command in the help window; a code fragment with the /expand command follows it. Ends mid-sentence.
+#. Description of the /collapse command in the help window. {command} is the /expand command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.collapse"
-msgid "Collapse all previews in the current channel (opposite of"
-msgstr "รวมข้อมูลล่วงหน้าทั้งหมดในช่องทางปัจจุบัน (ตรงข้ามของ"
+msgid "Collapse all previews in the current channel (opposite of {command})"
+msgstr "ยุบตัวอย่างทั้งหมดในช่องปัจจุบัน (ตรงข้ามกับ {command})"
 
 #. Description of the /connect command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
 #: client/components/Windows/Help.vue
@@ -1795,11 +1795,11 @@ msgctxt "help.commands.disconnectLong"
 msgid "Disconnect from the current network with an optionally-provided message."
 msgstr "แยกตัวออกจากระดับเครือข่ายปัจจุบันด้วยข้อความที่ให้มาได้เลือก"
 
-#. Description of the /expand command in the help window; a code fragment with the /collapse command follows it. Ends mid-sentence.
+#. Description of the /expand command in the help window. {command} is the /collapse command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.expand"
-msgid "Expand all previews in the current channel (opposite of"
-msgstr "ขยายการดูตัวอย่างทั้งหมดในช่องที่มีอยู่ในตอนนี้ (ตรงข้ามของ"
+msgid "Expand all previews in the current channel (opposite of {command})"
+msgstr "ขยายตัวอย่างทั้งหมดในช่องปัจจุบัน (ตรงข้ามกับ {command})"
 
 #. Heading of the commands section of the help window; one row per slash command with its syntax and description.
 #: client/components/Windows/Help.vue
@@ -1867,11 +1867,11 @@ msgctxt "help.commands.msg"
 msgid "Send a message to the specified channel."
 msgstr "ส่งข้อความไปยังช่องทางที่กำหนด"
 
-#. Description of the /mute command in the help window; a code fragment with the /unmute command follows it. Ends mid-sentence.
+#. Description of the /mute command in the help window. {command} is the /unmute command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mute"
-msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with"
-msgstr "ปิดการตอบกลับข้อความสำหรับช่องทางนี้ ซึ่งจะปิดตัวชี้แจ้ง ซ่อนการแจ้งเตือน และปิดการแจ้งเตือนแบบพิมพ์"
+msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with {command}."
+msgstr "ทำให้ข้อความในช่องไม่ก่อการแจ้งเตือนใด ๆ ทั้งสิ้น จะปิดตัวบ่งชี้การไฮไลต์ ซ่อนการกล่าวถึง และระงับการแจ้งเตือนแบบพุช การปิดเสียงล็อบบี้ของเครือข่ายจะปิดเสียงทั้งเครือข่าย หากไม่ระบุช่อง จะปิดเสียงช่องปัจจุบัน ยกเลิกได้ด้วย {command}"
 
 #. Description of the /nick command in the help window.
 #: client/components/Windows/Help.vue
@@ -3631,17 +3631,17 @@ msgctxt "msg.ctcpTitle"
 msgid "Client-to-client protocol"
 msgstr "โปรโตคอลผู้ใช้ถึงผู้ใช้"
 
-#. System message announcing a channel's modes (324). The mode string in <b> is protocol text and stays verbatim.
+#. System message announcing a channel's modes (324). {modes} is the mode string (e.g. +nt), shown in bold; protocol text, kept verbatim.
 #: client/components/MessageTypes/mode_channel.vue
 msgctxt "msg.modeChannelIs"
-msgid "Channel mode is"
-msgstr "โหมดช่องคือ"
+msgid "Channel mode is {modes}"
+msgstr "โหมดของช่องคือ {modes}"
 
-#. System message announcing the reader's own user modes (221). The mode string in <b> is protocol text and stays verbatim.
+#. System message announcing the reader's own user modes (221). {modes} is the mode string (e.g. +iwx), shown in bold; protocol text, kept verbatim.
 #: client/components/MessageTypes/mode_user.vue
 msgctxt "msg.modeUserIs"
-msgid "Your user mode is"
-msgstr "โหมดผู้ใช้คือ"
+msgid "Your user mode is {modes}"
+msgstr "โหมดผู้ใช้ของคุณคือ {modes}"
 
 #. Lobby error when the server refused a nick as taken (433) and gave no reason of its own; shown as '<nick>: <reason>'. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/numerics.ts
@@ -11128,11 +11128,11 @@ msgctxt "settings.aliases.varChan"
 msgid "the current channel or query"
 msgstr "ห้องสนทนาหรือการเชื่อมต่อปัจจุบัน"
 
-#. Variable reference fragment: introduces the $$ escape, which follows in code style as a single dollar sign.
+#. Settings > Aliases variable reference, describing the $$ escape: it expands to a single dollar sign. {character} is that dollar sign, shown in code style.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varLiteral"
-msgid "a literal"
-msgstr "ค่าคงที่"
+msgid "a literal {character}"
+msgstr "อักขระ {character} ตามตัวอักษร"
 
 #. Variable reference: what $me expands to.
 #: client/components/Settings/Aliases.vue

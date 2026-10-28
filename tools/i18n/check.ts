@@ -45,6 +45,8 @@ export interface PotProblems {
 	unreferenced: string[];
 	/** Pot entries without a single `#.` context line. */
 	missingContext: string[];
+	/** Pot entries whose English opens a parenthesis it never closes. */
+	cutOff: string[];
 	/** Assembled call sites that survived the allowlist. */
 	dynamic: DynamicSite[];
 	/** Assembled sites per allowlisted file (raw counts, before filtering) —
@@ -274,6 +276,20 @@ function collectCallSites(
 	}
 }
 
+/**
+ * True when an English text opens more parentheses than it closes, outside
+ * its {placeholders}: a sentence cut off before the element that finished
+ * it ("…(opposite of" + <code>/collapse</code> + ")"). A translator handed
+ * the fragment closes it themselves, and the page shows "…(Opposit von)
+ * /collapse)". The adjacent-fragments scan cannot see it, since only one
+ * t() sits in the element; the English can.
+ */
+export function opensUnclosed(text: string): boolean {
+	const body = text.replace(/\{[^{}]*\}/g, "");
+
+	return (body.match(/\(/g) ?? []).length > (body.match(/\)/g) ?? []).length;
+}
+
 export function checkPot(
 	potPath: string,
 	scanRoots: string[],
@@ -303,6 +319,15 @@ export function checkPot(
 			.sort(),
 		missingContext: entries
 			.filter((entry) => entry.msgctxt !== "" && entry.context.length === 0)
+			.map((entry) => entry.msgctxt)
+			.sort(),
+		cutOff: entries
+			.filter(
+				(entry) =>
+					entry.msgctxt !== "" &&
+					(opensUnclosed(entry.msgid) ||
+						(entry.msgidPlural !== undefined && opensUnclosed(entry.msgidPlural)))
+			)
 			.map((entry) => entry.msgctxt)
 			.sort(),
 		dynamic: dynamic.filter((site) => !allowed.has(site.file)),
@@ -373,6 +398,14 @@ function main(): void {
 	if (problems.missingContext.length > 0) {
 		failed = true;
 		list("check: pot entry without a #. context line:", problems.missingContext);
+	}
+
+	if (problems.cutOff.length > 0) {
+		failed = true;
+		list(
+			"check: English that opens a parenthesis it never closes (a sentence cut around an element; make it one frame with a {placeholder}):",
+			problems.cutOff
+		);
 	}
 
 	if (problems.dynamic.length > 0) {

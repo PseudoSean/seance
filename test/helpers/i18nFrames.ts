@@ -31,6 +31,25 @@ describe("whole-sentence frames keep the English", () => {
 			"To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the ↑ and ↓ keys to highlight an item, and insert it by pressing Tab or Enter (or by clicking the desired item).",
 		],
 		[
+			"help.autocomplete.emoji",
+			{example: ":)"},
+			"Emoji (note: requires two search characters, to avoid conflicting with common emoticons like :))",
+		],
+		[
+			"help.commands.collapse",
+			{command: "/expand"},
+			"Collapse all previews in the current channel (opposite of /expand)",
+		],
+		[
+			"help.commands.expand",
+			{command: "/collapse"},
+			"Expand all previews in the current channel (opposite of /collapse)",
+		],
+		["help.commands.back", {command: "/away"}, "Remove your away status (set with /away)."],
+		["msg.modeChannelIs", {modes: "+nt"}, "Channel mode is +nt"],
+		["msg.modeUserIs", {modes: "+iwx"}, "Your user mode is +iwx"],
+		["settings.aliases.varLiteral", {character: "$"}, "a literal $"],
+		[
 			"help.commands.ban",
 			{mode: "+b"},
 			"Ban (+b) a user from the current channel. This can be a nickname or a hostmask.",

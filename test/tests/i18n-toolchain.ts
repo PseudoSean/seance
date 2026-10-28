@@ -20,6 +20,7 @@ import {
 	ALLOWED_DYNAMIC,
 	adjacentFragments,
 	checkPot,
+	opensUnclosed,
 	collectStaticCallSiteKeys,
 } from "../../tools/i18n/check";
 import {POT_PATH} from "../../tools/i18n/paths";
@@ -1505,6 +1506,20 @@ describe("i18n toolchain", () => {
 		it("fails a pot entry without a #. context line", () => {
 			const problems = checkPot(potPath, [tree]);
 			expect(problems.missingContext).to.deep.equal(["nocontext.key"]);
+		});
+
+		it("flags English that opens a parenthesis it never closes", () => {
+			// One t() followed by an element is no adjacent pair, so Help's
+			// "(opposite of" + <code>/collapse</code> + ")" passed the scan;
+			// de closed the fragment itself and the page read "…(Opposit von)
+			// /collapse)".
+			expect(
+				opensUnclosed("Expand all previews in the current channel (opposite of")
+			).to.equal(true);
+			expect(opensUnclosed("Expand all previews (opposite of {command})")).to.equal(false);
+			expect(opensUnclosed("Bytes: {count} (of {total})")).to.equal(false);
+			// A placeholder's own text is not the sentence's.
+			expect(opensUnclosed("Shown as {open(}")).to.equal(false);
 		});
 
 		it("flags a sentence cut into t() fragments around an element in a template", () => {

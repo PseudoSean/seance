@@ -1675,11 +1675,11 @@ msgctxt "help.autocomplete.disabled"
 msgid "Autocompletion can be disabled in settings."
 msgstr "자동완성은 설정에서 비활성화할 수 있습니다."
 
-#. Description of the : autocompletion trigger in the help window; a code fragment with a smiley example follows it. Ends mid-sentence.
+#. Description of the : autocompletion trigger in the help window. {example} is a smiley shown as a code fragment (:) ), kept verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.emoji"
-msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like"
-msgstr "이모티콘(참고: 두 개의 검색 문자가 필요합니다. 일반적인 이모티콘과 충돌을 피하기 위해)"
+msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like {example})"
+msgstr "이모지(참고: {example} 같은 흔한 이모티콘과 겹치지 않도록 검색 문자 두 개가 필요합니다)"
 
 #. Heading of the autocompletion section of the help window; explains the prefix characters that open suggestion lists.
 #: client/components/Windows/Help.vue
@@ -1723,11 +1723,11 @@ msgctxt "help.commands.away"
 msgid "Mark yourself as away with an optional message."
 msgstr "선택적 메시지와 함께 자신을 어웨이 상태로 표시합니다."
 
-#. Start of the /back command description in the help window; a code fragment with the /away command follows it. Ends mid-sentence.
+#. Description of the /back command in the help window. {command} is the /away command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.back"
-msgid "Remove your away status (set with"
-msgstr "자신을 어웨이 상태에서 제거합니다 (로 설정한"
+msgid "Remove your away status (set with {command})."
+msgstr "자리 비움 상태를 해제합니다({command}(으)로 설정한 상태)."
 
 #. Description of the /ban command in the help window. {mode} is the channel mode +b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
@@ -1747,11 +1747,11 @@ msgctxt "help.commands.cleartopic"
 msgid "Clear the topic in the current channel."
 msgstr "현재 채널의 주제를 삭제합니다."
 
-#. Description of the /collapse command in the help window; a code fragment with the /expand command follows it. Ends mid-sentence.
+#. Description of the /collapse command in the help window. {command} is the /expand command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.collapse"
-msgid "Collapse all previews in the current channel (opposite of"
-msgstr "현재 채널의 모든 미리보기를 축소합니다 (의 반대가"
+msgid "Collapse all previews in the current channel (opposite of {command})"
+msgstr "현재 채널의 모든 미리보기를 접습니다({command}의 반대)"
 
 #. Description of the /connect command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
 #: client/components/Windows/Help.vue
@@ -1795,11 +1795,11 @@ msgctxt "help.commands.disconnectLong"
 msgid "Disconnect from the current network with an optionally-provided message."
 msgstr "현재 네트워크에서 연결을 종료합니다. 선택적으로 메시지가 제공될 수 있습니다."
 
-#. Description of the /expand command in the help window; a code fragment with the /collapse command follows it. Ends mid-sentence.
+#. Description of the /expand command in the help window. {command} is the /collapse command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.expand"
-msgid "Expand all previews in the current channel (opposite of"
-msgstr ""
+msgid "Expand all previews in the current channel (opposite of {command})"
+msgstr "현재 채널의 모든 미리보기를 펼칩니다({command}의 반대)"
 
 #. Heading of the commands section of the help window; one row per slash command with its syntax and description.
 #: client/components/Windows/Help.vue
@@ -1867,11 +1867,11 @@ msgctxt "help.commands.msg"
 msgid "Send a message to the specified channel."
 msgstr "지정된 채널에 메시지를 보냅니다."
 
-#. Description of the /mute command in the help window; a code fragment with the /unmute command follows it. Ends mid-sentence.
+#. Description of the /mute command in the help window. {command} is the /unmute command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mute"
-msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with"
-msgstr "채널에 메시지가 생성될 때 피드백을 생성하지 않습니다. 이는 높이트 인디케이터를 비활성화하고, 언급을 숨기며, 푸시 알림을 억제합니다. 네트워크 라이브러리의 멈춤은 전체 네트워크를 멈춥니다. 지정된 채널 목표를 지정하지 않으면 현재 채널을 멈춥니다. 되돌리기 위해"
+msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with {command}."
+msgstr "채널의 메시지가 어떤 알림도 일으키지 않게 합니다. 강조 표시를 끄고, 멘션을 숨기며, 푸시 알림을 막습니다. 네트워크 로비를 음소거하면 네트워크 전체가 음소거됩니다. 채널을 지정하지 않으면 현재 채널이 음소거됩니다. {command}(으)로 되돌립니다."
 
 #. Description of the /nick command in the help window.
 #: client/components/Windows/Help.vue
@@ -3630,17 +3630,17 @@ msgctxt "msg.ctcpTitle"
 msgid "Client-to-client protocol"
 msgstr "클라이언트 간 프로토콜"
 
-#. System message announcing a channel's modes (324). The mode string in <b> is protocol text and stays verbatim.
+#. System message announcing a channel's modes (324). {modes} is the mode string (e.g. +nt), shown in bold; protocol text, kept verbatim.
 #: client/components/MessageTypes/mode_channel.vue
 msgctxt "msg.modeChannelIs"
-msgid "Channel mode is"
-msgstr "채널 모드는"
+msgid "Channel mode is {modes}"
+msgstr "채널 모드: {modes}"
 
-#. System message announcing the reader's own user modes (221). The mode string in <b> is protocol text and stays verbatim.
+#. System message announcing the reader's own user modes (221). {modes} is the mode string (e.g. +iwx), shown in bold; protocol text, kept verbatim.
 #: client/components/MessageTypes/mode_user.vue
 msgctxt "msg.modeUserIs"
-msgid "Your user mode is"
-msgstr "사용자 모드는"
+msgid "Your user mode is {modes}"
+msgstr "내 사용자 모드: {modes}"
 
 #. Lobby error when the server refused a nick as taken (433) and gave no reason of its own; shown as '<nick>: <reason>'. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/numerics.ts
@@ -11127,11 +11127,11 @@ msgctxt "settings.aliases.varChan"
 msgid "the current channel or query"
 msgstr "현재 채널 또는 쿼리"
 
-#. Variable reference fragment: introduces the $$ escape, which follows in code style as a single dollar sign.
+#. Settings > Aliases variable reference, describing the $$ escape: it expands to a single dollar sign. {character} is that dollar sign, shown in code style.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varLiteral"
-msgid "a literal"
-msgstr "리터럴"
+msgid "a literal {character}"
+msgstr "문자 그대로의 {character}"
 
 #. Variable reference: what $me expands to.
 #: client/components/Settings/Aliases.vue
