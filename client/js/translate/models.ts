@@ -176,6 +176,59 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 export interface GpuBudget {
 	maxBufferBytes: number | null;
 	capBytes: number | null;
+	/**
+	 * A phone or tablet (capability.ts `Capability.mobile`): the GPU model
+	 * loads with `MOBILE_CONTEXT_WINDOW` (`contextWindowFor`). Absent on a
+	 * computer, so the message a computer's worker is told is unchanged.
+	 */
+	mobile?: boolean;
+}
+
+/**
+ * The context window a GPU model loads with on a phone or tablet, in tokens.
+ * WebLLM sizes the KV cache for the whole window at load and WebKit counts
+ * GPU memory against the page's own process (about 2.1 GB on an iPhone,
+ * past which the page is killed), so the window is memory: measured on a
+ * SwiftShader bench (the f32 build; the shipped f16 KV is half), the 1.7B
+ * at load was 1,278 MiB at 1024, 1,502 at 2048 and 1,950 at 4096 — about
+ * 1,050 / 1,160 / 1,390 MiB in f16. 2048 holds the worst single request
+ * the reader builds (10 full-length context lines with their translations,
+ * a 250-byte topic, 20 names, 20 terms, a full line and its 394-token reply:
+ * at most 1,952 tokens, docs/resources/translation.md § Phones and small
+ * GPUs); anything larger is trimmed to fit (budget.ts). 1024 saves another
+ * ~110 MiB and cannot hold a full line with its context; the library's
+ * prefill chunk is 1k.
+ */
+export const MOBILE_CONTEXT_WINDOW = 2048;
+
+/**
+ * The window a model loads with when nothing says otherwise: the Qwen3
+ * records' own (`overrides.context_window_size` in WebLLM's prebuilt list).
+ */
+export const DEFAULT_CONTEXT_WINDOW = 4096;
+
+/**
+ * The context window to ask WebLLM for on this device: `MOBILE_CONTEXT_WINDOW`
+ * on a phone or tablet, null elsewhere — the model's own record decides
+ * (4096 for both Qwen3 models), and the reload is the one it always was.
+ */
+export function contextWindowFor(gpu: GpuBudget | null | undefined): number | null {
+	return gpu?.mobile ? MOBILE_CONTEXT_WINDOW : null;
+}
+
+/**
+ * The most graphics memory a GPU model may need and still run on a phone or
+ * tablet. WebKit attributes GPU memory to the page's process and kills it
+ * past about 2.1 GB, and the page itself, the weights' load buffers and the
+ * other engine all live there too. The 1.7B (WebLLM's 2.0 GB figure is its
+ * 4096-token window in f32; about 1.2 GiB at `MOBILE_CONTEXT_WINDOW` in f16)
+ * is under it; the 4B, whose weights alone are 2.2 GB, never is.
+ */
+export const MOBILE_LLM_MAX_VRAM_BYTES = 2_500_000_000;
+
+/** A GPU model too large for a phone's page (`MOBILE_LLM_MAX_VRAM_BYTES`); unknown sizes pass. */
+export function tooLargeForPhone(ref: ModelRef): boolean {
+	return ref.engine === "llm" && (ref.vramBytes ?? 0) > MOBILE_LLM_MAX_VRAM_BYTES;
 }
 
 /**
@@ -265,6 +318,11 @@ export type ModelBlock =
 	| {kind: "device"; reason: DeviceReason}
 	| {kind: "buffer"; needed: number; limit: number}
 	/**
+	 * A GPU model a phone or tablet cannot hold (`tooLargeForPhone`):
+	 * `needed` is its graphics memory (`ModelRef.vramBytes`).
+	 */
+	| {kind: "memory"; needed: number}
+	/**
 	 * `all`: both engine switches (router.ts `translationBlock`; never one
 	 * model's). `nllb`: NLLB-200 alone, which is off until the user opts in
 	 * (its licence is non-commercial, CC-BY-NC-4.0).
@@ -329,6 +387,12 @@ export function modelBlock(
 			return {kind: "buffer", needed, limit: capability.maxBufferBytes};
 		}
 
+		// Whatever the GPU binds, a phone's page cannot hold the 4B: the
+		// switch would change nothing, so this comes before it.
+		if (capability.mobile && tooLargeForPhone(ref)) {
+			return {kind: "memory", needed: ref.vramBytes ?? 0};
+		}
+
 		return switches.llm ? null : {kind: "off", engine: "llm"};
 	}
 
@@ -363,6 +427,19 @@ export interface AdapterMemory {
 	tier?: Tier;
 }
 
+/**
+ * Whether `ref` can run on the device `memory` describes: its smallest
+ * build binds (`llmFits`) and, on a phone or tablet, it is not too large
+ * for the page (`tooLargeForPhone`) — the GPU half of `modelBlock`, for the
+ * callers that hold an `AdapterMemory` rather than a whole capability.
+ */
+export function llmRunsOn(
+	ref: ModelRef,
+	memory: Pick<AdapterMemory, "maxBufferBytes" | "mobile">
+): boolean {
+	return llmFits(ref, memory.maxBufferBytes) && !(memory.mobile && tooLargeForPhone(ref));
+}
+
 /** The device memory a 4B model asks for, in GiB. */
 export const LARGE_LLM_MIN_MEMORY_GIB = 6;
 
@@ -379,7 +456,9 @@ export const LARGE_LLM_MIN_MEMORY_GIB = 6;
  * caller's (`llmChoice`).
  */
 export function defaultLlmForAdapter(memory: AdapterMemory | null | undefined): string {
-	const fitting = LLM_CHOICES.filter((ref) => llmFits(ref, memory?.maxBufferBytes ?? 0));
+	const fitting = LLM_CHOICES.filter((ref) =>
+		llmRunsOn(ref, {maxBufferBytes: memory?.maxBufferBytes ?? 0, mobile: memory?.mobile})
+	);
 	const large = fitting.find((ref) => ref.id === QWEN3_4B_ID);
 	const wantsLarge =
 		!!memory &&
@@ -430,20 +509,31 @@ export function llmChoice(
 	const device = memory && (memory.tier ?? "gpu") === "gpu" ? memory : null;
 	const chosen = catalog.llmChoices.find((ref) => ref.id === selected);
 
-	// A choice this GPU cannot bind (llmFits) runs the default instead, so
-	// a gpu tier always means the model in use can load; Settings says why
-	// the chosen row cannot be downloaded.
-	if (chosen && (!device || llmFits(chosen, device.maxBufferBytes))) {
+	// A choice this GPU cannot bind (llmFits), or a phone cannot hold
+	// (tooLargeForPhone), runs the default instead, so a gpu tier always
+	// means the model in use can load; Settings says why the chosen row
+	// cannot be downloaded. The deploy's own model is held to the same rule.
+	const runs = (ref: ModelRef | undefined): ref is ModelRef =>
+		!!ref && (!device || llmRunsOn(ref, device));
+
+	if (runs(chosen)) {
 		return chosen;
 	}
 
-	const unset = catalog.llmDeploy ?? (device ? defaultLlmForAdapter(device) : undefined);
+	const deployed = catalog.llmChoices.find((ref) => ref.id === catalog.llmDeploy);
 
-	return (
+	if (runs(deployed)) {
+		return deployed;
+	}
+
+	const unset = device ? defaultLlmForAdapter(device) : undefined;
+	const fallback =
 		catalog.llmChoices.find((ref) => ref.id === unset) ??
-		catalog.llmChoices.find((ref) => ref.id === catalog.llmDefault) ??
-		catalog.llm
-	);
+		catalog.llmChoices.find((ref) => ref.id === catalog.llmDefault);
+
+	return runs(fallback)
+		? fallback
+		: catalog.llmChoices.find((ref) => runs(ref)) ?? fallback ?? catalog.llm;
 }
 
 /** The catalog with `selected` (see `llmChoice`) as its GPU model. */

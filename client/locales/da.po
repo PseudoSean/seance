@@ -12907,6 +12907,12 @@ msgctxt "translate.error.timedOut"
 msgid "timed out"
 msgstr "tidsgrænse overskredet"
 
+#. Why a translation failed, shown after 'Couldn't translate:' (so it reads 'Couldn't translate: too long for this device'): the message, even with the surrounding conversation left out, is longer than the translation model loaded on this device can take in at once — a very long message, typically on a phone, where the model is given less room. Lowercase: it follows a colon or a dash.
+#: client/js/helpers/translateErrors.ts
+msgctxt "translate.error.tooLong"
+msgid "too long for this device"
+msgstr "for lang til denne enhed"
+
 #. Why a translation failed, shown after 'Couldn't translate': no model on this device can handle that pair of languages. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.unavailable"
@@ -13707,6 +13713,12 @@ msgstr "Denne browser har ikke WebAssembly SIMD, som CPU-modellerne kræver."
 msgctxt "translate.why.noWebgpu"
 msgid "This browser has no WebGPU, which the GPU models need."
 msgstr "Denne browser har ikke WebGPU, som GPU-modellerne kræver."
+
+#. Reason a GPU translation model cannot run on this phone or tablet: the model is too large for the memory a mobile browser gives one page, whatever the graphics processor. Shown under the model's row in Settings → Translation (after 'Can't run on this device', its Download button greyed out), under the GPU model select after '{model} can't run on this device.' (the select's own hint above it gives the model's memory size), and wherever an action needing that model is unavailable, as a sentence of its own after a lead sentence such as 'Correcting a message needs the GPU model.'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.phoneMemory"
+msgid "It needs more memory than a phone or tablet lets a web page use."
+msgstr "Den kræver mere hukommelse, end en telefon eller tablet giver en webside."
 
 #. Reason nothing can translate: the app's check of the device's GPU and CPU features threw an error. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
 #: client/js/helpers/translateWhy.ts

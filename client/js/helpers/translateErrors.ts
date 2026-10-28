@@ -7,6 +7,7 @@
 
 import {t} from "../i18n/core";
 import {WORKER_DISPOSED} from "../translate/client";
+import {CONTEXT_OVERFLOW} from "../translate/engine";
 import {ABORTED, TIMED_OUT} from "../translate/outgoing";
 import {TRANSLATION_UNAVAILABLE} from "../translate/service";
 import {parseNeedsDownload} from "../translate/consent";
@@ -29,6 +30,10 @@ export function translateErrorText(error: string, explain?: () => string): strin
 
 	if (error === WORKER_DISPOSED) {
 		return t("translate.error.workerDisposed");
+	}
+
+	if (error === CONTEXT_OVERFLOW) {
+		return t("translate.error.tooLong");
 	}
 
 	// A download the user said "not now" to: the model, its size, and
