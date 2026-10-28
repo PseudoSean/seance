@@ -125,7 +125,13 @@
 			<span v-else class="from">
 				<template v-if="message.from && message.from.nick">
 					<span class="only-copy" aria-hidden="true">-</span>
-					<Username :user="message.from" :network="network" :channel="channel" />
+					<!-- A notice's sender is labelled (style.css draws data-label before it). -->
+					<Username
+						:user="message.from"
+						:network="network"
+						:channel="channel"
+						:data-label="message.type === 'notice' ? noticeLabel : undefined"
+					/>
 					<span class="only-copy" aria-hidden="true">-&nbsp;</span>
 				</template>
 			</span>
@@ -603,6 +609,7 @@ export default defineComponent({
 		const redactedRevealLabel = computed(() => t("message.redactedReveal"));
 		const redactedHideTitle = computed(() => t("message.redactedHide"));
 		const shownInActiveLabel = computed(() => t("message.shownInActive"));
+		const noticeLabel = computed(() => t("message.noticeFrom"));
 
 		const hideRevealed = (e: MouseEvent) => {
 			// Let links inside the revealed text keep working.
@@ -638,6 +645,7 @@ export default defineComponent({
 			redactedRevealLabel,
 			redactedHideTitle,
 			shownInActiveLabel,
+			noticeLabel,
 			hideRevealed,
 			canAct,
 			translated,

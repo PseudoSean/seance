@@ -3010,8 +3010,9 @@ html[data-reduce-motion] #chat .connecting-indicator {
 	border-top: 1px solid var(--unread-marker-color);
 }
 
+/* MessageList.vue fills data-label from t(). */
 #chat .unread-marker-text::before {
-	content: "New messages";
+	content: attr(data-label);
 	background-color: var(--window-bg-color);
 	color: var(--unread-marker-color);
 	padding: 0 10px;
@@ -3317,12 +3318,9 @@ html[data-own-messages="band"] #chat .msg.self[data-type="action"]:not(.highligh
 	color: #0074d9;
 }
 
-#chat .msg[data-type="notice"] .from .user::before {
-	content: "Notice: ";
-}
-
-#chat .msg[data-type="wallops"] .from .user::before {
-	content: "Wallops: ";
+/* Message.vue fills data-label from t() on a notice's sender. */
+#chat .msg[data-type="notice"] .from .user[data-label]::before {
+	content: attr(data-label) " ";
 }
 
 #chat .msg[data-type="error"],
@@ -4575,14 +4573,12 @@ button.snotice-badge:focus-visible {
 
 .snotice-origin {
 	color: var(--body-color-muted);
-	font-family: monospace;
 	font-size: 0.875em;
-	margin-left: 0.5em;
+	margin-inline-start: 0.5em;
 }
 
-.snotice-origin::before {
-	content: "via ";
-	font-family: inherit;
+.snotice-origin-server {
+	font-family: monospace;
 }
 
 .wallops .wallops-from {

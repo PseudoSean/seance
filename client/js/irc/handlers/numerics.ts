@@ -52,7 +52,7 @@ const snomask: Handler = (client, msg) => {
 		text:
 			value === undefined
 				? textOf(msg.params)
-				: `Server notice mask: ${value} (0x${value.toString(16)})`,
+				: t("msg.snomask", {value: String(value), hex: value.toString(16)}),
 		showInActive: true,
 	});
 };

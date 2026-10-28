@@ -65,6 +65,41 @@ const IDENTICAL_EVERYWHERE = new Set(
 		"utc",
 		"markdown",
 		"emoji",
+		// IRC and oper jargon the oper tools' keys tell translators to keep
+		// as is (the #. context): a plural like "{count} G-line" is its own
+		// translation in many languages, and refusing one slot sends the
+		// whole entry back to English.
+		"g-line",
+		"g-lines",
+		"gline",
+		"shun",
+		"shuns",
+		"k-line",
+		"z-line",
+		"z-lines",
+		"jupe",
+		"jupes",
+		"kill",
+		"kills",
+		"wallops",
+		"snomask",
+		"privs",
+		"oper",
+		"opers",
+		"op",
+		"halfop",
+		"webirc",
+		"iauth",
+		"dnsbl",
+		"gitsync",
+		"cidr",
+		"ip",
+		"ipv4",
+		"ipv6",
+		"x3",
+		"o3",
+		"authserv",
+		"chanserv",
 	].map((word) => word.toLowerCase())
 );
 

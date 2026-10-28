@@ -1,9 +1,12 @@
 // The device probe (spec § capability.ts): what the router may pick from.
-// `gpu` needs a WebGPU adapter with 16-bit float shaders and 1 GiB of
-// addressable buffer (a q4f16 1.7B model plus its KV cache); `cpu` needs
+// `gpu` needs a WebGPU adapter with 16-bit float shaders and a storage
+// binding as large as the smallest GPU model's largest tensor
+// (models.ts `LLM_MIN_BUFFER_BYTES`; which models fit is `llmFits`); `cpu` needs
 // WebAssembly SIMD for ONNX Runtime; `none` hides the feature. The reasons
 // are what Settings shows in place of a missing model row. `browserEnv()`
 // is the only place that reads `navigator`; tests pass their own env.
+
+import {LLM_MIN_BUFFER_BYTES} from "./models";
 
 export type Tier = "gpu" | "cpu" | "none";
 
@@ -29,6 +32,8 @@ export interface Capability {
 	maxBufferBytes: number;
 	deviceMemoryGiB: number | null;
 	storageQuotaBytes: number | null;
+	/** A phone or tablet: models.ts never defaults one to the large GPU model. */
+	mobile: boolean;
 }
 
 export interface AdapterLike {
@@ -49,12 +54,15 @@ export interface ProbeEnv {
 	 * WebGPU". Undefined where the question makes no sense (tests).
 	 */
 	secureContext?: boolean;
+	/** A phone or tablet (`browserEnv`); absent means a computer. */
+	mobile?: boolean;
 }
 
-// WebLLM's own floor for a q4f16 model. Adapters report their limits with alignment
-// slack (Chrome: maxStorageBufferBindingSize 2147483644 on most desktop GPUs), so a
-// threshold at exactly 2 GiB refused hardware that runs the model fine.
-export const GPU_MIN_BUFFER_BYTES = 1024 * 1024 * 1024;
+// A model binds each weight tensor whole, so the floor is the smallest GPU
+// model's largest tensor (148 MiB for Qwen3 1.7B), not WebLLM's 1 GiB: the
+// worker asks WebLLM's device for whatever the adapter offers
+// (engines/gpuLimits.ts), and a phone offering 256 MiB-1 GiB can load it.
+export const GPU_MIN_BUFFER_BYTES = LLM_MIN_BUFFER_BYTES;
 
 /** A minimal module using a v128 op; validating it proves SIMD support. */
 export const WASM_SIMD_PROBE = new Uint8Array([
@@ -121,6 +129,7 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 		maxBufferBytes,
 		deviceMemoryGiB: env.deviceMemory,
 		storageQuotaBytes,
+		mobile: env.mobile === true,
 	};
 }
 
@@ -128,6 +137,7 @@ export function browserEnv(): ProbeEnv {
 	const nav = navigator as Navigator & {
 		gpu?: {requestAdapter(): Promise<AdapterLike | null>};
 		deviceMemory?: number;
+		userAgentData?: {mobile?: boolean};
 	};
 	let wasmSimd = false;
 
@@ -143,7 +153,26 @@ export function browserEnv(): ProbeEnv {
 		storage: nav.storage && typeof nav.storage.estimate === "function" ? nav.storage : null,
 		wasmSimd,
 		secureContext: typeof window !== "undefined" ? window.isSecureContext : undefined,
+		mobile: isMobile(nav),
 	};
+}
+
+/**
+ * A phone or tablet: Chromium says so outright (`userAgentData.mobile`); the
+ * others by their user agent, and an iPad that asks for desktop sites by a
+ * Mac with a touch screen.
+ */
+function isMobile(nav: Navigator & {userAgentData?: {mobile?: boolean}}): boolean {
+	if (typeof nav.userAgentData?.mobile === "boolean" && nav.userAgentData.mobile) {
+		return true;
+	}
+
+	const ua = nav.userAgent ?? "";
+
+	return (
+		/Android|iPhone|iPad|iPod|Mobi/i.test(ua) ||
+		(/Macintosh/.test(ua) && nav.maxTouchPoints > 1)
+	);
 }
 
 let cached: Promise<Capability> | null = null;

@@ -40,6 +40,14 @@ export interface ModelRef {
 	 * the default model is picked (models.ts `defaultLlmForAdapter`).
 	 */
 	vramBytes?: number;
+	/**
+	 * The largest single buffer the model binds on the GPU (GPU models
+	 * only): every weight tensor is one storage binding, so a device whose
+	 * binding limit is below this cannot load the model however it is
+	 * downloaded (models.ts `llmFits`). Unknown (a deploy's own model):
+	 * trusted to fit.
+	 */
+	largestBufferBytes?: number;
 	/** OPUS-MT pair models: [from, to] in ISO 639-1. */
 	pair?: [string, string];
 	/**

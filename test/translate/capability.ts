@@ -93,6 +93,27 @@ describe("translate/capability", () => {
 		).to.deep.equal(["SMALL_BUFFER"]);
 	});
 
+	it("rates gpu a phone's GPU that binds the 1.7B's embedding, not WebLLM's 1 GiB", async () => {
+		const MiB = 1024 * 1024;
+		const at = (maxBuffer: number) =>
+			probe(env({gpu: {requestAdapter: () => Promise.resolve(adapter({maxBuffer}))}}));
+
+		// Most Android phones (Mali) and a fifth of iPhones offer 256-768 MiB.
+		const phone = await at(512 * MiB);
+		expect(phone.tier).to.equal("gpu");
+		expect(phone.maxBufferBytes).to.equal(512 * MiB);
+		// Adreno 7xx offers WebGPU's floor alone, which no model's embedding fits.
+		const floor = await at(128 * MiB);
+		expect(floor.tier).to.equal("cpu");
+		expect(floor.reasons).to.deep.equal(["SMALL_BUFFER"]);
+		expect(floor.maxBufferBytes, "the limit is reported for Settings").to.equal(128 * MiB);
+	});
+
+	it("passes a phone's mobile flag on, a computer by default", async () => {
+		expect((await probe(env())).mobile).to.equal(false);
+		expect((await probe(env({mobile: true}))).mobile).to.equal(true);
+	});
+
 	it("rates gpu an adapter whose binding limit is 2 GiB minus the alignment slack", async () => {
 		// Chrome reports maxStorageBufferBindingSize as 2147483644 on most desktop GPUs.
 		const cap = await probe(

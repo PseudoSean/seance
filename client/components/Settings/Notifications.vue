@@ -50,49 +50,50 @@
 						:checked="schedule.enabled"
 						@change="update({enabled: ($event.target as HTMLInputElement).checked})"
 					/>
-					Do not disturb on a schedule
+					{{ t("dnd.scheduleToggle") }}
 				</label>
 				<!-- Inactive while the schedule is off: dimmed and disabled. -->
 				<fieldset
 					:class="['dnd-schedule-fields', {disabled: !schedule.enabled}]"
 					:disabled="!schedule.enabled"
 				>
+					<!-- One sentence, "From [start] until [end]", cut around its two
+					     fields (frameSegments): each label holds the words before
+					     its field. -->
 					<div class="dnd-times">
 						<label
-							>From
+							>{{ windowParts[0] }}
 							<input
 								type="time"
-								aria-label="Do not disturb from"
+								:aria-label="startLabel"
 								:value="schedule.start"
 								@change="setTime('start', $event)"
 						/></label>
 						<label
-							>until
+							>{{ windowParts[1] }}
 							<input
 								type="time"
-								aria-label="Do not disturb until"
+								:aria-label="endLabel"
 								:value="schedule.end"
 								@change="setTime('end', $event)"
 						/></label>
+						<span v-if="windowParts[2].trim()">{{ windowParts[2] }}</span>
 					</div>
-					<div class="dnd-days" role="group" aria-label="Days">
-						<label v-for="(name, day) in DAYS" :key="day">
+					<div class="dnd-days" role="group" :aria-label="daysLabel">
+						<label v-for="day in DAYS" :key="day">
 							<input
 								v-switch
 								type="checkbox"
-								:aria-label="DAY_FULL_NAMES[day]"
+								:aria-label="weekdayName(day, 'long')"
 								:checked="schedule.days.includes(day)"
 								@change="toggleDay(day)"
 							/>
-							{{ name }}
+							{{ weekdayName(day) }}
 						</label>
 					</div>
 				</fieldset>
 				<p class="dnd-schedule-hint">
-					While do not disturb is on, you show as away and nothing alerts you here or
-					through push. Push stops on all your devices signed in to the same account. If
-					no {{ appName }} is open when a scheduled window starts, push stops once one
-					opens. Same start and end: all day.
+					{{ t("dnd.scheduleHint", {appName}) }}
 				</p>
 			</div>
 			<div v-if="store.state.pushNotificationState === 'stale'" id="pushStale" class="error">
@@ -263,7 +264,8 @@ import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
 import webpush from "../../js/webpush";
 import dnd from "../../js/dnd";
-import {DAYS, DAY_FULL_NAMES, HHMM, type DndSchedule} from "../../js/helpers/dnd";
+import {DAYS, HHMM, weekdayName, type DndSchedule} from "../../js/helpers/dnd";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 import {isAndroidShell} from "../../js/helpers/capacitor";
 import {nativeAlertsAvailable} from "../../js/helpers/nativeAlerts";
 import {playNotificationSound} from "../../js/helpers/notificationSound";
@@ -272,7 +274,7 @@ export default defineComponent({
 	name: "NotificationSettings",
 	setup() {
 		const store = useStore();
-		const {t} = useI18n();
+		const {t, locale} = useI18n();
 
 		const highlightHelp = computed(() => t("settings.notifications.highlightHelp"));
 		const highlightsHelp = computed(() => t("settings.notifications.highlightsHelp"));
@@ -280,6 +282,19 @@ export default defineComponent({
 			t("settings.notifications.highlightExceptionsHelp")
 		);
 		const commaListPlaceholder = computed(() => t("settings.notifications.commaList"));
+		const windowParts = computed(() =>
+			frameSegments(t("dnd.scheduleWindow", {start: KEEP, end: KEEP}), ["start", "end"])
+		);
+		const startLabel = computed(() => t("dnd.scheduleStartAria"));
+		const endLabel = computed(() => t("dnd.scheduleEndAria"));
+		const daysLabel = computed(() => t("dnd.scheduleDaysAria"));
+
+		// A weekday's name in the language shown (Intl, helpers/dnd.ts).
+		const dayName = (day: number, width?: "short" | "long") => {
+			void locale.value;
+
+			return weekdayName(day, width);
+		};
 
 		// The do-not-disturb schedule (client/js/dnd.ts); every edit saves at once.
 		const schedule = computed(() => dnd.state.schedule);
@@ -325,7 +340,11 @@ export default defineComponent({
 			playNotification,
 			// Sunday = 0, the day a window starts on (helpers/dnd.ts DndSchedule.days).
 			DAYS,
-			DAY_FULL_NAMES,
+			weekdayName: dayName,
+			windowParts,
+			startLabel,
+			endLabel,
+			daysLabel,
 			appName: computed(() => store.state.branding.appName),
 			schedule,
 			update,
