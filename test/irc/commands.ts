@@ -1014,6 +1014,25 @@ describe("irc commands", function () {
 				send(h, id, "Hello everyone\n/part #seance", "Hallo zusammen\n/part #seance")
 			).to.deep.equal(["PRIVMSG #seance :Hallo zusammen", "PART #seance :Seance"]);
 		});
+
+		it("sends the user's own command line, never the model's in its place", function () {
+			const h = setup();
+			const id = joined(h);
+			const sent = send(h, id, "Hello everyone\n/part #seance", "Hallo zusammen\n/quit bye");
+			expect(sent).to.deep.equal(["PRIVMSG #seance :Hallo zusammen", "PART #seance :Seance"]);
+			expect(h.client.isQuitting).to.be.false;
+		});
+
+		it("keeps a line the user escaped as text, text", function () {
+			const h = setup();
+			const id = joined(h);
+			const sent = send(h, id, "Hello everyone\n//shrug", "Hallo zusammen\n/quit bye");
+			expect(sent).to.deep.equal([
+				"PRIVMSG #seance :Hallo zusammen",
+				"PRIVMSG #seance :/quit bye",
+			]);
+			expect(h.client.isQuitting).to.be.false;
+		});
 	});
 
 	describe("/alias", function () {

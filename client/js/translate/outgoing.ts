@@ -149,9 +149,10 @@ export function draftGate(text: string, editing: boolean): DraftGate {
  * action is one message and its lines go out verbatim, so they are left
  * alone (an escape would be sent as `//x`); without it (`splitsLines`) every
  * line is its own input and each one that begins with "/" is escaped.
- * Except where the draft's own line at the same place began with "/" too:
- * that one the user typed as a command (or escaped as text) themselves, and
- * it goes as it would have untranslated.
+ * Except where the draft's own line at the same place is a command (`/x`,
+ * not the escaped text `//x`): the user typed that one, so the draft's line
+ * goes in its place, as it would have untranslated — never the model's,
+ * which could have swapped in a command of its own.
  */
 export function sendableTranslation(
 	gate: DraftGate,
@@ -162,11 +163,17 @@ export function sendableTranslation(
 	const draftLines = gate.text.split("\n");
 	const aligned = draftLines.length === lines.length;
 	const out = lines.map((line, i) => {
-		if (i === 0 || !splitsLines || !line.startsWith("/")) {
+		if (i === 0 || !splitsLines) {
 			return line;
 		}
 
-		return aligned && draftLines[i].startsWith("/") ? line : `/${line}`;
+		const typed = aligned ? draftLines[i] : "";
+
+		if (typed.startsWith("/") && !typed.startsWith("//")) {
+			return typed;
+		}
+
+		return line.startsWith("/") ? `/${line}` : line;
 	});
 
 	if (gate.kind === "action") {
