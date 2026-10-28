@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import en from "../../client/locales/en.json";
 import {
 	defaultOwnMessageStyle,
 	normalizeOwnMessageStyle,
@@ -25,5 +26,17 @@ describe("ownMessages", () => {
 		expect(normalizeOwnMessageStyle("")).to.equal("muted");
 		expect(normalizeOwnMessageStyle("grey")).to.equal("muted");
 		expect(normalizeOwnMessageStyle(2)).to.equal("muted");
+	});
+
+	it("has an English label and hint for every style (Appearance.vue's keys)", function () {
+		const catalog = en as Record<string, unknown>;
+
+		for (const style of ownMessageStyles) {
+			const key = `settings.appearance.ownMessages${style
+				.charAt(0)
+				.toUpperCase()}${style.slice(1)}`;
+			expect(catalog[key], style).to.be.a("string").and.not.equal("");
+			expect(catalog[`${key}Hint`], style).to.be.a("string").and.not.equal("");
+		}
 	});
 });
