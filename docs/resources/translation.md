@@ -101,9 +101,9 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   `translation-languages.txt`, which the beta trimmed to 24 (§ i18n.md
   "Adding a language"). A line in a dropped language
   is no longer detected as that language (franc's candidates are the
-  supported list), so it reads as unplaced; a stored Settings override
-  that is no longer offered is treated as "auto" by the reading-language
-  guard (`reader.ts` `readingLanguage`), and a channel's stored read
+  supported list), so it reads as unplaced; the reading language is the
+  interface's (`reader.ts` `readingLanguage`, `fromLocaleTag`), which
+  maps any tag the supported list lacks to English, and a channel's stored read
   language — the per-channel picker the unification removed — loads as
   plain "on" (`channelStore.ts`). All four scores rest on three cases each
   (`tools/translate-eval/results/2026-09-13-web-weights.md`); the best were
@@ -205,7 +205,7 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   trip flatters benchmark-trained models in chat. Each placement
   applies to the language as source and as target. `LIMITED_LANGUAGES`
   (is lv et hi lt bn hu sk ko) are the languages whose best engine brought back
-  under 55%: the panel's write picker and the Settings override say
+  under 55%: the panel's write picker and the Settings language select say
   "Translations into and out of this language are often wrong." when one is
   chosen — the selected GPU model's list.
 
@@ -330,8 +330,7 @@ all read `<Source> → <Target>` -- no "from", "to", "into" or "reads back
 as" -- and every language name in them and in their titles is
 `languageName(code, readingLanguage())`: the reading language
 (`reader.ts` `readingLanguage`, the one helper the composer uses too --
-the interface's language, or the Settings `translateTo` override when one
-is set). A user who reads
+the interface's language; there is no separate reading override). A user who reads
 English sees "French → English", one who reads German sees "Französisch →
 Englisch". The chip menu's actions keep their wording ("Retranslate from
 French") with the names chosen the same way; the language pickers keep
@@ -652,8 +651,8 @@ translation is the composer's read-back (§ Writing in a channel): it is
 kept, and left out of the requeue, when it is already in the reading
 language; when it is not it goes with the rest and the line is translated
 again like any other. The same requeue runs for every reading-on channel
-when the reading language itself moves -- the Settings override changed,
-or the interface's did and the override follows it (`reader.ts`
+when the reading language itself moves -- the interface's language
+changed, in Settings or through the dev globe (`reader.ts`
 `restartAllReading`). That path calls `requeueReading` itself: reading is
 already on, so `setReading` would return at its no-op guard and retranslate
 nothing. The language reading started in is recorded in `initReader`, so
@@ -729,8 +728,8 @@ is in: the panel's lists, the composer's translate-into dialog and the
 chip menu's retranslate-from dialog all call `languageName(code, readingLanguage())` (`Intl.DisplayNames` in the reading language, the
 bundled English table behind it), so an English interface offers "French"
 and not "Français". The one list that keeps the endonym is the interface's
-own language selector (`LanguageSelect.vue` -- Settings -> Appearance, the
-Settings -> Translation override and the sidebar globe, `languageEndonym()`):
+own language selector (`LanguageSelect.vue` -- Settings -> Translation's
+language select and the dev build's sidebar globe, `languageEndonym()`):
 someone looking for a language to read the app in is looking for its own
 name.
 
@@ -742,8 +741,8 @@ Vue-free and i18n-free -- `models.ts`, `service.ts` and `capability.ts`
 return **codes** (a model's label, a load note's phase, a device verdict's
 reason) and the component that shows one maps it to a key, with a prose
 fallback for a code it does not know. Three consequences worth keeping:
-the Settings -> Translation language override is `LanguageSelect.vue`, the
-same control the sidebar globe and Appearance use, so there is one list of
+the Settings -> Translation language select is `LanguageSelect.vue`, the
+same control the dev build's sidebar globe uses, so there is one list of
 codes and not two that could disagree; the channel menu's "Translation…"
 is offered only where the deploy has translation at all
 (`reader.ts` `translationAvailable`); and the composer strip's live region
@@ -778,10 +777,16 @@ target, session-only, so the model's phrasing stays consistent across a
 conversation without ever touching persisted storage.
 
 The language the user reads in is **one language everywhere**
-(`reader.ts` `readingLanguage`): the interface's, since the reading and
-interface selections unified -- with the Settings → Translation override
-(`translateTo`, default "auto") as the exception a reader who wants
-translations into something else sets for themselves. Reading itself
+(`reader.ts` `readingLanguage`): the interface's. One setting, `locale`,
+chosen in Settings → Translation (it stays there when a deploy turns
+translation off), is both the language the app is written in and the one
+messages are translated into; the old `translateTo` reading override is
+gone (`settings.ts` `migrateReadingToLocale` moved a pinned one into
+`locale` and deleted it). One consequence: the reading language can only
+be one of the interface's languages (the 24 of
+`translation-languages.txt`), not any of the ~50 the engines support -- a
+Finnish or Hebrew reader cannot have lines translated into Finnish or
+Hebrew until the interface offers that language. Reading itself
 stays on or off per channel; the language does not, which is why the
 composer and the reader cannot disagree the way the per-channel picker
 once let them (a channel reading English while the global named German

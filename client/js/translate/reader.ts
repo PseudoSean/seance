@@ -106,8 +106,8 @@ export function readingLanguage(): string {
 }
 
 /**
- * The reading language changed (the Settings override moved, or the
- * interface's did and the override follows it): re-read every channel that
+ * The reading language changed (the interface's language did -- in
+ * Settings or through the dev globe): re-read every channel that
  * is reading, the way a switch-on does (`requeueReading` -- not
  * `setReading`, which is already on and would return at its no-op guard).
  * A change that leaves the effective language alone restarts nothing; the
@@ -507,8 +507,8 @@ export function requeueReading(network: ClientNetwork, channel: ClientChan): voi
 	replayBatches.drop(channel.id);
 	queues.get(network.uuid)?.cancelChannel(channel.id);
 
-	// The language is the global reading language (the interface's, or the
-	// Settings override): only a finished translation already in it is
+	// The language is the global reading language (the interface's): only
+	// a finished translation already in it is
 	// kept, a skipped mark is detected again like everything else.
 	const lang = readingLanguage();
 

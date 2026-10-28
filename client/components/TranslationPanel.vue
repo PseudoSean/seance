@@ -41,8 +41,8 @@
 				<section class="translation-panel-section">
 					<h3>{{ t("translate.panel.reading") }}</h3>
 					<!-- The reading language is not chosen here: it is the
-					     interface's (the unified setting), with the Settings
-					     override as the exception. This is only the switch. -->
+					     interface's (the one `locale` setting, Settings →
+					     Translation). This is only the switch. -->
 					<div class="translation-panel-field">
 						<span class="translation-panel-label">{{
 							t("translate.panel.readIn", {language: name(readingLanguage())})

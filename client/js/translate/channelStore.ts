@@ -31,8 +31,8 @@ export interface TermEntry {
 export interface ChannelTranslation {
 	/**
 	 * Reading on or off. The language is not per channel: it is the
-	 * interface's (the unified setting, with the Settings override as the
-	 * exception), so a stored record only remembers the switch. A record
+	 * interface's (the one `locale` setting), so a stored record only
+	 * remembers the switch. A record
 	 * from before the unification carries the language a per-channel
 	 * picker once set ("de"); anything truthy loads as on.
 	 */
