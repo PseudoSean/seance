@@ -245,9 +245,12 @@ disabled and described by the reason); the composer's translate dialog and
 the chips' "Retranslate from…" (the confirm disabled, the reason in a polite
 live region that describes it); the panel (a notice when nothing runs, the
 reading switch's On disabled, languages nothing can write in greyed under
-"Send my messages in" with the reason); the header button (dimmed, its
-click opens the panel); the message toolbar's Translate (disabled, the
-reason as its tooltip and description); and a line or strip that failed for
+"Send my messages in" with the reason, the note naming the greyed option);
+the header button (dimmed, labelled "Translation can't run here right
+now." on touch as with a pointer, its click opens the panel); the message
+toolbar's Translate (with a pointer disabled, the reason as its tooltip and
+description; under a finger, which shows no tooltip, `aria-disabled` and
+its tap opens the panel with the reason); and a line or strip that failed for
 want of an engine names why. Tests: `test/translate/availability.ts`;
 browser check `tools/scenarios/translate-capability.mjs` (five stubbed
 adapters, also `--mobile`).
@@ -705,7 +708,8 @@ that turns reading **on** opens the panel with it, so the reader sees and
 can adjust the languages at once (a click that turns reading off only
 turns it off); on touch there is no
 right-click, so the **tap** opens the panel (whose first control is the
-reading switch) and the button's label says "Translation settings". The
+reading switch) and the button's label says "Translation settings" (or,
+when nothing here can translate, that it cannot run). The
 channel menu's "Translation..." reaches it on both. It closes on the X, on
 Done, on Escape, and -- the anchored panel only, since the sheet has no
 outside -- on a click outside it; the caret goes back to the translate

@@ -521,11 +521,18 @@ export default async function run(page) {
 		);
 
 		if (MOBILE) {
-			// The sheet is modal: Tab and Shift+Tab stay inside it.
+			// The sheet is modal: Tab and Shift+Tab stay inside it, walking
+			// its controls and wrapping last -> first (and first -> last
+			// under Shift) -- not merely never leaving, which a Tab that
+			// moved nothing would pass too.
+			const TABBABLE = `[...document.querySelector(".translation-panel").querySelectorAll("button, select, input, textarea, a[href], [tabindex]")].filter((el) => el.tabIndex >= 0 && !el.disabled && el.getClientRects().length > 0)`;
+			const count = await page.evaluate(`${TABBABLE}.length`);
+			const forward = [];
+			const backward = [];
 			const outside = [];
 
-			for (let i = 0; i < 30; i++) {
-				const shift = i >= 20;
+			for (let i = 0; i < 2 * count + 4; i++) {
+				const shift = i >= count + 2;
 
 				await page.send("Input.dispatchKeyEvent", {
 					type: "rawKeyDown",
@@ -542,18 +549,32 @@ export default async function run(page) {
 					modifiers: shift ? 8 : 0,
 				});
 
-				const where = await page.evaluate(
-					`(() => { const a = document.activeElement; return a && a.closest(".translation-panel") ? "" : (a ? a.tagName + "." + a.className : "none"); })()`
+				const at = await page.evaluate(
+					`(() => { const a = document.activeElement; if (!a || !a.closest(".translation-panel")) { return a ? a.tagName + "." + a.className : "none"; } return ${TABBABLE}.indexOf(a); })()`
 				);
 
-				if (where) {
-					outside.push(where);
+				if (typeof at === "string") {
+					outside.push(at);
+				} else {
+					(shift ? backward : forward).push(at);
 				}
 			}
+
+			const wraps = (steps, from, to) =>
+				steps.some((value, i) => i > 0 && steps[i - 1] === from && value === to);
 
 			page.check(
 				`${name}: Tab stays inside the sheet (${outside.join(", ") || "always inside"})`,
 				outside.length === 0
+			);
+			page.check(
+				`${name}: Tab walks the sheet's ${count} controls and wraps both ways (${forward.join(
+					","
+				)} / ${backward.join(",")})`,
+				count > 3 &&
+					new Set(forward).size === count &&
+					wraps(forward, count - 1, 0) &&
+					wraps(backward, 0, count - 1)
 			);
 		}
 
