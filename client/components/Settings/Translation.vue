@@ -84,6 +84,14 @@
 				<span v-if="capability.maxBufferBytes > 0" class="translate-device-limit">{{
 					t("translate.capability.bufferLimit", {size: size(capability.maxBufferBytes)})
 				}}</span>
+				<!-- The test switch (translate/gpuTestLimit.ts) is on: the
+				     limit above is the switch's, not the GPU's. -->
+				<span v-if="capability.bufferCapBytes" class="translate-device-test-limit">{{
+					t("translate.capability.testLimit", {
+						size: size(capability.bufferCapBytes),
+						key: testLimitKey,
+					})
+				}}</span>
 				<!-- Each reason is a phrase of its own: a translator is never
 				     handed a list glued together with a comma. -->
 				<ul v-if="capability.reasons.length" class="translate-device-reasons">
@@ -202,6 +210,19 @@
 						:id="'translate-model-why-' + index"
 						class="translate-model-why"
 						>{{ whyLabel(view.ref) }}</span
+					>
+					<!-- This GPU binds too little for the model itself: what
+					     Download fetches and what runs is its small-buffer build
+					     (models.ts smallBufferBuildFor), with its own need. -->
+					<span
+						v-if="smallBuild(view.ref)"
+						class="translate-model-small-build"
+						:data-build="smallBuild(view.ref)!.id"
+						>{{
+							t("translate.model.smallBufferBuild", {
+								size: size(smallBuild(view.ref)!.largestBufferBytes),
+							})
+						}}</span
 					>
 					<span
 						v-if="view.status === 'downloading'"
@@ -349,7 +370,8 @@
 
 /* Whether the model can run here, and why not: rows of their own. */
 .translate-model-runs,
-.translate-model-why {
+.translate-model-why,
+.translate-model-small-build {
 	grid-column: 1 / -1;
 }
 
@@ -358,11 +380,13 @@
 }
 
 .translate-model[data-runs="off"] .translate-model-runs,
-.translate-model-why {
+.translate-model-why,
+.translate-model-small-build {
 	color: var(--body-color-muted);
 }
 
-.translate-device-limit {
+.translate-device-limit,
+.translate-device-test-limit {
 	display: block;
 }
 
@@ -423,7 +447,14 @@ import {modelLabel} from "../../js/helpers/modelLabel";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
-import {LLM_MIN_BUFFER_BYTES, llmChoice, llmName, modelBlock} from "../../js/translate/models";
+import {
+	LLM_MIN_BUFFER_BYTES,
+	llmChoice,
+	llmName,
+	modelBlock,
+	smallBufferBuildFor,
+} from "../../js/translate/models";
+import {GPU_TEST_LIMIT_KEY} from "../../js/translate/gpuTestLimit";
 import {translateErrorText} from "../../js/helpers/translateErrors";
 import {translateWhyText} from "../../js/helpers/translateWhy";
 import {isLimitedLanguage} from "../../js/translate/routes.default";
@@ -604,6 +635,13 @@ export default defineComponent({
 				: t("translate.model.cantRun");
 		};
 
+		// The small-buffer build this device runs in the model's place, when
+		// it does: on a GPU tier that binds too little for the model itself.
+		const smallBuild = (modelRef: ModelRef) =>
+			capability.value?.tier === "gpu"
+				? smallBufferBuildFor(modelRef, capability.value.maxBufferBytes)
+				: null;
+
 		// The reason under "Can't run on this device"; none for the others.
 		const whyLabel = (modelRef: ModelRef) => {
 			const block = blockOf(modelRef);
@@ -670,6 +708,8 @@ export default defineComponent({
 			unfitLlms,
 			whyText: translateWhyText,
 			whyLabel,
+			smallBuild,
+			testLimitKey: GPU_TEST_LIMIT_KEY,
 			store,
 			enabled,
 			models,

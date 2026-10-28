@@ -1,7 +1,10 @@
 import {expect} from "chai";
 import {
+	capBufferLimits,
+	getBufferCap,
 	installBufferLimits,
 	raiseBufferLimits,
+	setBufferCap,
 	WEBLLM_FULL_REQUEST,
 } from "../../client/js/translate/engines/gpuLimits";
 
@@ -63,6 +66,47 @@ describe("gpuLimits", () => {
 			expect(raiseBufferLimits({}, {maxBufferSize: 1})).to.deep.equal({});
 			expect(raiseBufferLimits(undefined, {maxBufferSize: 1})).to.equal(undefined);
 		});
+
+		it("with a cap, lowers a desktop's 1 GiB request to it", () => {
+			const raised = raiseBufferLimits(
+				{
+					requiredLimits: {
+						maxBufferSize: WEBLLM_FULL_REQUEST,
+						maxStorageBufferBindingSize: WEBLLM_FULL_REQUEST,
+						maxComputeWorkgroupStorageSize: 32 * 1024,
+					},
+				},
+				{maxBufferSize: 4096 * MiB, maxStorageBufferBindingSize: 2047 * MiB},
+				128 * MiB
+			);
+			expect(raised?.requiredLimits).to.deep.equal({
+				maxBufferSize: 128 * MiB,
+				maxStorageBufferBindingSize: 128 * MiB,
+				maxComputeWorkgroupStorageSize: 32 * 1024,
+			});
+		});
+
+		it("with a cap, raises a small request no further than it", () => {
+			const raised = raiseBufferLimits(
+				webllmFallback(),
+				{maxBufferSize: 1024 * MiB, maxStorageBufferBindingSize: 1024 * MiB},
+				192 * MiB
+			);
+			// The buffer was asked 256 MiB (over the cap: lowered), the binding
+			// 128 MiB (raised to the cap, not to what the adapter offers).
+			expect(raised?.requiredLimits?.maxBufferSize).to.equal(192 * MiB);
+			expect(raised?.requiredLimits?.maxStorageBufferBindingSize).to.equal(192 * MiB);
+		});
+
+		it("capBufferLimits only lowers, and is the request itself without a cap", () => {
+			const request = webllmFallback();
+			expect(capBufferLimits(request, null)).to.equal(request);
+			expect(capBufferLimits(request, 512 * MiB)).to.equal(request);
+			expect(capBufferLimits(request, 128 * MiB)?.requiredLimits).to.deep.include({
+				maxBufferSize: 128 * MiB,
+				maxStorageBufferBindingSize: 128 * MiB,
+			});
+		});
 	});
 
 	describe("installBufferLimits", () => {
@@ -118,6 +162,46 @@ describe("gpuLimits", () => {
 			};
 			expect(seen).to.have.length(2);
 			expect(device.request.requiredLimits.maxStorageBufferBindingSize).to.equal(128 * MiB);
+		});
+
+		it("holds every request to the cap set since, its fallback too", async () => {
+			const {FakeAdapter, seen} = fakeAdapterClass(64 * MiB);
+			installBufferLimits(FakeAdapter.prototype);
+			const adapter = new FakeAdapter({
+				maxBufferSize: 4096 * MiB,
+				maxStorageBufferBindingSize: 2047 * MiB,
+			});
+			const desktop = () => ({
+				requiredLimits: {
+					maxBufferSize: WEBLLM_FULL_REQUEST,
+					maxStorageBufferBindingSize: WEBLLM_FULL_REQUEST,
+				},
+			});
+
+			try {
+				setBufferCap(128 * MiB);
+				expect(getBufferCap()).to.equal(128 * MiB);
+				// The fake refuses anything above 64 MiB: the capped request is
+				// refused and its fallback is the capped one again, never 1 GiB.
+				await adapter.requestDevice(desktop()).catch(() => undefined);
+				const asked = seen.map(
+					(request) =>
+						(request as {requiredLimits: Record<string, number>}).requiredLimits
+							.maxStorageBufferBindingSize
+				);
+				expect(asked).to.deep.equal([128 * MiB]);
+
+				setBufferCap(null);
+				expect(getBufferCap()).to.equal(null);
+				seen.length = 0;
+				await adapter.requestDevice(desktop()).catch(() => undefined);
+				expect(
+					(seen[0] as {requiredLimits: Record<string, number>}).requiredLimits
+						.maxStorageBufferBindingSize
+				).to.equal(WEBLLM_FULL_REQUEST);
+			} finally {
+				setBufferCap(null);
+			}
 		});
 
 		it("does nothing without WebGPU", () => {

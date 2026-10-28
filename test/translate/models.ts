@@ -89,7 +89,7 @@ describe("translate/models", () => {
 			engine: "llm",
 			family: "llm",
 			sizeBytes: 984_000_000,
-			largestBufferBytes: 155_574_272,
+			largestBufferBytes: 155_582_464,
 		});
 		expect(large).to.include({
 			engine: "llm",
@@ -142,18 +142,25 @@ describe("translate/models", () => {
 		expect(defaultLlmForAdapter(mem(2147483644, 8, true))).to.equal(QWEN3_1_7B_ID);
 		// A GPU that binds the 1.7B's embedding but not the 4B's.
 		expect(defaultLlmForAdapter(mem(160 * MiB, 16))).to.equal(QWEN3_1_7B_ID);
-		// Nothing fits, or no probe at all: the shipped default.
+		// A computer under the test switch's 128 MiB: the 1.7B's small-buffer build.
 		expect(defaultLlmForAdapter(mem(128 * MiB, 16))).to.equal(QWEN3_1_7B_ID);
+		// Nothing fits, or no probe at all: the shipped default.
+		expect(defaultLlmForAdapter(mem(64 * MiB, 16))).to.equal(QWEN3_1_7B_ID);
 		expect(defaultLlmForAdapter(null)).to.equal(QWEN3_1_7B_ID);
 	});
 
-	it("a model fits when the GPU binds its largest tensor", () => {
+	it("a model fits when the GPU binds its largest tensor, or its small-buffer build's", () => {
 		const MiB = 1024 * 1024;
 		const [small, large] = LLM_CHOICES;
 
-		expect(LLM_MIN_BUFFER_BYTES).to.equal(155_574_272);
-		expect(llmFits(small, 155_574_272)).to.equal(true);
-		expect(llmFits(small, 128 * MiB)).to.equal(false);
+		// The tier's floor is the 1.7B's small-buffer build: half its table.
+		expect(LLM_MIN_BUFFER_BYTES).to.equal(77_791_232);
+		expect(llmFits(small, 155_582_464)).to.equal(true);
+		expect(llmFits(small, 128 * MiB)).to.equal(true);
+		expect(llmFits(small, 77_791_232)).to.equal(true);
+		expect(llmFits(small, 77_791_231)).to.equal(false);
+		// The 4B has no small-buffer build.
+		expect(large.smallBuffer).to.equal(undefined);
 		expect(llmFits(large, 180 * MiB)).to.equal(false);
 		expect(llmFits(large, 256 * MiB)).to.equal(true);
 		// Only a GPU model has a binding to fit.

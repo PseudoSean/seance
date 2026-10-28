@@ -12758,6 +12758,12 @@ msgctxt "translate.capability.reason.smallBuffer"
 msgid "The GPU binds at most {limit} in one buffer; the smallest GPU model needs {needed}"
 msgstr "GPU 单个缓冲区最多可绑定 {limit}；最小的 GPU 模型需要 {needed}"
 
+#. Settings → Translation, under the line that says how much the GPU can hold in one buffer. Shown only while a developer test setting pretends the graphics card is smaller than it is, to try what a phone gets. {size} is a data size with its unit, e.g. '128 MiB'. {key} is the name of the stored setting, e.g. 'thelounge.state.gpuTestLimitMiB' — never translate it. 'Storage' is the browser's local storage for this site.
+#: client/components/Settings/Translation.vue:89
+msgctxt "translate.capability.testLimit"
+msgid "Limited to {size} for testing ({key} in this browser's storage). Delete that entry and reload to use the GPU's own limit."
+msgstr "为测试限制为 {size}（此浏览器存储中的 {key}）。删除该条目并重新加载，即可使用 GPU 自身的限制。"
+
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.alreadyIn"
@@ -13117,6 +13123,12 @@ msgstr "{percent}%"
 msgctxt "translate.model.runsHere"
 msgid "Can run on this device"
 msgstr "可在此设备上运行"
+
+#. Settings → Translation, a line under the GPU model's row (Qwen3 1.7B) on a device whose graphics card cannot hold the model's largest piece in one buffer (most phones): the app then downloads and runs a special build of the same model whose pieces are smaller. {size} is a data size with its unit, already formatted, e.g. '74.2 MiB'. 'Buffer' is the graphics-card term (a block of GPU memory); 'build' means a compiled version of the same model.
+#: client/components/Settings/Translation.vue:213
+msgctxt "translate.model.smallBufferBuild"
+msgid "This GPU gets a build of the model made for small graphics buffers: its largest buffer is {size}."
+msgstr "此 GPU 将使用为小型图形缓冲区构建的模型版本：其最大缓冲区为 {size}。"
 
 #. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
 #: client/components/Settings/Translation.vue

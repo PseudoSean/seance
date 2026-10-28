@@ -11,10 +11,15 @@ import {
 	TranslateChunk,
 	TranslateRequest,
 } from "./engine";
-import {ModelCacheState, ModelCatalog} from "./models";
+import {GpuBudget, ModelCacheState, ModelCatalog} from "./models";
 
 export type MainToWorker =
-	| {type: "configure"; catalog: ModelCatalog; ortBase: string}
+	/**
+	 * Sent when the worker starts and again when the device probe lands:
+	 * `gpu` is what decides a GPU model's build (models.ts
+	 * `smallBufferBuildFor`) and caps WebLLM's device; absent before the probe.
+	 */
+	| {type: "configure"; catalog: ModelCatalog; ortBase: string; gpu?: GpuBudget}
 	| {type: "load"; ref: ModelRef}
 	| {type: "unload"; engine: EngineName}
 	| {type: "translate"; req: TranslateRequest; ref: ModelRef}

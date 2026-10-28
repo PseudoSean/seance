@@ -136,7 +136,7 @@ describe("translate/capability", () => {
 		expect(enough.reasons).to.deep.equal([]);
 	});
 
-	it("rates gpu a phone's GPU that binds the 1.7B's embedding, not WebLLM's 1 GiB", async () => {
+	it("rates gpu a phone's GPU that binds the 1.7B's small-buffer build, not WebLLM's 1 GiB", async () => {
 		const MiB = 1024 * 1024;
 		const at = (maxBuffer: number) =>
 			probe(env({gpu: {requestAdapter: () => Promise.resolve(adapter({maxBuffer}))}}));
@@ -145,11 +145,39 @@ describe("translate/capability", () => {
 		const phone = await at(512 * MiB);
 		expect(phone.tier).to.equal("gpu");
 		expect(phone.maxBufferBytes).to.equal(512 * MiB);
-		// Adreno 7xx offers WebGPU's floor alone, which no model's embedding fits.
+		// Adreno 7xx offers WebGPU's floor alone: the 1.7B's embedding does
+		// not fit it, its small-buffer build (74 MiB at most) does.
 		const floor = await at(128 * MiB);
-		expect(floor.tier).to.equal("cpu");
-		expect(floor.reasons).to.deep.equal(["SMALL_BUFFER"]);
+		expect(floor.tier).to.equal("gpu");
+		expect(floor.reasons).to.deep.equal([]);
 		expect(floor.maxBufferBytes, "the limit is reported for Settings").to.equal(128 * MiB);
+		// Below even that (no WebGPU device is): no GPU model fits.
+		const below = await at(64 * MiB);
+		expect(below.tier).to.equal("cpu");
+		expect(below.reasons).to.deep.equal(["SMALL_BUFFER"]);
+	});
+
+	it("holds the limit to the test switch's cap, and says so", async () => {
+		const MiB = 1024 * 1024;
+		const at = (maxBuffer: number, bufferCapBytes?: number | null) =>
+			probe(
+				env({
+					gpu: {requestAdapter: () => Promise.resolve(adapter({maxBuffer}))},
+					bufferCapBytes,
+				})
+			);
+
+		const capped = await at(2048 * MiB, 128 * MiB);
+		expect(capped.maxBufferBytes).to.equal(128 * MiB);
+		expect(capped.bufferCapBytes).to.equal(128 * MiB);
+		expect(capped.tier).to.equal("gpu");
+		// A cap above what the GPU binds changes nothing but the note.
+		const above = await at(256 * MiB, 1024 * MiB);
+		expect(above.maxBufferBytes).to.equal(256 * MiB);
+		// No switch, no cap.
+		const plain = await at(256 * MiB);
+		expect(plain.maxBufferBytes).to.equal(256 * MiB);
+		expect(plain.bufferCapBytes).to.equal(null);
 	});
 
 	it("passes a phone's mobile flag on, a computer by default", async () => {

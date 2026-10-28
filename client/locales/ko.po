@@ -12757,6 +12757,12 @@ msgctxt "translate.capability.reason.smallBuffer"
 msgid "The GPU binds at most {limit} in one buffer; the smallest GPU model needs {needed}"
 msgstr "이 GPU는 버퍼 하나에 최대 {limit}까지 바인딩할 수 있습니다. 가장 작은 GPU 모델에는 {needed}이(가) 필요합니다"
 
+#. Settings → Translation, under the line that says how much the GPU can hold in one buffer. Shown only while a developer test setting pretends the graphics card is smaller than it is, to try what a phone gets. {size} is a data size with its unit, e.g. '128 MiB'. {key} is the name of the stored setting, e.g. 'thelounge.state.gpuTestLimitMiB' — never translate it. 'Storage' is the browser's local storage for this site.
+#: client/components/Settings/Translation.vue:89
+msgctxt "translate.capability.testLimit"
+msgid "Limited to {size} for testing ({key} in this browser's storage). Delete that entry and reload to use the GPU's own limit."
+msgstr "테스트를 위해 {size}로 제한됨(이 브라우저 저장소의 {key}). 해당 항목을 삭제하고 새로고침하면 GPU 자체 한도를 사용합니다."
+
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.alreadyIn"
@@ -13116,6 +13122,12 @@ msgstr "{percent}%"
 msgctxt "translate.model.runsHere"
 msgid "Can run on this device"
 msgstr "이 기기에서 실행 가능"
+
+#. Settings → Translation, a line under the GPU model's row (Qwen3 1.7B) on a device whose graphics card cannot hold the model's largest piece in one buffer (most phones): the app then downloads and runs a special build of the same model whose pieces are smaller. {size} is a data size with its unit, already formatted, e.g. '74.2 MiB'. 'Buffer' is the graphics-card term (a block of GPU memory); 'build' means a compiled version of the same model.
+#: client/components/Settings/Translation.vue:213
+msgctxt "translate.model.smallBufferBuild"
+msgid "This GPU gets a build of the model made for small graphics buffers: its largest buffer is {size}."
+msgstr "이 GPU에는 작은 그래픽 버퍼용으로 만든 모델 빌드가 사용됩니다. 그 최대 버퍼는 {size}입니다."
 
 #. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
 #: client/components/Settings/Translation.vue

@@ -3,15 +3,17 @@
 // offers the two helpers the cache API needs.
 
 import {
+	type AppConfig,
 	MLCEngine,
 	deleteModelAllInfoInCache,
 	hasModelInCache,
 	prebuiltAppConfig,
 } from "@mlc-ai/web-llm";
-import {ModelRef} from "../engine";
-import {CacheApi, ModelCatalog} from "../models";
-import {MlcLike, ModelRecord, WebLlmDeps, appConfigFor} from "./webllm";
+import {CacheApi, GpuBudget, ModelCatalog} from "../models";
+import {MlcLike, ModelRecord, WebLlmDeps} from "./webllm";
+import {webllmCacheApi} from "./webllmCache";
 import {installBufferLimits} from "./gpuLimits";
+import {SeedDeps, seedSplitManifest} from "./splitManifest";
 
 // Before any reload: WebLLM's device asks for what the adapter can give
 // (gpuLimits.ts). A worker without WebGPU has no GPUAdapter at all.
@@ -22,11 +24,34 @@ installBufferLimits(
 
 const prebuilt = prebuiltAppConfig.model_list as ModelRecord[];
 
+/**
+ * The app's root: this worker is js/translate-worker.js under it, wherever
+ * the deploy serves it from (https://host/seance/develop/ on Pages).
+ */
+const appRoot = new URL("..", self.location.href).href;
+
+/**
+ * The Cache API backend, said outright rather than left to WebLLM's
+ * default: the small-buffer build's manifest is seeded into Cache Storage
+ * (splitManifest.ts), and a backend that never reads it there (OPFS, the
+ * cross-origin extension) would load the stock manifest into the split
+ * library.
+ */
+const CACHE_BACKEND = {cacheBackend: "cache" as const};
+
+const seedDeps: SeedDeps = {
+	fetch: (url) => fetch(url),
+	openCache: (name) => caches.open(name),
+	response: (body) => new Response(body, {headers: {"Content-Type": "application/json"}}),
+};
+
 export const realWebLlmDeps: WebLlmDeps = {
 	prebuilt,
+	appRoot,
+	seedSplit: (build) => seedSplitManifest({model: build.model, split: build.split}, seedDeps),
 	create(appConfig, onProgress) {
 		return new MLCEngine({
-			appConfig: {...prebuiltAppConfig, model_list: appConfig.model_list},
+			appConfig: {...prebuiltAppConfig, ...CACHE_BACKEND, model_list: appConfig.model_list},
 			initProgressCallback: (report) =>
 				onProgress({progress: report.progress, text: report.text}),
 			logLevel: "WARN",
@@ -34,25 +59,19 @@ export const realWebLlmDeps: WebLlmDeps = {
 	},
 };
 
-/** `has` / `delete` for the LLM; the catalog decides which URLs a mirror uses. */
-export function webllmCache(getCatalog: () => ModelCatalog | null): CacheApi {
-	const config = (ref: ModelRef) => {
-		const catalog = getCatalog();
-
-		return {
-			...prebuiltAppConfig,
-			model_list: appConfigFor(ref, prebuilt, {
-				modelBase: catalog?.modelBase,
-				lib: ref.lib,
-			}).model_list,
-		};
-	};
-
-	return {
-		// `async` so that `config()` throwing for a model the library does not
-		// know (appConfigFor) rejects rather than throwing at the caller:
-		// cacheStates() isolates a rejection to this one row.
-		has: async (ref) => await hasModelInCache(ref.id, config(ref)),
-		delete: (ref) => deleteModelAllInfoInCache(ref.id, config(ref)),
-	};
+/** `has` / `delete` for the LLM (webllmCache.ts), over WebLLM's own two helpers. */
+export function webllmCache(
+	getCatalog: () => ModelCatalog | null,
+	getGpu: () => GpuBudget | null
+): CacheApi {
+	return webllmCacheApi({
+		has: (id, config) => hasModelInCache(id, config as unknown as AppConfig),
+		deleteAll: (id, config) => deleteModelAllInfoInCache(id, config as unknown as AppConfig),
+		baseConfig: {...prebuiltAppConfig, ...CACHE_BACKEND},
+		prebuilt,
+		appRoot,
+		seed: seedDeps,
+		getCatalog,
+		getGpu,
+	});
 }

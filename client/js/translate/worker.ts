@@ -6,7 +6,7 @@
 // engines, tests and fakePort.ts hand in scripted ones.
 
 import {Engine, EngineError, EngineName, ModelRef} from "./engine";
-import {CacheApi, ModelCatalog, cacheStates} from "./models";
+import {CacheApi, GpuBudget, ModelCatalog, cacheStates} from "./models";
 import {EngineSnapshot, MainToWorker, WorkerPort, errorMessage} from "./protocol";
 
 export interface EngineSet {
@@ -15,8 +15,8 @@ export interface EngineSet {
 }
 
 export interface WorkerDeps {
-	/** The libraries' global configuration (mirror base, ORT wasm path). */
-	configure(catalog: ModelCatalog, ortBase: string): void;
+	/** The libraries' global configuration (mirror base, ORT wasm path, the GPU's budget). */
+	configure(catalog: ModelCatalog, ortBase: string, gpu?: GpuBudget): void;
 	cache: CacheApi;
 }
 
@@ -60,7 +60,7 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 			case "configure":
 				try {
 					catalog = message.catalog;
-					deps.configure(message.catalog, message.ortBase);
+					deps.configure(message.catalog, message.ortBase, message.gpu);
 				} catch (e) {
 					port.postMessage({type: "error", scope: "worker", message: errorMessage(e)});
 				}

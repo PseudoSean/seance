@@ -8,6 +8,7 @@
 // is the only place that reads `navigator`; tests pass their own env.
 
 import {LLM_MIN_BUFFER_BYTES} from "./models";
+import {readGpuTestLimit} from "./gpuTestLimit";
 
 export type Tier = "gpu" | "cpu" | "none";
 
@@ -37,6 +38,11 @@ export interface Capability {
 	storageQuotaBytes: number | null;
 	/** A phone or tablet: models.ts never defaults one to the large GPU model. */
 	mobile: boolean;
+	/**
+	 * The test switch's cap (gpuTestLimit.ts), when set: `maxBufferBytes` is
+	 * already held to it, and the worker holds WebLLM's device to it too.
+	 */
+	bufferCapBytes?: number | null;
 }
 
 export interface AdapterLike {
@@ -65,12 +71,15 @@ export interface ProbeEnv {
 	secureContext?: boolean;
 	/** A phone or tablet (`browserEnv`); absent means a computer. */
 	mobile?: boolean;
+	/** The test switch (gpuTestLimit.ts): bind no more than this; absent or null, no cap. */
+	bufferCapBytes?: number | null;
 }
 
 // A model binds each weight tensor whole, so the floor is the smallest GPU
-// model's largest tensor (148 MiB for Qwen3 1.7B), not WebLLM's 1 GiB: the
-// worker asks WebLLM's device for whatever the adapter offers
-// (engines/gpuLimits.ts), and a phone offering 256 MiB-1 GiB can load it.
+// model's largest tensor, not WebLLM's 1 GiB: the worker asks WebLLM's
+// device for whatever the adapter offers (engines/gpuLimits.ts). The 1.7B's
+// small-buffer build needs 74 MiB (models.ts), under WebGPU's 128 MiB
+// default, so every adapter with shader-f16 and WebLLM's floors is on it.
 export const GPU_MIN_BUFFER_BYTES = LLM_MIN_BUFFER_BYTES;
 
 // WebLLM's own floors (`detectGPUDevice`, @mlc-ai/web-llm 0.2.85): an
@@ -109,7 +118,8 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 			f16 = adapter.features.has("shader-f16");
 			maxBufferBytes = Math.min(
 				adapter.limits.maxBufferSize,
-				adapter.limits.maxStorageBufferBindingSize
+				adapter.limits.maxStorageBufferBindingSize,
+				env.bufferCapBytes ?? Infinity
 			);
 
 			if (!f16) {
@@ -148,6 +158,7 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 		deviceMemoryGiB: env.deviceMemory,
 		storageQuotaBytes,
 		mobile: env.mobile === true,
+		bufferCapBytes: env.bufferCapBytes ?? null,
 	};
 }
 
@@ -183,6 +194,7 @@ export function browserEnv(): ProbeEnv {
 		wasmSimd,
 		secureContext: typeof window !== "undefined" ? window.isSecureContext : undefined,
 		mobile: isMobile(nav),
+		bufferCapBytes: readGpuTestLimit(),
 	};
 }
 

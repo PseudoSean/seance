@@ -10,15 +10,20 @@ import {realWebLlmDeps, webllmCache} from "./engines/webllm.real";
 import {Seq2seqEngine} from "./engines/seq2seq";
 import {configureTransformers, realSeq2seqDeps, seq2seqCache} from "./engines/seq2seq.real";
 import {languageName} from "./languages";
-import {CacheApi, ModelCatalog} from "./models";
+import {CacheApi, GpuBudget, ModelCatalog} from "./models";
+import {setBufferCap} from "./engines/gpuLimits";
 import {WorkerPort} from "./protocol";
 import {serveEngines} from "./worker";
 
 let catalog: ModelCatalog | null = null;
+let gpu: GpuBudget | null = null;
 
 const llm = new WebLlmEngine(realWebLlmDeps, languageName);
 const seq2seq = new Seq2seqEngine(realSeq2seqDeps);
-const llmCache = webllmCache(() => catalog);
+const llmCache = webllmCache(
+	() => catalog,
+	() => gpu
+);
 const seqCache = seq2seqCache();
 const cache: CacheApi = {
 	has: (ref) => (ref.engine === "llm" ? llmCache : seqCache).has(ref),
@@ -30,9 +35,17 @@ serveEngines(
 	{llm, seq2seq},
 	{
 		cache,
-		configure(next, ortBase) {
+		configure(next, ortBase, budget) {
 			catalog = next;
-			llm.configure(next);
+
+			// Absent before the page's probe answered: what an earlier
+			// configure said stands.
+			if (budget) {
+				gpu = budget;
+				setBufferCap(budget.capBytes);
+			}
+
+			llm.configure(next, budget);
 			configureTransformers({modelBase: next.modelBase, ortBase});
 		},
 	}

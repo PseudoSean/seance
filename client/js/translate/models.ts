@@ -3,7 +3,7 @@
 // and the cache API the worker answers "is it downloaded" / "delete it"
 // with. A router candidate names a catalog entry, never a URL.
 
-import {EngineName, ModelRef} from "./engine";
+import {EngineName, ModelRef, SmallBufferBuild} from "./engine";
 import type {Capability, CapabilityReason, Tier} from "./capability";
 
 /** What the route table lists: the LLM, NLLB, or an OPUS-MT pair. */
@@ -89,6 +89,32 @@ function opusRef(pairKey: string, id: string): ModelRef {
 	};
 }
 
+/** The small-buffer build of the 1.7B: its own WebLLM id (engine.ts `SmallBufferBuild`). */
+export const QWEN3_1_7B_SPLIT_ID = "Qwen3-1.7B-q4f16_1-MLC-split";
+
+/**
+ * The 1.7B's published directory at the commit its split was cut from (the
+ * manifest there is byte-identical to `main` on 2026-10-28). Pinned, so the
+ * byte ranges the rewrite names can never move, and so the build's cache
+ * keys are never the model's own `resolve/main/` ones.
+ */
+export const QWEN3_1_7B_PINNED_MODEL =
+	"https://huggingface.co/mlc-ai/Qwen3-1.7B-q4f16_1-MLC/resolve/80b3abcec6c3b3f5355dc0cc99cc4fb578f192bc/";
+
+/**
+ * The split library the app ships (client/models/, copied to public/models/
+ * by webpack; built by tools/translate-split/). The file name carries the
+ * first eight hex digits of its SHA-256: WebLLM caches a library by URL, so
+ * a rebuilt library must have a new one. Relative to the app's root, which
+ * the worker resolves against its own location (a deploy may live under a
+ * subpath).
+ */
+export const QWEN3_1_7B_SPLIT_LIB = "models/qwen3-1.7b-q4f16_1-split-c4939e7d.wasm";
+
+/** Qwen3's vocabulary, and the row its table is split at: two halves of 75968 rows. */
+const QWEN3_VOCAB_ROWS = 151_936;
+const QWEN3_SPLIT_ROW = 75_968;
+
 /**
  * The GPU models Settings offers, both WebLLM prebuilt ids. `sizeBytes` is
  * the download; `vramBytes` is the graphics memory the model needs at
@@ -96,9 +122,16 @@ function opusRef(pairKey: string, id: string): ModelRef {
  * for 4B); `largestBufferBytes` is the model's largest weight tensor, its
  * vocabulary embedding (`model.embed_tokens.q_weight`, 151936 rows of u32:
  * 256 per row for 1.7B, 320 for 4B, from each model's
- * tensor-cache.json) — the single binding the device must allow. The KV
- * cache's pages and the work buffers are smaller by estimate, not by
- * measurement.
+ * tensor-cache.json: 155,582,464 and 194,478,080 bytes) — the single
+ * binding the device must allow. The KV cache's pages and the work buffers
+ * are smaller by estimate, not by measurement.
+ *
+ * The 1.7B also has a small-buffer build (`smallBuffer`): the table split
+ * in two halves of 75968 rows, whose larger tensor is 75968 × 1024 bytes,
+ * so it loads where a storage binding stops at WebGPU's 128 MiB floor. The
+ * same weights, so the same download and the same graphics memory. The 4B
+ * has none: its library was never built (its table is 186 MiB, two halves
+ * of 93 MiB would fit too, but nothing has measured it on a phone).
  */
 export const LLM_CHOICES: readonly ModelRef[] = [
 	{
@@ -108,7 +141,19 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		label: {kind: "llm", name: "Qwen3 1.7B"},
 		sizeBytes: LLM_SIZE_BYTES,
 		vramBytes: 2_000_000_000,
-		largestBufferBytes: 155_574_272,
+		largestBufferBytes: 155_582_464,
+		smallBuffer: {
+			id: QWEN3_1_7B_SPLIT_ID,
+			model: QWEN3_1_7B_PINNED_MODEL,
+			lib: QWEN3_1_7B_SPLIT_LIB,
+			split: {
+				rows: QWEN3_VOCAB_ROWS,
+				at: QWEN3_SPLIT_ROW,
+				weight: {cols: 256, dtype: "uint32"},
+				scale: {cols: 64, dtype: "float16"},
+			},
+			largestBufferBytes: 77_791_232,
+		},
 	},
 	{
 		engine: "llm",
@@ -121,19 +166,82 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 	},
 ];
 
-/** The smallest binding any GPU model needs: the gpu tier's floor (capability.ts). */
+/**
+ * What the worker is told about the device (protocol.ts `configure`): the
+ * probe's largest storage binding, which decides the build
+ * (`smallBufferBuildFor`), and the test cap (translate/gpuTestLimit.ts),
+ * which WebLLM's device request is held to (engines/gpuLimits.ts). Null
+ * where nothing is known: the model's own build loads, uncapped.
+ */
+export interface GpuBudget {
+	maxBufferBytes: number | null;
+	capBytes: number | null;
+}
+
+/**
+ * Which build of `ref` loads on a device whose largest storage binding is
+ * `maxBufferBytes`: null for the model itself — it fits, it has no
+ * small-buffer build, or the limit is unknown — and its small-buffer build
+ * when only that fits. The one rule the engine's load, the worker's cache
+ * answers (Downloaded / Delete) and Settings read, so a phone's Download
+ * downloads the build it will run and a desktop's the model itself. A
+ * device that can bind neither gets the model itself, which then fails as
+ * `modelBlock` already said it would.
+ */
+export function smallBufferBuildFor(
+	ref: ModelRef,
+	maxBufferBytes: number | null | undefined
+): SmallBufferBuild | null {
+	const build = ref.engine === "llm" ? ref.smallBuffer : undefined;
+
+	if (!build || typeof maxBufferBytes !== "number" || !(maxBufferBytes > 0)) {
+		return null;
+	}
+
+	if ((ref.largestBufferBytes ?? 0) <= maxBufferBytes) {
+		return null;
+	}
+
+	return build.largestBufferBytes <= maxBufferBytes ? build : null;
+}
+
+/** The WebLLM id that loads for `ref` on this device: its own, or its small-buffer build's. */
+export function buildIdFor(ref: ModelRef, maxBufferBytes: number | null | undefined): string {
+	return smallBufferBuildFor(ref, maxBufferBytes)?.id ?? ref.id;
+}
+
+/**
+ * The smallest binding any build of `ref` needs: its small-buffer build's
+ * when it has one. Undefined for a model of unknown size (a deploy's own).
+ */
+export function minBufferNeed(ref: ModelRef): number | undefined {
+	const own = ref.largestBufferBytes;
+	const small = ref.smallBuffer?.largestBufferBytes;
+
+	if (own === undefined) {
+		return small;
+	}
+
+	return small === undefined ? own : Math.min(own, small);
+}
+
+/**
+ * The smallest binding any GPU model needs, by its smallest build: the gpu
+ * tier's floor (capability.ts). The 1.7B's small-buffer build: 74 MiB.
+ */
 export const LLM_MIN_BUFFER_BYTES = Math.min(
-	...LLM_CHOICES.map((ref) => ref.largestBufferBytes ?? Infinity)
+	...LLM_CHOICES.map((ref) => minBufferNeed(ref) ?? Infinity)
 );
 
 /**
  * Whether `ref` can load on a device whose largest storage binding is
  * `maxBufferBytes` (the probe's `min(maxBufferSize,
- * maxStorageBufferBindingSize)`; the worker asks WebLLM's device for that
- * much, engines/gpuLimits.ts). Anything but a GPU model fits.
+ * maxStorageBufferBindingSize)`, and the test cap; the worker asks WebLLM's
+ * device for that much, engines/gpuLimits.ts): the model itself fits, or
+ * its small-buffer build does. Anything but a GPU model fits.
  */
 export function llmFits(ref: ModelRef, maxBufferBytes: number): boolean {
-	return ref.engine !== "llm" || (ref.largestBufferBytes ?? 0) <= maxBufferBytes;
+	return ref.engine !== "llm" || (minBufferNeed(ref) ?? 0) <= maxBufferBytes;
 }
 
 /**
@@ -214,8 +322,8 @@ export function modelBlock(
 
 		// The gpu tier's floor is the smallest shipped model's need, so a
 		// deploy model of unknown size on a device below it is held to that.
-		const needed =
-			ref.largestBufferBytes ?? (capability.tier === "gpu" ? 0 : LLM_MIN_BUFFER_BYTES);
+		// A model with a small-buffer build needs what that build needs.
+		const needed = minBufferNeed(ref) ?? (capability.tier === "gpu" ? 0 : LLM_MIN_BUFFER_BYTES);
 
 		if (capability.tier !== "gpu" || needed > capability.maxBufferBytes) {
 			return {kind: "buffer", needed, limit: capability.maxBufferBytes};
@@ -358,9 +466,21 @@ export function buildCatalog(
 	// A deploy's library belongs to the deploy's model (or to the shipped
 	// default it mirrors), never to the other choice: a 4B load handed the
 	// 1.7B wasm fails.
-	const llmChoices = LLM_CHOICES.map(
-		(ref): ModelRef => (ref.id === llmId && lib ? {...ref, lib} : {...ref})
-	);
+	//
+	// The small-buffer build reads the published weights from Hugging Face
+	// at a pinned commit through the app's own library: a deploy that
+	// mirrors the weights (`modelBase`, which keeps its readers off
+	// third-party hosts) or names its own library for the model has neither,
+	// so there the model has no such build and a small GPU cannot run it.
+	const llmChoices = LLM_CHOICES.map((ref): ModelRef => {
+		const choice: ModelRef = ref.id === llmId && lib ? {...ref, lib} : {...ref};
+
+		if (choice.smallBuffer && (options.modelBase || choice.lib)) {
+			delete choice.smallBuffer;
+		}
+
+		return choice;
+	});
 
 	if (!llmChoices.some((ref) => ref.id === llmId)) {
 		llmChoices.push(deployLlmRef(llmId, lib));

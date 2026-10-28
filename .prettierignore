@@ -41,6 +41,7 @@ shells/capacitor/ios/
 
 # Binary artifacts and interpreter caches: nothing prettier can ever parse.
 *.zip
+*.wasm
 __pycache__/
 .claude/
 .pi/

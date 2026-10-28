@@ -6,6 +6,7 @@
 // stand in for either engine.
 
 import type {MarkerForm} from "./spans";
+import type {EmbeddingSplit} from "./engines/splitManifest";
 
 export type EngineName = "llm" | "seq2seq";
 export type ModelFamily = "llm" | "nllb" | "opus";
@@ -20,6 +21,29 @@ export type ModelLabel =
 	| {kind: "opus"; from: string; to: string}
 	| {kind: "nllb"}
 	| {kind: "llm"; name: string};
+
+/**
+ * A GPU model built for small buffers (tools/translate-split/): its own
+ * WebLLM record and cache keys, the published weights through a rewritten
+ * tensor manifest (engines/splitManifest.ts), the app's own library.
+ */
+export interface SmallBufferBuild {
+	/** Its WebLLM `model_id`: never the model's own, so nothing in the caches is shared. */
+	id: string;
+	/**
+	 * The published model directory the split was cut from, with its
+	 * revision pinned (`/resolve/<commit>/`): the byte ranges the rewrite
+	 * names cannot drift under it, and its cache keys differ from the
+	 * `resolve/main/` the model itself uses.
+	 */
+	model: string;
+	/** The compiled library, a path under the app's own root (public/models/). */
+	lib: string;
+	/** The rows and the tensors' shapes the library was compiled for. */
+	split: EmbeddingSplit;
+	/** Its largest weight tensor: one half of the vocabulary table. */
+	largestBufferBytes: number;
+}
 
 export interface ModelRef {
 	engine: EngineName;
@@ -48,6 +72,14 @@ export interface ModelRef {
 	 * trusted to fit.
 	 */
 	largestBufferBytes?: number;
+	/**
+	 * A GPU model's small-buffer build (models.ts `smallBufferBuildFor`):
+	 * the same published weights read by a library of our own that splits
+	 * the vocabulary table in two, for a GPU that cannot bind the model's
+	 * `largestBufferBytes` (a phone's 128 MiB). Settings lists one model;
+	 * which build loads is decided per device, at the WebLLM boundary.
+	 */
+	smallBuffer?: SmallBufferBuild;
 	/** OPUS-MT pair models: [from, to] in ISO 639-1. */
 	pair?: [string, string];
 	/**

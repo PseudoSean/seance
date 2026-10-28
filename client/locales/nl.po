@@ -12817,6 +12817,12 @@ msgctxt "translate.capability.reason.smallBuffer"
 msgid "The GPU binds at most {limit} in one buffer; the smallest GPU model needs {needed}"
 msgstr "De GPU bindt hoogstens {limit} in één buffer; het kleinste GPU-model heeft {needed} nodig"
 
+#. Settings → Translation, under the line that says how much the GPU can hold in one buffer. Shown only while a developer test setting pretends the graphics card is smaller than it is, to try what a phone gets. {size} is a data size with its unit, e.g. '128 MiB'. {key} is the name of the stored setting, e.g. 'thelounge.state.gpuTestLimitMiB' — never translate it. 'Storage' is the browser's local storage for this site.
+#: client/components/Settings/Translation.vue:89
+msgctxt "translate.capability.testLimit"
+msgid "Limited to {size} for testing ({key} in this browser's storage). Delete that entry and reload to use the GPU's own limit."
+msgstr "Voor testen beperkt tot {size} ({key} in de opslag van deze browser). Verwijder die vermelding en herlaad om de eigen grens van de GPU te gebruiken."
+
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.alreadyIn"
@@ -13176,6 +13182,12 @@ msgstr "{percent}%"
 msgctxt "translate.model.runsHere"
 msgid "Can run on this device"
 msgstr "Werkt op dit apparaat"
+
+#. Settings → Translation, a line under the GPU model's row (Qwen3 1.7B) on a device whose graphics card cannot hold the model's largest piece in one buffer (most phones): the app then downloads and runs a special build of the same model whose pieces are smaller. {size} is a data size with its unit, already formatted, e.g. '74.2 MiB'. 'Buffer' is the graphics-card term (a block of GPU memory); 'build' means a compiled version of the same model.
+#: client/components/Settings/Translation.vue:213
+msgctxt "translate.model.smallBufferBuild"
+msgid "This GPU gets a build of the model made for small graphics buffers: its largest buffer is {size}."
+msgstr "Deze GPU krijgt een versie van het model voor kleine grafische buffers: de grootste buffer is {size}."
 
 #. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
 #: client/components/Settings/Translation.vue
