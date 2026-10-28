@@ -2,10 +2,16 @@
 	<div class="settings-aliases" role="group" :aria-label="paneAria">
 		<h2>{{ t("settings.aliases.titleHeading") }}</h2>
 		<p class="alias-intro">
-			{{ t("settings.aliases.introOwn") }}
-			<code>/{{ rows[0]?.name || "wave" }}</code>
-			{{ t("settings.aliases.introRuns") }} <code>$1</code>, <code>$2-</code>
-			{{ t("settings.aliases.introOr") }} <code>$*</code>.
+			<I18nFrame
+				:text="
+					t('settings.aliases.intro', {example: KEEP, first: KEEP, rest: KEEP, all: KEEP})
+				"
+				><template v-slot:example
+					><code>/{{ rows[0]?.name || "wave" }}</code></template
+				><template v-slot:first><code>$1</code></template
+				><template v-slot:rest><code>$2-</code></template
+				><template v-slot:all><code>$*</code></template></I18nFrame
+			>
 		</p>
 
 		<div v-if="rows.length" class="alias-table">
@@ -79,9 +85,10 @@
 			<dd>{{ t("settings.aliases.varLiteral") }} <code>$</code></dd>
 		</dl>
 		<p class="alias-intro">
-			{{ t("settings.aliases.nestedMain") }} <code>/join</code>
-			{{ t("settings.aliases.nestedBecomes") }} <code>/join #lobby $*</code>
-			{{ t("settings.aliases.nestedTail") }}
+			<I18nFrame :text="t('settings.aliases.nested', {command: KEEP, expansion: KEEP})"
+				><template v-slot:command><code>/join</code></template
+				><template v-slot:expansion><code>/join #lobby $*</code></template></I18nFrame
+			>
 		</p>
 
 		<h2>{{ t("settings.aliases.tryHeading") }}</h2>
@@ -255,6 +262,8 @@
 <script lang="ts">
 import {computed, defineComponent, reactive, ref, watch} from "vue";
 import {useI18n} from "../../js/i18n";
+import {KEEP} from "../../js/i18n/core";
+import I18nFrame from "../I18nFrame.vue";
 import {
 	expandAlias,
 	isValidAliasName,
@@ -273,6 +282,9 @@ interface AliasRow extends Alias {
 
 export default defineComponent({
 	name: "AliasSettings",
+	components: {
+		I18nFrame,
+	},
 	setup() {
 		const {t, tCount} = useI18n();
 		let nextId = 1;
@@ -395,6 +407,7 @@ export default defineComponent({
 		return {
 			t,
 			tCount,
+			KEEP,
 			rows,
 			rowError,
 			statusText,

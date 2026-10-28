@@ -29,8 +29,11 @@ export interface DynamicSite {
 	file: string;
 	line: number;
 	/** `key`: the first argument is not a double-quoted literal;
-	 * `combined`: a t() call concatenated with another string. */
-	kind: "key" | "combined";
+	 * `combined`: a t() call concatenated with another string;
+	 * `adjacent`: two t() interpolations side by side in one template
+	 * element with an element or text between them -- a sentence cut into
+	 * fragments around the element (I18nFrame.vue renders it whole). */
+	kind: "key" | "combined" | "adjacent";
 	/** The offending line, comment-stripped, trimmed. */
 	code: string;
 }
@@ -127,6 +130,78 @@ function stripComments(source: string): string {
 	);
 }
 
+/** A t()/tCount() interpolation in a template: `{{ t("key", …) }}`. */
+const INTERPOLATION = /\{\{\s*t(?:Count)?\(\s*(["'])[^"']+\1[\s\S]*?\}\}/g;
+
+/** An HTML/component tag: group 1 is "/" for a closing tag, group 3 "/" for
+ * a self-closing one. */
+const TAG = /<(\/?)([A-Za-z][\w-]*)\b(?:[^>"']|"[^"]*"|'[^']*')*?(\/?)>/g;
+
+/** Elements with no content of their own. */
+const VOID_ELEMENTS = new Set(["br", "hr", "img", "input", "wbr"]);
+
+/** An opening tag a sentence runs on inside: a link, an emphasis, a code or
+ * keycap element, a formatting sample (`<span class="irc-bold">`). */
+const RUN_IN = /^<(?:a|router-link|em|strong|b|i|code|kbd|abbr|bdi)\b|^<span\b[^>]*\bclass="irc-/i;
+
+/**
+ * Template sites where a sentence is cut into translated fragments around an
+ * element: `{{ t("a") }} <code>x</code> {{ t("b") }}` -- two interpolations
+ * with the same parent and something (an element, or text) between them.
+ * `combined` sees only `+`; this is the template form of the same mistake
+ * (a translator gets "starts with a" and has to guess the rest). The line is
+ * the first interpolation's. Only the template of a .vue file is read.
+ */
+export function adjacentFragments(source: string): number[] {
+	const end = source.search(/<script\b/);
+	const template = end === -1 ? source : source.slice(0, end);
+	const found = [...template.matchAll(INTERPOLATION)];
+	const lines: number[] = [];
+
+	for (let i = 0; i + 1 < found.length; i++) {
+		const from = found[i].index! + found[i][0].length;
+		const between = template.slice(from, found[i + 1].index);
+		const open: string[] = [];
+		let sameSentence = true;
+		let elements = 0;
+
+		for (const tag of between.matchAll(TAG)) {
+			const name = tag[2].toLowerCase();
+
+			if (name === "br") {
+				sameSentence = false; // a line break ends the sentence
+				break;
+			}
+
+			elements += 1;
+
+			if (tag[3] === "/" || VOID_ELEMENTS.has(name)) {
+				continue;
+			}
+
+			if (tag[1] !== "/") {
+				open.push(tag[0]);
+			} else if (open.pop() === undefined) {
+				sameSentence = false; // left the first fragment's element
+				break;
+			}
+		}
+
+		// The second fragment may sit inside a run-in element of the same
+		// sentence -- a link, an emphasis, a formatting sample -- but not
+		// inside a hint or a control of its own.
+		if (!sameSentence || !open.every((tag) => RUN_IN.test(tag))) {
+			continue;
+		}
+
+		if (elements > 0 || between.trim() !== "") {
+			lines.push(template.slice(0, found[i].index).split("\n").length);
+		}
+	}
+
+	return lines;
+}
+
 function collectCallSites(
 	dir: string,
 	root: string,
@@ -150,6 +225,12 @@ function collectCallSites(
 		const source = stripComments(readFileSync(path, "utf8"));
 		const rel = relative(root, path).split("\\").join("/");
 		const lines = source.split("\n");
+
+		if (item.name.endsWith(".vue")) {
+			for (const line of adjacentFragments(source)) {
+				dynamic.push({file: rel, line, kind: "adjacent", code: lines[line - 1].trim()});
+			}
+		}
 
 		for (const [index, line] of lines.entries()) {
 			for (const match of line.matchAll(CALL_SITE)) {

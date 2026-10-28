@@ -323,7 +323,7 @@ export default defineComponent({
 	name: "UploadPreview",
 	setup() {
 		const store = useStore();
-		const {t} = useI18n();
+		const {t, tCount} = useI18n();
 		const request = ref<UploadConfirmRequest | null>(null);
 		const items = ref<PreviewItem[]>([]);
 		const confirmButton = ref<HTMLButtonElement>();
@@ -335,7 +335,7 @@ export default defineComponent({
 		);
 		const confirmText = computed(() =>
 			items.value.length > 1
-				? t("upload.confirmMany", {count: items.value.length})
+				? tCount("upload.confirmCount", items.value.length)
 				: t("upload.confirmOne")
 		);
 		const removeLabel = (name: string) => t("upload.removeOne", {name});

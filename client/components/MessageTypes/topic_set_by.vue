@@ -1,8 +1,9 @@
 <template>
 	<span class="content">
-		{{ t("msg.topicSetBy") }}
-		<bdi><Username :user="message.from" /></bdi>
-		{{ t("msg.topicSetOn", {time: messageTimeLocale}) }}
+		<I18nFrame :text="t('msg.topicSet', {nick: KEEP, time: messageTimeLocale})"
+			><template v-slot:nick
+				><bdi><Username :user="message.from" /></bdi></template
+		></I18nFrame>
 	</span>
 </template>
 
@@ -12,11 +13,14 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import Username from "../Username.vue";
 import {formatDateTime} from "../../js/i18n/dates";
 import {useI18n} from "../../js/i18n";
+import {KEEP} from "../../js/i18n/core";
+import I18nFrame from "../I18nFrame.vue";
 
 export default defineComponent({
 	name: "MessageTypeTopicSetBy",
 	components: {
 		Username,
+		I18nFrame,
 	},
 	props: {
 		network: {
@@ -40,6 +44,7 @@ export default defineComponent({
 
 		return {
 			t,
+			KEEP,
 			messageTimeLocale,
 		};
 	},

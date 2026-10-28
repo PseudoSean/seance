@@ -20,6 +20,7 @@ import {
 	untranslatedKeys,
 	warnFragmentJoin,
 	frameSegments,
+	framePieces,
 } from "../../client/js/i18n/core";
 import {activate, useOverlayLoader} from "../../client/js/i18n";
 import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
@@ -321,6 +322,26 @@ describe("i18n dev warnings for dynamic strings", () => {
 		expect(
 			frameSegments(t("frame", {nick: KEEP, modes: KEEP}), ["nick", "modes"])
 		).to.deep.equal(["", " sets mode ", ""]);
+	});
+
+	it("framePieces follows the translation's order of the placeholders", () => {
+		// A translator may put {target} before {nick}; frameSegments returns
+		// the segments in the CALLER's order, so a component with fixed
+		// element positions rendered a raw "{target}" there. framePieces is
+		// what I18nFrame.vue renders, slot by slot, in the frame's order.
+		expect(framePieces("{nick} has kicked {target}", ["nick", "target"])).to.deep.equal([
+			{name: "nick"},
+			" has kicked ",
+			{name: "target"},
+		]);
+		expect(
+			framePieces("{target} は {nick} にキックされました", ["nick", "target"])
+		).to.deep.equal([{name: "target"}, " は ", {name: "nick"}, " にキックされました"]);
+		// A placeholder the caller has no element for stays text.
+		expect(framePieces("on {time} by {nick}", ["nick"])).to.deep.equal([
+			"on {time} by ",
+			{name: "nick"},
+		]);
 	});
 
 	it("the class-3 audit: a {var} frame warns once, naming its values", () => {

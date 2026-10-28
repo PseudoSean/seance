@@ -18,6 +18,7 @@ import {addToPot} from "../../tools/i18n/add";
 import {
 	ALLOWED_UNREFERENCED,
 	ALLOWED_DYNAMIC,
+	adjacentFragments,
 	checkPot,
 	collectStaticCallSiteKeys,
 } from "../../tools/i18n/check";
@@ -1424,6 +1425,37 @@ describe("i18n toolchain", () => {
 		it("fails a pot entry without a #. context line", () => {
 			const problems = checkPot(potPath, [tree]);
 			expect(problems.missingContext).to.deep.equal(["nocontext.key"]);
+		});
+
+		it("flags a sentence cut into t() fragments around an element in a template", () => {
+			// `combined` sees only `+`; Help.vue's "{{ t('connectA') }} <code>port</code>
+			// {{ t('connectB') }}" passed check and reached translators as
+			// "starts with a".
+			expect(
+				adjacentFragments(
+					'<template>\n<p>\n{{ t("a") }} <code>port</code>\n{{ t("b") }}\n</p>\n</template>'
+				)
+			).to.deep.equal([3]);
+			// A fragment inside a link of the same sentence is one too.
+			expect(
+				adjacentFragments('<p>{{ t("a") }}\n<a href="x">{{ t("b") }}</a>.</p>')
+			).to.deep.equal([1]);
+			// Separate elements, a hint beside a label, a line break: not one sentence.
+			expect(
+				adjacentFragments('<p>{{ t("a") }} <code>x</code></p>\n<p>{{ t("b") }}</p>')
+			).to.deep.equal([]);
+			expect(
+				adjacentFragments(
+					'<label>{{ t("a") }} <span class="opt-hint">{{ t("b") }}</span></label>'
+				)
+			).to.deep.equal([]);
+			expect(adjacentFragments('<p>{{ t("a") }}<br />{{ t("b") }}</p>')).to.deep.equal([]);
+			// The script block is not a template.
+			expect(
+				adjacentFragments(
+					'<template><p>{{ t("a") }}</p></template>\n<script>const x = `{{ t("b") }} <i/> {{ t("c") }}`</script>'
+				)
+			).to.deep.equal([]);
 		});
 
 		it("collects a single-quoted key as a call site, not an unreferenced one", () => {

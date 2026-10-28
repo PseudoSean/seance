@@ -1,8 +1,13 @@
 <template>
 	<span class="content">
-		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
-		}}<bdi> <Username :user="{nick: message.new_nick, mode: message.from.mode}" /> </bdi
-		>{{ parts[2] }}
+		<I18nFrame :text="frame"
+			><template v-slot:nick
+				><bdi><Username :user="message.from" /></bdi></template
+			><template v-slot:newNick
+				><bdi
+					><Username
+						:user="{nick: message.new_nick, mode: message.from.mode}" /></bdi></template
+		></I18nFrame>
 	</span>
 </template>
 
@@ -11,12 +16,14 @@ import {computed, defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments, KEEP} from "../../js/i18n/core";
+import {KEEP} from "../../js/i18n/core";
+import I18nFrame from "../I18nFrame.vue";
 
 export default defineComponent({
 	name: "MessageTypeNick",
 	components: {
 		Username,
+		I18nFrame,
 	},
 	props: {
 		network: {
@@ -30,12 +37,10 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
-		const parts = computed(() =>
-			frameSegments(t("system.nick", {nick: KEEP, newNick: KEEP}), ["nick", "newNick"])
-		);
+		const frame = computed(() => t("system.nick", {nick: KEEP, newNick: KEEP}));
 
 		return {
-			parts,
+			frame,
 			t,
 		};
 	},

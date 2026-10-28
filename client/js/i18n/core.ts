@@ -383,13 +383,52 @@ if (DEV_I18N) {
 	(globalThis as unknown as Record<string, unknown>).__tDynC = tDynC;
 }
 
-/** Split a translated frame on its {placeholders}, in order: the segments
+/** One piece of a translated frame: literal text, or the named
+ * placeholder an element stands in. */
+export type FramePiece = string | {name: string};
+
+/** Split a translated frame on the named {placeholders} in the order the
+ * TRANSLATION puts them -- "{target} は {nick} にキックされました" is as good a
+ * frame as the English order. A placeholder not in `names` stays text. What
+ * I18nFrame.vue renders, each name through the slot of that name; the
+ * order-agnostic form of frameSegments, for any frame with two or more
+ * elements. */
+export function framePieces(template: string, names: readonly string[]): FramePiece[] {
+	const pieces: FramePiece[] = [];
+	let last = 0;
+
+	for (const match of template.matchAll(/\{(\w+)\}/g)) {
+		if (!names.includes(match[1])) {
+			continue;
+		}
+
+		const at = match.index ?? 0;
+
+		if (at > last) {
+			pieces.push(template.slice(last, at));
+		}
+
+		pieces.push({name: match[1]});
+		last = at + match[0].length;
+	}
+
+	if (last < template.length) {
+		pieces.push(template.slice(last));
+	}
+
+	return pieces;
+}
+
+/** Split a translated frame on ONE {placeholder}: the segments
  * a component renders around the inline elements (the interactive
  * <Username>, a parsed hostmask) — so a translator writes one whole
  * sentence with the verbatim value where it belongs, and the interactive
  * element lands inside it. segments.length === names.length + 1. compile
  * guarantees every placeholder survives translation, so a miss here is a
- * degraded render, never a silent one. */
+ * degraded render, never a silent one. The segments come back in the
+ * order of `names`, which a component renders its elements in -- so with
+ * two or more names a translation that reorders them breaks the line: use
+ * framePieces (I18nFrame.vue) there. */
 export function frameSegments(template: string, names: string[]): string[] {
 	const segments: string[] = [];
 	let rest = template;

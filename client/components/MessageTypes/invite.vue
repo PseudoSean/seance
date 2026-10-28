@@ -1,9 +1,14 @@
 <template>
 	<span class="content">
-		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
-		}}<span v-if="message.invitedYou">{{ parts[2] }}</span
-		><bdi v-else><Username :user="message.target" /></bdi>{{ parts[2]
-		}}<ParsedMessage :network="network" :text="message.channel" />{{ parts[3] }}
+		<I18nFrame :text="frame"
+			><template v-slot:nick
+				><bdi><Username :user="message.from" /></bdi></template
+			><template v-if="!message.invitedYou" v-slot:target
+				><bdi><Username :user="message.target" /></bdi></template
+			><template v-slot:channel
+				><ParsedMessage :network="network" :text="message.channel"
+			/></template>
+		</I18nFrame>
 	</span>
 </template>
 
@@ -13,13 +18,15 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments, KEEP} from "../../js/i18n/core";
+import {KEEP} from "../../js/i18n/core";
+import I18nFrame from "../I18nFrame.vue";
 
 export default defineComponent({
 	name: "MessageTypeInvite",
 	components: {
 		ParsedMessage,
 		Username,
+		I18nFrame,
 	},
 	props: {
 		network: {
@@ -36,20 +43,14 @@ export default defineComponent({
 		// Two whole sentences: the invite aimed at the reader or at someone
 		// else. The target slot is the reader's name in one and the
 		// interactive username element in the other.
-		const parts = computed(() =>
+		const frame = computed(() =>
 			props.message.invitedYou
-				? frameSegments(t("system.inviteYou", {nick: KEEP, channel: KEEP}), [
-						"nick",
-						"channel",
-				  ])
-				: frameSegments(
-						t("system.inviteTarget", {nick: KEEP, target: KEEP, channel: KEEP}),
-						["nick", "target", "channel"]
-				  )
+				? t("system.inviteYou", {nick: KEEP, channel: KEEP})
+				: t("system.inviteTarget", {nick: KEEP, target: KEEP, channel: KEEP})
 		);
 
 		return {
-			parts,
+			frame,
 			t,
 		};
 	},

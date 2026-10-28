@@ -1669,12 +1669,6 @@ msgctxt "help.about"
 msgid "About"
 msgstr "Acerca de"
 
-#. Word between the two version numbers inside the compare links of the help window's past-release list. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.and"
-msgid "and"
-msgstr "y"
-
 #. Description of the # autocompletion trigger in the help window: typing # suggests channel names.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.channel"
@@ -1705,35 +1699,11 @@ msgctxt "help.autocomplete.heading"
 msgid "Autocompletion"
 msgstr "Autocompletación"
 
-#. First part of the autocompletion intro in the help window; keycap symbols (arrow up) follow it. Ends mid-sentence.
+#. Autocompletion intro in the help window, one paragraph. {up} and {down} are the arrow-key keycaps (↑ ↓), {tab} and {enter} the Tab and Enter keycaps, each rendered as a keycap element where its placeholder stands; order them as your language needs.
 #: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introA"
-msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the"
-msgstr "Para completar automáticamente apodos, canales, comandos y emojis, escribe uno de los caracteres a continuación para abrir una lista de sugerencias. Usa la"
-
-#. Word between the two arrow keycaps inside the autocompletion intro in the help window. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introB"
-msgid "and"
-msgstr "y"
-
-#. Continuation of the autocompletion intro in the help window, after the two arrow keycaps; the Tab and Enter keycaps follow it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introC"
-msgid "keys to highlight an item, and insert it by pressing"
-msgstr "teclas para resaltar un elemento, y únsalo insertándolo al presionar"
-
-#. Word between the Tab and Enter keycaps inside the autocompletion intro in the help window. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introD"
-msgid "or"
-msgstr "o"
-
-#. End of the autocompletion intro in the help window, after the Tab and Enter keycaps; the parenthesized phrase offers clicking as the third way.
-#: client/components/Windows/Help.vue
-msgctxt "help.autocomplete.introE"
-msgid "(or by clicking the desired item)."
-msgstr "(o haciendo clic en el elemento deseado)."
+msgctxt "help.autocomplete.intro"
+msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the {up} and {down} keys to highlight an item, and insert it by pressing {tab} or {enter} (or by clicking the desired item)."
+msgstr ""
 
 #. Description of the @ autocompletion trigger in the help window: typing @ suggests user names.
 #: client/components/Windows/Help.vue
@@ -1741,29 +1711,11 @@ msgctxt "help.autocomplete.nick"
 msgid "Nickname"
 msgstr "Apodo"
 
-#. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
+#. Help window sentence shown when the running build is newer than its release. {app} is the app's name (verbatim); {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v.
 #: client/components/Windows/Help.vue
-msgctxt "help.behindDevelop"
-msgid "to see what you are missing"
-msgstr "para ver lo que estás faltando"
-
-#. Word that starts the link in the help window's compare items; the two version numbers being compared follow it inside the same link. Mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.between"
-msgid "between"
-msgstr "entre"
-
-#. End of the help window's past-release sentence, after the link naming the source commit. {version} is the release number the build follows, kept with its v. Keep the comma.
-#: client/components/Windows/Help.vue
-msgctxt "help.builtAfter"
-msgid ", after v{version}"
-msgstr ", después de v{version}"
-
-#. Part of the sentence in the help window shown when the running build is newer than its release; the app's name precedes it and a link naming the source commit follows. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.builtFrom"
-msgid "is built from"
-msgstr "está construido a partir de"
+msgctxt "help.builtFromCommit"
+msgid "{app} is built from {commit}, after v{version}."
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window; the alternative command follows it as a code fragment. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1789,17 +1741,11 @@ msgctxt "help.commands.back"
 msgid "Remove your away status (set with"
 msgstr "Elimina tu estado \"away\" (establecido con"
 
-#. Start of the /ban command description in the help window; a code fragment with the +b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /ban command in the help window. {mode} is the channel mode +b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.banA"
-msgid "Ban ("
-msgstr "Baneo ("
-
-#. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.banB"
-msgid ") a user from the current channel. This can be a nickname or a hostmask."
-msgstr ") para banear a un usuario del canal actual. Esto puede ser un apodo o una hostmask."
+msgctxt "help.commands.ban"
+msgid "Ban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
+msgstr ""
 
 #. Description of the /banlist command in the help window.
 #: client/components/Windows/Help.vue
@@ -1819,37 +1765,19 @@ msgctxt "help.commands.collapse"
 msgid "Collapse all previews in the current channel (opposite of"
 msgstr "Colapsa todas las previsualizaciones del canal actual (opuesto a"
 
-#. Start of the /connect command description in the help window; a code fragment with the port parameter follows it. Ends mid-sentence.
+#. Description of the /connect command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.connectA"
-msgid "Connect to a new IRC network. If"
-msgstr "Conectar a una nueva red IRC. Si"
+msgctxt "help.commands.connect"
+msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
+msgstr ""
 
-#. Middle of the /connect command description in the help window, after the port parameter; a code fragment with the plus sign follows it. Ends mid-sentence.
+#. Description of the /ctcp command in the help window. {ctcp} is the abbreviation CTCP (never translated, an element with its expansion as tooltip); {link} is a link whose text is help.commands.ctcpLink ('the dedicated Wikipedia article') — write this frame so that phrase fits where {link} stands.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.connectB"
-msgid "starts with a"
-msgstr "comienza con un"
+msgctxt "help.commands.ctcp"
+msgid "Send a {ctcp} request. Read more about this on {link}."
+msgstr ""
 
-#. End of the /connect command description in the help window, after the plus-sign code fragment; TLS stays verbatim.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.connectC"
-msgid "sign, the connection will be made secure using TLS."
-msgstr "signo, la conexión se realizará segura mediante TLS."
-
-#. Start of the /ctcp command description in the help window; the CTCP abbreviation follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.ctcpA"
-msgid "Send a"
-msgstr "Enviar un"
-
-#. Continuation of the /ctcp command description in the help window, after the CTCP abbreviation; the link text follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.ctcpB"
-msgid "request. Read more about this on"
-msgstr "pedido. Leer más sobre esto en"
-
-#. Text of the link at the end of the /ctcp command description in the help window; it opens the external Wikipedia article. Mid-sentence.
+#. Text of the link at the end of the /ctcp command description in the help window (help.commands.ctcp, where it stands for {link}); it opens the Wikipedia article on CTCP. Use the form that fits that frame in your language.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
@@ -1861,29 +1789,17 @@ msgctxt "help.commands.ctcpTitle"
 msgid "Client-to-client protocol"
 msgstr "Protocolo cliente-a-cliente"
 
-#. Start of the /deop command description in the help window; a code fragment with the -o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /deop command in the help window. {mode} is the channel mode -o, rendered as a code element; 'op' is IRC channel-operator status (keep the catalog's usual term).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.deopA"
-msgid "Remove op ("
-msgstr "Quitar op ("
+msgctxt "help.commands.deop"
+msgid "Remove op ({mode}) from one or several users in the current channel."
+msgstr ""
 
-#. Continuation of the /deop command description in the help window, after the -o code fragment. Starts with the closing parenthesis.
+#. Description of the /devoice command in the help window. {mode} is the channel mode -v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.deopB"
-msgid ") from one or several users in the current channel."
-msgstr ") de uno o varios usuarios en el canal actual."
-
-#. Start of the /devoice command description in the help window; a code fragment with the -v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.devoiceA"
-msgid "Remove voice ("
-msgstr "Quitar voz ("
-
-#. Continuation of the /devoice command description in the help window, after the -v code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.devoiceB"
-msgid ") from one or several users in the current channel."
-msgstr ") de uno o varios usuarios en el canal actual."
+msgctxt "help.commands.devoice"
+msgid "Remove voice ({mode}) from one or several users in the current channel."
+msgstr ""
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
@@ -1915,17 +1831,11 @@ msgctxt "help.commands.ignorelist"
 msgid "Load the list of ignored users for the current network."
 msgstr "Cargar la lista de usuarios ignorados para la red actual."
 
-#. Start of the /invite command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
+#. Description of the /invite command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.inviteA"
-msgid "Invite a user to the specified channel. If"
-msgstr "Invitar a un usuario al canal especificado. Si"
-
-#. Continuation of the /invite command description in the help window, after the channel-parameter code fragment.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.inviteB"
-msgid "is omitted, user will be invited to the current channel."
-msgstr "se omite, el usuario será invitado al canal actual."
+msgctxt "help.commands.invite"
+msgid "Invite a user to the specified channel. If {channel} is omitted, user will be invited to the current channel."
+msgstr ""
 
 #. Description of the /join command in the help window.
 #: client/components/Windows/Help.vue
@@ -1939,23 +1849,11 @@ msgctxt "help.commands.kick"
 msgid "Kick a user from the current channel."
 msgstr "Expulsar a un usuario del canal actual."
 
-#. Start of the /kickban command description in the help window; a code fragment with the +b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /kickban command in the help window. {mode} is the channel mode +b and {ban} the command /ban, each rendered as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.kickbanA"
-msgid "Kick and ban ("
-msgstr "Kickear y banear a un usuario del canal actual."
-
-#. Middle of the /kickban command description in the help window, after the +b code fragment; a code fragment with the /ban command follows it. Starts with the closing parenthesis. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.kickbanB"
-msgid ") a user from the current channel. Unlike"
-msgstr "Eliminar a un usuario del canal actual. A diferencia de"
-
-#. End of the /kickban command description in the help window, after the /ban code fragment. Starts with a comma.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.kickbanC"
-msgid ", only nicknames (and not host masks) can be used."
-msgstr ", solo se pueden usar nicknames (y no máscaras de host)."
+msgctxt "help.commands.kickban"
+msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
+msgstr ""
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1999,29 +1897,18 @@ msgctxt "help.commands.notice"
 msgid "Sends a notice message to the specified channel."
 msgstr "Enviar un mensaje de notificación al canal especificado."
 
-#. Start of the /op command description in the help window; a code fragment with the +o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
+#. Description of the /op command in the help window. {mode} is the channel mode +o, rendered as a code element; 'op' is IRC channel-operator status (keep the catalog's usual term).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.opA"
-msgid "Give op ("
-msgstr "Dar op ("
+msgctxt "help.commands.op"
+msgid "Give op ({mode}) to one or several users in the current channel."
+msgstr ""
 
-#. Continuation of the /op command description in the help window, after the +o code fragment. Starts with the closing parenthesis.
+#. Description of the /part command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.opB"
-msgid ") to one or several users in the current channel."
-msgstr ") a uno o varios usuarios en el canal actual."
-
-#. Start of the /part command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
+#, fuzzy
 msgctxt "help.commands.part"
-msgid "Close the specified channel or private message window, or the current channel if"
+msgid "Close the specified channel or private message window, or the current channel if {channel} is omitted."
 msgstr "Cerrar la ventana del canal o mensaje privado especificada, o el canal actual si"
-
-#. End of the /part command description in the help window, after the channel-parameter code fragment.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.partB"
-msgid "is omitted."
-msgstr "está omitido."
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue
@@ -2059,29 +1946,17 @@ msgctxt "help.commands.slap"
 msgid "Slap someone in the current channel with a trout!"
 msgstr "Azotar a alguien en el canal actual con un trucha!"
 
-#. Start of the /topic command description in the help window; a code fragment with the newtopic parameter follows it. Ends mid-sentence.
+#. Description of the /topic command in the help window. {newtopic} is the command's parameter (the word 'newtopic' as a code element).
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.topicA"
-msgid "Get the topic in the current channel. If"
-msgstr "Obtiene el tema del canal actual. Si"
+msgctxt "help.commands.topic"
+msgid "Get the topic in the current channel. If {newtopic} is specified, sets the topic in the current channel."
+msgstr ""
 
-#. End of the /topic command description in the help window, after the newtopic-parameter code fragment.
+#. Description of the /unban command in the help window. {mode} is the channel mode -b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.topicB"
-msgid "is specified, sets the topic in the current channel."
-msgstr "está especificado, establece el tema del canal actual."
-
-#. Start of the /unban command description in the help window; a code fragment with the -b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.unbanA"
-msgid "Unban ("
-msgstr "Desbana ("
-
-#. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.unbanB"
-msgid ") a user from the current channel. This can be a nickname or a hostmask."
-msgstr ") a un usuario del canal actual. Esto puede ser un nickname o un hostmask."
+msgctxt "help.commands.unban"
+msgid "Unban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
+msgstr ""
 
 #. Description of the /unignore command in the help window.
 #: client/components/Windows/Help.vue
@@ -2089,47 +1964,23 @@ msgctxt "help.commands.unignore"
 msgid "Unblock messages from the specified user on the current network. This can be a nickname or a hostmask."
 msgstr "Desbloquea mensajes de el usuario especificado en la red actual. Esto puede ser un nickname o un hostmask."
 
-#. Start of the /unmute command description in the help window; a code fragment with the /mute command follows it. Ends mid-sentence.
+#. Description of the /unmute command in the help window. {mute} is the command /mute as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.unmuteA"
-msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See"
-msgstr "Desmuda el canal (s) dado o el canal actual si no se proporciona canal. Consulte"
+msgctxt "help.commands.unmute"
+msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See {mute} for more information."
+msgstr ""
 
-#. End of the /unmute command description in the help window, after the /mute code fragment.
+#. Description of the /ver command in the help window. {ctcp} is the abbreviation CTCP (never translated) and {command} the literal command /ctcp nick version as a code element; VERSION stays verbatim.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.unmuteB"
-msgid "for more information."
-msgstr "para más información."
+msgctxt "help.commands.ver"
+msgid "Ask a user which client they run: a {ctcp} VERSION request, the same as {command}. The answer shows where you asked."
+msgstr ""
 
-#. Start of the /ver command description in the help window; the CTCP abbreviation follows it. Ends mid-sentence.
+#. Description of the /voice command in the help window. {mode} is the channel mode +v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
-msgctxt "help.commands.verA"
-msgid "Ask a user which client they run: a"
-msgstr "Pide al usuario qué cliente utiliza: a"
-
-#. Middle of the /ver command description in the help window: follows the CTCP abbreviation, and the literal command '/ctcp nick version' follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.verB"
-msgid "VERSION request, the same as"
-msgstr "solicitud de versión, la misma que"
-
-#. Last sentence of the /ver command description in the help window; a whole sentence on its own.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.verC"
-msgid "The answer shows where you asked."
-msgstr "La respuesta muestra dónde lo preguntaste."
-
-#. Start of the /voice command description in the help window; a code fragment with the +v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.voiceA"
-msgid "Give voice ("
-msgstr "Da voz ("
-
-#. Continuation of the /voice command description in the help window, after the +v code fragment. Starts with the closing parenthesis.
-#: client/components/Windows/Help.vue
-msgctxt "help.commands.voiceB"
-msgid ") to one or several users in the current channel."
-msgstr ") a uno o varios usuarios en el canal actual."
+msgctxt "help.commands.voice"
+msgid "Give voice ({mode}) to one or several users in the current channel."
+msgstr ""
 
 #. Help page, description of the /who command. {mask} is an example wildcard mask shown as code (nick!user@host); keep it.
 #: client/components/Windows/Help.vue
@@ -2143,17 +1994,23 @@ msgctxt "help.commands.whois"
 msgid "Retrieve information about the given user on the current network."
 msgstr "Recupera información sobre el usuario dado en la red actual."
 
-#. Word inside the link of the help window's past-release sentence; the linked text names the source code commit the running build was made from, and the commit hash follows it. Mid-sentence.
+#. Text of the link naming the source commit a build was made from, in the help and changelog windows. {hash} is the commit hash (verbatim, a code element).
 #: client/components/Windows/Help.vue
-msgctxt "help.commitLink"
-msgid "commit"
-msgstr "el commit"
+msgctxt "help.commitHash"
+msgid "commit {hash}"
+msgstr ""
 
-#. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
+#. Second item of the help window's past-release list (comparing the running build with the development branch). {range} is a link whose text is help.range ('between 1a2b3c4 and develop').
 #: client/components/Windows/Help.vue
-msgctxt "help.compare"
-msgid "Compare"
-msgstr "Comparar"
+msgctxt "help.compareBehind"
+msgid "Compare {range} to see what you are missing"
+msgstr ""
+
+#. First item of the help window's past-release list. {range} is a link whose text is help.range ('between v5.2.0 and 1a2b3c4').
+#: client/components/Windows/Help.vue
+msgctxt "help.compareSince"
+msgid "Compare {range} to see what changed since the release"
+msgstr ""
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -2161,12 +2018,6 @@ msgstr "Comparar"
 msgctxt "help.documentation"
 msgid "Documentation"
 msgstr "Documentación"
-
-#. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.formatting.as"
-msgid "Mark all text typed after this shortcut as"
-msgstr "Marcar todo el texto tipado después de este atajo como"
 
 #. The example word shown in bold lettering in the help window's Ctrl+B formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2180,35 +2031,23 @@ msgctxt "help.formatting.colorHere"
 msgid "here"
 msgstr "aquí"
 
-#. First part of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
+#. First paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP1a"
-msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range"
-msgstr "Marcar cualquier texto tipado después de este atajo para que sea colorido. Después de presionar este atajo, ingresa un entero en el rango"
+msgctxt "help.formatting.colorP1"
+msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range {range} to select the desired color, or use the autocompletion menu to choose a color name (see below)."
+msgstr ""
 
-#. Continuation of the Ctrl+K description in the help window's formatting section, after the code fragment with the numeric range.
+#. Second paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP1b"
-msgid "to select the desired color, or use the autocompletion menu to choose a color name (see below)."
-msgstr "para seleccionar el color deseado, o use el menú de autocompleción para elegir un nombre de color (ver a continuación)."
+msgctxt "help.formatting.colorP2"
+msgid "Background color can be specified by putting a comma and another integer in the range {range} after the foreground color number (autocompletion works too)."
+msgstr ""
 
-#. Start of the second paragraph of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
+#. Last paragraph of the Ctrl+K description in the help window. {link} is a link to an external IRC color reference whose text is help.formatting.colorHere ('here'); write the frame so that word fits it.
 #: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP2a"
-msgid "Background color can be specified by putting a comma and another integer in the range"
-msgstr "El color de fondo puede especificarse poniendo una coma y otro entero en el rango"
-
-#. Continuation of the second paragraph of the Ctrl+K description in the help window's formatting section, after the code fragment with the numeric range.
-#: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorP2b"
-msgid "after the foreground color number (autocompletion works too)."
-msgstr "después del número de color del frente (también funciona la autocompleción)."
-
-#. Start of the last paragraph of the Ctrl+K description in the help window's formatting section; the link text follows it. Ends mid-sentence.
-#: client/components/Windows/Help.vue
-msgctxt "help.formatting.colorRef"
-msgid "A color reference can be found"
-msgstr "Puede encontrarse una referencia de color"
+msgctxt "help.formatting.colorReference"
+msgid "A color reference can be found {link}."
+msgstr ""
 
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
 #: client/components/Windows/Help.vue
@@ -2221,6 +2060,12 @@ msgstr "Atajos de formato"
 msgctxt "help.formatting.italic"
 msgid "italics"
 msgstr "cursiva"
+
+#. Description of a text-formatting shortcut in the help window. {style} is the style's name (help.formatting.bold, italic, underline, strikethrough or monospace: 'bold', 'italics', 'underlined', 'struck through', 'monospaced'), shown in that style where the placeholder stands; write the frame so those words fit it.
+#: client/components/Windows/Help.vue
+msgctxt "help.formatting.markAs"
+msgid "Mark all text typed after this shortcut as {style}."
+msgstr ""
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2294,6 +2139,12 @@ msgstr "Deslizar con dos dedos hacia la derecha"
 msgctxt "help.privacy"
 msgid "Privacy policy"
 msgstr "Política de privacidad"
+
+#. Text of a link in the help window's past-release list that compares two versions on the source host. {from} and {to} are version names or commit hashes (verbatim, code elements). It fills {range} in help.compareSince and help.compareBehind.
+#: client/components/Windows/Help.vue
+msgctxt "help.range"
+msgid "between {from} and {to}"
+msgstr ""
 
 #. Link beside the version number in the help window's title line; opens the changelog window. Mid-sentence between parentheses.
 #: client/components/Windows/Help.vue
@@ -2414,12 +2265,6 @@ msgstr "Alternar el panel lateral."
 msgctxt "help.shortcuts.toggleUserlist"
 msgid "Toggle channel user list."
 msgstr "Alternar la lista de usuarios del canal."
-
-#. Purpose clause ending the first compare item of the help window's past-release list (comparing the release with the running build). Starts lowercase because it follows the link.
-#: client/components/Windows/Help.vue
-msgctxt "help.sinceRelease"
-msgid "to see what changed since the release"
-msgstr "Para ver lo que cambió desde la versión anterior"
 
 #. Title of the help window: its heading, its dialog aria-label, and the accessible name of the whole page.
 #: client/components/Windows/Help.vue
@@ -3854,17 +3699,11 @@ msgctxt "msg.topicIs"
 msgid "The topic is:"
 msgstr "El tema es:"
 
-#. System message naming who set the topic (333). Renders before the setter's name (direction-isolated in <bdi>); the time follows through the next fragment.
+#. System line naming who set the channel topic and when (numeric 333). {nick} is the setter's nick, VERBATIM user content, rendered as the interactive username element where the placeholder stands; {time} is the pre-formatted date and time. Order them as your language needs.
 #: client/components/MessageTypes/topic_set_by.vue
-msgctxt "msg.topicSetBy"
-msgid "Topic set by"
-msgstr "Tema establecido por"
-
-#. Topic-set-by system message, after the setter's name. {time} is the pre-formatted timestamp of when the topic was set; keep it in the position the language's preposition wants.
-#: client/components/MessageTypes/topic_set_by.vue
-msgctxt "msg.topicSetOn"
-msgid "on {time}"
-msgstr "en {time}"
+msgctxt "msg.topicSet"
+msgid "Topic set by {nick} on {time}"
+msgstr ""
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -11112,17 +10951,11 @@ msgctxt "search.results.scopeNote"
 msgid "Only messages loaded in this session are searched — older history is not searched."
 msgstr "Solo los mensajes cargados en esta sesión se buscan — el historial anterior no se busca."
 
-#. Second fragment of the search-results window header, rendered after the styled channel-name element; the search term itself follows the header. The element (the channel's or query window's name — user content, never translated) sits between this fragment and the one before it. Word order inside each fragment is free; the fragments cannot cross the element. Ends mid-sentence.
-#: client/components/Windows/SearchResults.vue:21
-msgctxt "search.results.searchingInAfter"
-msgid "for"
-msgstr "para"
-
-#. First fragment of the search-results window header, rendered before the styled channel-name element. That element (the channel's or query window's name — user content, never translated, like a <Username>) sits between this fragment and the one after it. Word order inside each fragment is free; the fragments cannot cross the element.
-#: client/components/Windows/SearchResults.vue:19
-msgctxt "search.results.searchingInBefore"
-msgid "Searching in"
-msgstr "Búsqueda en"
+#. Header of the search-results window. {channel} is the channel or conversation name (VERBATIM, a styled element); the search term itself is shown right after this text, in its own element, so the phrase ends where the term begins.
+#: client/components/Windows/SearchResults.vue
+msgctxt "search.results.searchingIn"
+msgid "Searching in {channel} for"
+msgstr ""
 
 #. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
 #: client/components/Windows/SearchResults.vue
@@ -11264,23 +11097,11 @@ msgctxt "settings.aliases.headRuns"
 msgid "Runs"
 msgstr "Ejecuta"
 
-#. Joins the last two entries of the alias-body variable list ($2- or $*). Single word; the spaces around it come from the template.
+#. Intro paragraph of Settings → Aliases. {example} is an example alias invocation such as /wave (a code element); {first}, {rest} and {all} are the argument tokens $1, $2- and $*, each a code element.
 #: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.introOr"
-msgid "or"
-msgstr "o"
-
-#. Intro fragment (Settings -> Aliases): leads into the example alias invocation that follows in code style; the fragment ends where the example begins.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.introOwn"
-msgid "An alias is a slash command of your own. Typing"
-msgstr "Un alias es un comando slash propio. Escribir"
-
-#. Intro fragment between the example invocation and the variable list: what defining an alias does. Sits in front of the $1 token.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.introRuns"
-msgid "runs what you define here — one command per line, with the arguments filled in where the body says"
-msgstr "corre lo que defines aquí — un comando por línea, con los argumentos completados donde el cuerpo lo indica"
+msgctxt "settings.aliases.intro"
+msgid "An alias is a slash command of your own. Typing {example} runs what you define here — one command per line, with the arguments filled in where the body says {first}, {rest} or {all}."
+msgstr ""
 
 #. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
 #: client/components/Settings/Aliases.vue
@@ -11294,23 +11115,11 @@ msgctxt "settings.aliases.namePlaceholder"
 msgid "name"
 msgstr "nombre"
 
-#. Nested-alias fragment between the two example commands: the first command can be rewritten as the second.
+#. Paragraph of Settings → Aliases on nested aliases. {command} is the example /join and {expansion} the example /join #lobby $*, each a code element: an alias named join can expand to the built-in /join without calling itself again.
 #: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.nestedBecomes"
-msgid "can become"
-msgstr "puede convertirse en"
-
-#. Nested-alias fragment: aliases may call other aliases and shadow built-in commands; the two example commands follow in code style.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.nestedMain"
-msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it —"
-msgstr "Una línea de cuerpo puede invocar otro alias, y un alias nombrado después de un comando integrado lo reemplaza —"
-
-#. Nested-alias fragment: closes the example — shadowing a built-in does not recurse for ever.
-#: client/components/Settings/Aliases.vue
-msgctxt "settings.aliases.nestedTail"
-msgid "without looping."
-msgstr "sin bucles."
+msgctxt "settings.aliases.nested"
+msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
+msgstr ""
 
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
 #: client/components/Settings/Aliases.vue
@@ -11898,17 +11707,11 @@ msgctxt "settings.appearance.trustedHeading"
 msgid "Always shown"
 msgstr "Siempre mostrado"
 
-#. First part of the help line under the always-shown list in Settings > Appearance; the second part and the words 'Always show' (the name of the button on any media preview) follow it. Ends mid-sentence.
+#. Help line under the always-shown list in Settings > Appearance. {button} is the name of the preview button (settings.appearance.trustedButtonName, 'Always show'), rendered emphasized where the placeholder stands.
 #: client/components/Settings/Appearance.vue
-msgctxt "settings.appearance.trustedHelpA"
-msgid "Media in these scopes loads without asking. Add one with"
-msgstr "Los medios en estos alcances se cargan sin preguntar. Agregar uno con"
-
-#. Last part of the help line under the always-shown list in Settings > Appearance, after the words 'Always show' marking the preview button's name. Ends the sentence.
-#: client/components/Settings/Appearance.vue
-msgctxt "settings.appearance.trustedHelpB"
-msgid "on any preview."
-msgstr "en cualquier antebrazo."
+msgctxt "settings.appearance.trustedHelp"
+msgid "Media in these scopes loads without asking. Add one with {button} on any preview."
+msgstr ""
 
 #. Subheading in the always-shown media list of Settings > Appearance above the user account entries.
 #: client/components/Settings/Appearance.vue
@@ -13885,17 +13688,19 @@ msgctxt "upload.cancelled"
 msgid "Upload cancelled"
 msgstr "Subida cancelada"
 
+#. Confirmation button of the upload dialog when several files are queued (so in practice the count is 2 or more); clicking sends them all to the chat server. {count} is the number of files.
+#: client/components/UploadPreview.vue
+msgctxt "upload.confirmCount"
+msgid "Upload {count} file"
+msgid_plural "Upload {count} files"
+msgstr[0] ""
+msgstr[1] ""
+
 #. Intro line of the upload confirmation dialog; asks the user to check the files and warns that every uploaded file is reachable through its link.
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmHint"
 msgid "Check that this is what you meant to share, then upload. Anyone who can open the link will be able to see it."
 msgstr "Comprueba que es lo que quieres compartir, luego sube. Quien pueda abrir el enlace podrá verlo."
-
-#. Confirmation button of the upload dialog when several files are queued; clicking sends them all to the chat server.
-#: client/components/UploadPreview.vue
-msgctxt "upload.confirmMany"
-msgid "Upload {count} files"
-msgstr "Subir {count} archivos"
 
 #. Confirmation button of the upload confirmation dialog when one file is queued; clicking sends it to the chat server.
 #: client/components/UploadPreview.vue
@@ -14321,35 +14126,17 @@ msgctxt "windows.changelog.back"
 msgid "« Help"
 msgstr "« Ayuda"
 
-#. Word inside the link of the changelog's past-release sentence: the linked text names the source code commit the running build was made from; the commit hash follows it. Mid-sentence.
+#. Changelog window paragraph. {readNotes} is a link whose text is windows.changelog.readNotesLink ('Read the notes for v5.2.0') and {allReleases} a link whose text is windows.changelog.allReleasesLink ('see all releases').
 #: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.commitLink"
-msgid "commit"
-msgstr "el commit"
+msgctxt "windows.changelog.notBundledLine"
+msgid "Release notes are not bundled with the build. {readNotes} or {allReleases}."
+msgstr ""
 
-#. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
+#. Changelog window sentence shown when the running build is newer than its release. {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v; {since} is a link whose text is windows.changelog.sinceReleaseLink ('what changed since the release').
 #: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.notBundled"
-msgid "Release notes are not bundled with the build."
-msgstr "Las notas de versión no están incluidas en la construcción."
-
-#. Word joining the two links of the changelog window's last paragraph (the release notes and the list of all releases). Mid-sentence.
-#: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.or"
-msgid "or"
-msgstr "o"
-
-#. Start of the sentence in the changelog window shown when the running build is newer than its release; what follows names the source commit and the changes since the release. Ends mid-sentence.
-#: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.pastRelease"
-msgid "This build is"
-msgstr "Esta construcción es"
-
-#. Middle of the changelog's past-release sentence, after the link naming the source commit; introduces the link that lists what changed since the release. {version} is the release number the build follows. Keep the comma, colon and the v.
-#: client/components/Windows/Changelog.vue
-msgctxt "windows.changelog.pastReleaseAfter"
-msgid ", after v{version}:"
-msgstr ", después de v{version}:"
+msgctxt "windows.changelog.pastReleaseLine"
+msgid "This build is {commit}, after v{version}: {since}."
+msgstr ""
 
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
 #: client/components/Windows/Changelog.vue

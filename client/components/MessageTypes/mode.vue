@@ -1,7 +1,10 @@
 <template>
 	<span class="content">
-		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
-		}}<ParsedMessage :message="message" />{{ parts[2] }}
+		<I18nFrame :text="frame"
+			><template v-slot:nick
+				><bdi><Username :user="message.from" /></bdi></template
+			><template v-slot:modes><ParsedMessage :message="message" /></template
+		></I18nFrame>
 	</span>
 </template>
 
@@ -11,13 +14,15 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments, KEEP} from "../../js/i18n/core";
+import {KEEP} from "../../js/i18n/core";
+import I18nFrame from "../I18nFrame.vue";
 
 export default defineComponent({
 	name: "MessageTypeMode",
 	components: {
 		ParsedMessage,
 		Username,
+		I18nFrame,
 	},
 	props: {
 		network: {
@@ -31,12 +36,10 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
-		const parts = computed(() =>
-			frameSegments(t("system.mode", {nick: KEEP, modes: KEEP}), ["nick", "modes"])
-		);
+		const frame = computed(() => t("system.mode", {nick: KEEP, modes: KEEP}));
 
 		return {
-			parts,
+			frame,
 			t,
 		};
 	},
