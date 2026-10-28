@@ -140,8 +140,10 @@
 					:data-status="view.status"
 					:data-runs="runsState(view.ref)"
 				>
-					<span :id="'translate-model-name-' + index" class="translate-model-name"
-						>{{ modelLabel(view.ref) }}
+					<span class="translate-model-name"
+						><span :id="'translate-model-name-' + index">{{
+							modelLabel(view.ref)
+						}}</span>
 						<!-- No GPU model is in use on a device that can run none:
 						     the selection then only keys the route table. -->
 						<span

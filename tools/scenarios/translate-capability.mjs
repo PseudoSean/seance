@@ -271,6 +271,21 @@ export default async function run(page) {
 		}
 	};
 
+	/** A finger on `selector` for `hold` ms: a tap, or a long press. */
+	const finger = async (selector, hold) => {
+		const r = await page.evaluate(
+			`(() => { const b = document.querySelector(${JSON.stringify(
+				selector
+			)}).getBoundingClientRect(); return {x: b.x + Math.min(b.width / 2, 40), y: b.y + b.height / 2}; })()`
+		);
+		const points = [{x: r.x, y: r.y, radiusX: 12, radiusY: 12, force: 1}];
+
+		await page.send("Input.dispatchTouchEvent", {type: "touchStart", touchPoints: points});
+		await page.sleep(hold);
+		await page.send("Input.dispatchTouchEvent", {type: "touchEnd", touchPoints: []});
+		await page.sleep(250);
+	};
+
 	const openPicker = async () => {
 		await page.waitFor(`!!document.querySelector("#translate-once:not([disabled])")`, {
 			label: "composer translate button enabled",
@@ -375,7 +390,10 @@ export default async function run(page) {
 				const row = document.querySelector(${JSON.stringify(ROW(id))});
 				const button = row.querySelector(".translate-model-download");
 				const described = button && button.getAttribute("aria-describedby");
+				const named = button && button.getAttribute("aria-labelledby");
 				return {
+					name: named ? named.split(" ").map((id) => (document.getElementById(id) || {}).textContent?.replace(/\\s+/g, " ").trim()).join(" ") : "",
+					modelName: row.querySelector(".translate-model-name > span:first-child").textContent.replace(/\\s+/g, " ").trim(),
 					runs: row.dataset.runs,
 					verdict: row.querySelector(".translate-model-runs").textContent.trim(),
 					why: (row.querySelector(".translate-model-why") || {}).textContent?.trim() || "",
@@ -399,6 +417,10 @@ export default async function run(page) {
 					runs ? "enabled" : "disabled, described by the reason"
 				}`,
 				state.disabled === !runs && (runs || state.describedBy === state.why)
+			);
+			page.check(
+				`${name}: ${id}'s Download is named for its model (${state.name})`,
+				state.name === `${EN["translate.model.download"]} ${state.modelName}`
 			);
 		}
 
@@ -430,11 +452,27 @@ export default async function run(page) {
 		await page.screenshot(`${name}-settings`);
 		await closeSettings();
 
-		// 2. The composer's dialog, on the cleanup pass and on German.
+		// 2. The composer's dialog: what it opens on, the cleanup pass, German.
 		await openPicker();
 
-		const same = await pickerState();
 		const llm = device.runs[SMALL];
+		const opened = await pickerState();
+		const openedOn = await page.evaluate(
+			`document.querySelector('${PICKER} select[name="translateInto"]').value`
+		);
+
+		// No earlier pick: the cleanup pass where the GPU model runs, else
+		// the first language this device serves -- never a disabled dialog.
+		page.check(
+			`${name}: the dialog opens on ${
+				llm ? "the cleanup pass" : "a pair that runs"
+			} (${openedOn}, ${opened.disabled ? "disabled" : "enabled"})`,
+			!opened.disabled && (llm ? openedOn === "en" : openedOn !== "en")
+		);
+		await page.screenshot(`${name}-composer-opened`, {selector: PICKER, pad: 8});
+		await pickTarget("en");
+
+		const same = await pickerState();
 
 		page.check(`${name}: the dialog's hint is a polite live region`, same.live === "polite");
 
@@ -470,6 +508,54 @@ export default async function run(page) {
 		await openPanel();
 
 		const panel = await panelState();
+		const focus = await page.evaluate(`(() => {
+			const a = document.activeElement;
+			return a ? {role: a.getAttribute("role"), checked: a.getAttribute("aria-checked"), text: a.textContent.trim()} : null;
+		})()`);
+
+		page.check(
+			`${name}: the panel opens on the reading switch's checked choice (${JSON.stringify(
+				focus
+			)})`,
+			!!focus && focus.role === "radio" && focus.checked === "true"
+		);
+
+		if (MOBILE) {
+			// The sheet is modal: Tab and Shift+Tab stay inside it.
+			const outside = [];
+
+			for (let i = 0; i < 30; i++) {
+				const shift = i >= 20;
+
+				await page.send("Input.dispatchKeyEvent", {
+					type: "rawKeyDown",
+					key: "Tab",
+					code: "Tab",
+					windowsVirtualKeyCode: 9,
+					modifiers: shift ? 8 : 0,
+				});
+				await page.send("Input.dispatchKeyEvent", {
+					type: "keyUp",
+					key: "Tab",
+					code: "Tab",
+					windowsVirtualKeyCode: 9,
+					modifiers: shift ? 8 : 0,
+				});
+
+				const where = await page.evaluate(
+					`(() => { const a = document.activeElement; return a && a.closest(".translation-panel") ? "" : (a ? a.tagName + "." + a.className : "none"); })()`
+				);
+
+				if (where) {
+					outside.push(where);
+				}
+			}
+
+			page.check(
+				`${name}: Tab stays inside the sheet (${outside.join(", ") || "always inside"})`,
+				outside.length === 0
+			);
+		}
 
 		page.check(
 			`${name}: no notice in the panel (something runs)`,
@@ -482,7 +568,12 @@ export default async function run(page) {
 			llm
 				? !panel.enDisabled && panel.note === ""
 				: panel.enDisabled &&
-						panel.note.includes(EN["translate.picker.sameLanguageNeedsGpu"]) &&
+						panel.note.includes(
+							EN["translate.panel.ownLanguageNeedsGpu"].replace(
+								"{language}",
+								"English"
+							)
+						) &&
 						panel.note.includes(device.why(SMALL)) &&
 						panel.noteDescribes
 		);
@@ -529,6 +620,17 @@ export default async function run(page) {
 			await closeSettings();
 			await openPicker();
 
+			// The GPU model off: the dialog no longer opens on the cleanup pass.
+			const openedOff = await page.evaluate(
+				`document.querySelector('${PICKER} select[name="translateInto"]').value`
+			);
+
+			page.check(
+				`desktop, GPU off: the dialog opens on a pair that runs (${openedOff})`,
+				openedOff !== "en" && !(await pickerState()).disabled
+			);
+			await pickTarget("en");
+
 			const polish = await pickerState();
 
 			page.check(
@@ -557,26 +659,36 @@ export default async function run(page) {
 
 			page.check(
 				`desktop, both off: the header button is dimmed and says so (${header.label})`,
-				header.unavailable &&
-					header.label ===
-						(MOBILE
-							? EN["translate.header.settings"]
-							: EN["translate.unavailable.lead"])
+				header.unavailable && header.label === EN["translate.unavailable.lead"]
 			);
+
+			// Under --mobile the toolbar is a finger's: a long press opens it
+			// and marks the last pointer a touch (helpers/inputModality.ts).
+			if (MOBILE) {
+				await page.evaluate(`(() => {
+					const msg = [...document.querySelectorAll("#chat .msg:not(.self)")].reverse().find((m) => m.textContent.includes("Hallo zusammen"));
+					msg.setAttribute("data-cap-target", "1");
+				})()`);
+				await finger("[data-cap-target] .content", 700);
+			}
 
 			const toolbar = await page.evaluate(`(() => {
 				const msg = [...document.querySelectorAll("#chat .msg:not(.self)")].reverse().find((m) => m.textContent.includes("Hallo zusammen"));
 				const b = msg && msg.querySelector(".msg-action-translate");
 				const described = b && b.getAttribute("aria-describedby");
-				return b ? {disabled: b.disabled, title: b.title, described: described ? (document.getElementById(described) || {}).textContent?.trim() : ""} : null;
+				return b ? {disabled: b.disabled, ariaDisabled: b.getAttribute("aria-disabled"), title: b.title, described: described ? (document.getElementById(described) || {}).textContent?.trim() : ""} : null;
 			})()`);
 
+			// Under a finger it stays tappable (aria-disabled) and the tap opens
+			// the panel, since no tooltip shows there; under a mouse, disabled.
 			page.check(
-				`desktop, both off: the toolbar's Translate is disabled, described by the reason (${JSON.stringify(
-					toolbar
-				)})`,
+				`desktop, both off: the toolbar's Translate is ${
+					MOBILE ? "aria-disabled" : "disabled"
+				}, described by the reason (${JSON.stringify(toolbar)})`,
 				!!toolbar &&
-					toolbar.disabled &&
+					(MOBILE
+						? !toolbar.disabled && toolbar.ariaDisabled === "true"
+						: toolbar.disabled) &&
 					toolbar.described === EN["translate.why.allOff"] &&
 					toolbar.title === EN["translate.why.allOff"]
 			);
@@ -587,6 +699,21 @@ export default async function run(page) {
 					selector: "#chat .msg:not(.self):last-of-type",
 					pad: 40,
 				});
+			} else {
+				// The tap a finger makes: the panel opens with the reason.
+				await finger("[data-cap-target] .msg-action-translate", 60);
+				await page.waitFor(`!!document.querySelector(".translation-panel")`, {
+					label: "the toolbar's tap opened the panel",
+				});
+
+				const tapped = await panelState();
+
+				page.check(
+					`desktop, both off: the toolbar's tap opens the panel with the reason (${tapped.banner})`,
+					tapped.banner.includes(EN["translate.why.allOff"])
+				);
+				await page.screenshot("desktop-both-off-toolbar-tap");
+				await closePanel();
 			}
 
 			// The header's click opens the panel with the reason, not a reading that fails.
