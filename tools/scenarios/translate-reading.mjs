@@ -65,6 +65,7 @@
 // back off at the end.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
+//   (or any port, with SEANCE_HTTP=http://localhost:<port>/)
 //   CHROME_BIN=/seance/tmp/chrome-pw.sh node tools/browser-drive.mjs tools/scenarios/translate-reading.mjs
 //   … --mobile --width=390 --height=844
 //
@@ -86,7 +87,7 @@ const NICK = `tr${RUN}`;
 const SPEAKER = `de${RUN}`;
 const CHANNEL = "#seance-translate";
 const IRCD = process.env.SEANCE_IRC_WS || "ws://127.0.0.1:8067/";
-const BASE = "http://localhost:8021/";
+const BASE = process.env.SEANCE_HTTP ?? "http://localhost:8021/";
 
 export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join=%23seance-translate&fakeTranslate`;
 
