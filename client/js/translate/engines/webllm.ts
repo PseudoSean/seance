@@ -548,7 +548,11 @@ export class WebLlmEngine implements Engine {
 			const stream = await engine.chat.completions.create({
 				messages: profile.buildMessages(req, this.languageName),
 				stream: true,
-				temperature: 0.1,
+				// A cleanup is decided greedily, as it was measured: on the web
+				// weights a correction can hinge on one token's narrow lead
+				// ("you" 50.4 % against "your" 47.3 %), and 0.1 turns that
+				// into a coin flip.
+				temperature: req.purpose === "polish" ? 0 : 0.1,
 				max_tokens: profile.maxTokensFor(req),
 				stop: req.lines ? [`\n${END_SENTINEL}`] : [],
 				extra_body: {enable_thinking: false},
