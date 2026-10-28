@@ -120,8 +120,11 @@ export function formatRelativeTime(ms: number): string {
 	const rtf = relativeFormatter(activeLocale());
 	const seconds = Math.round((ms - Date.now()) / 1000);
 
-	if (Math.abs(seconds) < 60) {
-		return rtf.format(seconds, "second");
+	// Under 45 s is "now", as dayjs's "a few seconds ago" was: the Mentions
+	// pane redraws every 30 s, so a count of seconds would be up to 30 s
+	// stale, and 45–89 s rounds to "1 minute ago" below.
+	if (Math.abs(seconds) < 45) {
+		return rtf.format(0, "second");
 	}
 
 	const minutes = Math.round(seconds / 60);

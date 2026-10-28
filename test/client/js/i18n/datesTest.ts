@@ -87,6 +87,13 @@ describe("i18n date formatters", () => {
 		expect(formatRelativeTime(time)).to.match(/year/);
 	});
 
+	it("says now under 45 seconds, then counts minutes, as dayjs's fromNow did", () => {
+		// The Mentions pane redraws every 30 s; a seconds count would be stale.
+		expect(formatRelativeTime(Date.now() - 30_000)).to.equal("now");
+		expect(formatRelativeTime(Date.now() - 50_000)).to.equal("1 minute ago");
+		expect(formatRelativeTime(Date.now() - 3_600_000)).to.equal("1 hour ago");
+	});
+
 	it("steps up from days to months and years, as dayjs's fromNow did", () => {
 		const day = 86_400_000;
 		expect(formatRelativeTime(Date.now() - 3 * day)).to.equal("3 days ago");
