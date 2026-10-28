@@ -5,6 +5,7 @@ import {
 	formatRelativeDay,
 	formatRelativeTime,
 	formatTime,
+	setHour12Source,
 } from "../../../../client/js/i18n/dates";
 
 describe("i18n date formatters", () => {
@@ -26,6 +27,33 @@ describe("i18n date formatters", () => {
 		expect(text).to.contain("May");
 		expect(text).to.contain("2014");
 		expect(text).to.match(/\d{1,2}:\d{2}:\d{2}/);
+	});
+
+	it("writes a full timestamp on the 24-hour clock when nothing says otherwise", () => {
+		// Upstream's localetime was always "22 May 2014, 12:00:00"; Intl's
+		// "en" alone is en-US's 12-hour clock, which ignored the setting.
+		const text = formatDateTime(time);
+		expect(text).to.match(/12:00:00$/);
+		expect(text).to.not.match(/[AP]M/);
+		expect(formatTime(time, false)).to.equal("12:00");
+	});
+
+	it("follows the use12hClock setting through the registered getter", () => {
+		let twelve = true;
+		setHour12Source(() => twelve);
+
+		try {
+			expect(formatDateTime(time)).to.match(/12:00:00\s?PM$/);
+			expect(formatTime(time, false)).to.match(/^12:00\s?PM$/);
+			// A caller that names a clock keeps it.
+			expect(formatDateTime(time, false)).to.match(/12:00:00$/);
+
+			// The getter is read on every call, so a change takes at once.
+			twelve = false;
+			expect(formatDateTime(time)).to.match(/12:00:00$/);
+		} finally {
+			setHour12Source(() => false);
+		}
 	});
 
 	it("should render the date-marker heading in the active language", () => {

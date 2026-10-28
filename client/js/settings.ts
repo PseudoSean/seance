@@ -1,6 +1,7 @@
 import type {TypedStore} from "./store";
 import {mirrorPushPrefs} from "./push-prefs";
 import {activate} from "./i18n";
+import {setHour12Source} from "./i18n/dates";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {normalizeOwnMessageStyle} from "./helpers/ownMessages";
 import {normalizePsWords} from "./helpers/psWords";
@@ -187,6 +188,11 @@ const defaultConfig = {
 	// at load; a stored setting is assigned over it (store-settings.ts).
 	use12hClock: {
 		default: prefersTwelveHourClock(),
+		// Every timestamp that names no clock (tooltips, ban lists, whois, the
+		// oper cards) reads this one through the getter, reactively.
+		apply(store: TypedStore) {
+			setHour12Source(() => !!store.state.settings.use12hClock);
+		},
 	},
 	statusMessages: {
 		default: "condensed",
