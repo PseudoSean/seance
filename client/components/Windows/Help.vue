@@ -946,7 +946,11 @@
 					<code>/who [mask] [flags]</code>
 				</div>
 				<div class="description">
-					<p>{{ whoParts[0] }}<code>nick!user@host</code>{{ whoParts[1] }}</p>
+					<p>
+						<I18nFrame :text="t('help.commands.who', {mask: KEEP})"
+							><template v-slot:mask><code>nick!user@host</code></template></I18nFrame
+						>
+					</p>
 				</div>
 			</div>
 
@@ -966,7 +970,7 @@
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
-import {frameSegments, KEEP} from "../../js/i18n/core";
+import {KEEP} from "../../js/i18n/core";
 import {buildIdentityOf, isPastRelease, sourceLinks} from "../../js/helpers/sourceLinks";
 import SidebarToggle from "../SidebarToggle.vue";
 import I18nFrame from "../I18nFrame.vue";
@@ -982,10 +986,6 @@ export default defineComponent({
 		const {t} = useI18n();
 		const title = computed(() => t("help.title"));
 		const ctcpTitle = computed(() => t("help.commands.ctcpTitle"));
-		// /who's description, cut around its example mask.
-		const whoParts = computed(() =>
-			frameSegments(t("help.commands.who", {mask: KEEP}), ["mask"])
-		);
 		const isApple = navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i) || false;
 		const isTouch = navigator.maxTouchPoints > 0;
 		const appName = computed(() => store.state.branding.appName);
@@ -1004,7 +1004,6 @@ export default defineComponent({
 		return {
 			title,
 			ctcpTitle,
-			whoParts,
 			KEEP,
 			appName,
 			build,
