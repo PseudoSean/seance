@@ -71,8 +71,10 @@ export function translateWhyText(block: RouteBlock): string {
 				limit: friendlysize(block.limit),
 			});
 
+		// No size: the GPU model select's own hint, above it, says how much
+		// graphics memory the larger model needs.
 		case "memory":
-			return t("translate.why.phoneMemory", {needed: friendlysize(block.needed)});
+			return t("translate.why.phoneMemory");
 
 		case "off":
 			switch (block.engine) {

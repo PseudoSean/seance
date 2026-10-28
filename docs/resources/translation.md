@@ -442,8 +442,8 @@ an iPad asking for desktop sites, which reads as a Mac with
   each batched line's reply note, the topic and the reply target. A batch
   that does not fit even bare is refused as `BATCH_REFUSED`, so its lines
   go one at a time (queue.ts `resplit`, outgoing.ts `translateDraft`); a
-  single line that does not fit is `CONTEXT_OVERFLOW`, "too long to
-  translate on this device". There is no tokenizer before the model loads
+  single line that does not fit is `CONTEXT_OVERFLOW`, "too long for
+  this device". There is no tokenizer before the model loads
   and none under mocha, so the count is `tokenBound`, a per-class bound
   calibrated on the real tokenizer (`test/translate/budget.ts` holds the
   counts: 14 languages, URLs, digits -- Qwen3 splits numbers into single
@@ -465,8 +465,8 @@ an iPad asking for desktop sites, which reads as a Mac with
   (`vramBytes` 3.4 GB). `modelBlock` answers `{kind: "memory", needed}`
   for a GPU model over `MOBILE_LLM_MAX_VRAM_BYTES` (2.5 GB) on a mobile
   device, after the device and buffer reasons and before the switch -- "It
-  needs about 3.2 GiB of memory, more than a phone or tablet lets a web page
-  use." (`translate.why.phoneMemory`) -- so its Settings row cannot be
+  needs more memory than a phone or tablet lets a web page use."
+  (`translate.why.phoneMemory`; the select's hint above gives the size) -- so its Settings row cannot be
   downloaded, the GPU select greys it (`llmUnfit`), and `llmRunsOn` keeps it
   out of `defaultLlmForAdapter` and out of `llmChoice`, an explicit choice
   and a deploy's `translation.llm.model` included (both run the 1.7B on a
@@ -479,8 +479,12 @@ an iPad asking for desktop sites, which reads as a Mac with
   engine running, it waits; the other loaded, it unloads it; and the GPU
   model wanted in a worker the CPU engine has run in, it starts a fresh
   worker (`recycleWorker`, without the teardown's generation step), since
-  a WebAssembly heap grows and never shrinks. A download now waits for the
-  probe first, which says whether this is a phone. The cost: a phone
+  a WebAssembly heap grows and never shrinks. Every caller waits for one
+  unload to be answered before it loads (`evicting`). A download now waits
+  for the probe first, which says whether this is a phone, and on a phone
+  its progress moves `loadTicks`, so a request waiting behind it for the
+  other engine keeps its deadline alive rather than timing out (and
+  pausing its engine) through a long Settings download. The cost: a phone
   whose channels route some lines to the GPU model and others to an
   OPUS-MT pair reloads a model at every switch. A computer keeps both, side
   by side.

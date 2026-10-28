@@ -190,6 +190,8 @@ export class TranslateService {
 	 * into a fresh worker once it has (`makeRoom`).
 	 */
 	private cpuHeapUsed = false;
+	/** An engine's unload `makeRoom` posted, until the worker answers: every caller waits on it. */
+	private evicting: Record<EngineName, Promise<void> | null> = {llm: null, seq2seq: null};
 
 	constructor(
 		private deps: ServiceDeps,
@@ -452,6 +454,10 @@ export class TranslateService {
 			return this.whenEngineIdle(other);
 		}
 
+		if (this.evicting[other]) {
+			return this.evicting[other];
+		}
+
 		if (engine === "llm" && this.cpuHeapUsed && this.engineRunning.llm === 0) {
 			this.recycleWorker();
 			return Promise.resolve();
@@ -463,9 +469,19 @@ export class TranslateService {
 			this.clearEngineTimer(other);
 			this.loadedEngines.delete(other);
 
-			return worker.client.unload(other).catch(() => {
-				// A worker torn down meanwhile unloaded it anyway.
-			});
+			const evicting = worker.client
+				.unload(other)
+				.catch(() => {
+					// A worker torn down meanwhile unloaded it anyway.
+				})
+				.then(() => {
+					if (this.evicting[other] === evicting) {
+						this.evicting[other] = null;
+					}
+				});
+
+			this.evicting[other] = evicting;
+			return evicting;
 		}
 
 		return null;
@@ -1121,6 +1137,13 @@ export class TranslateService {
 			}
 
 			await client.load(ref, (progress: LoadProgress) => {
+				// On a phone a request for the other engine waits for this
+				// download (`makeRoom`): its deadline is kept alive while the
+				// download moves, as a request's own download keeps it.
+				if (this.oneEngineAtATime()) {
+					this.ticks++;
+				}
+
 				view.fraction = progress.fraction;
 				this.publish();
 			});

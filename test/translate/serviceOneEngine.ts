@@ -228,6 +228,58 @@ describe("translate/service: one engine at a time on a phone", () => {
 		).to.equal(true);
 	});
 
+	it("keeps a waiting request's deadline alive while a Settings download moves, on a phone only", async () => {
+		for (const mobile of [true, false]) {
+			r = rig(mobile);
+			r.llm.loadTicks = 4;
+			await r.service.capabilities();
+
+			const before = r.service.loadTicks();
+
+			await r.service.download(catalog.llm);
+			expect(r.service.loadTicks() - before, mobile ? "phone" : "computer").to.equal(
+				mobile ? 4 : 0
+			);
+
+			r.service.dispose();
+			r.clock.restore();
+		}
+
+		r = rig(false);
+	});
+
+	it("holds every waiting request until the other engine's unload has answered", async () => {
+		r = rig(true);
+
+		expect(await text(r.service.translate(request("fr")))).to.equal("llm:hello");
+
+		// An unload that takes its time, as freeing a GPU model does.
+		const unload = r.llm.unload.bind(r.llm);
+
+		r.llm.unload = async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			await unload();
+			r.log.push("unloaded llm");
+		};
+
+		const all = Promise.all([
+			text(r.service.translate(request("de"))),
+			text(r.service.translate(request("de"))),
+			text(r.service.translate(request("de"))),
+		]);
+
+		await r.clock.tickAsync(200);
+		await all;
+
+		const unloaded = r.log.indexOf("unloaded llm");
+
+		expect(unloaded).to.be.greaterThan(-1);
+		expect(r.log.filter((line) => line === "unloaded llm")).to.have.length(1);
+		expect(r.log.findIndex((line) => line.endsWith("load seq2seq"))).to.be.greaterThan(
+			unloaded
+		);
+	});
+
 	it("keeps both engines in one worker on a computer, side by side", async () => {
 		r = rig(false);
 

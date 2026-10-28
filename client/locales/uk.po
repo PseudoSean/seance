@@ -12967,11 +12967,11 @@ msgctxt "translate.error.timedOut"
 msgid "timed out"
 msgstr "минув час очікування"
 
-#. Why a translation failed, shown after 'Couldn't translate': the message (with the conversation around it) is longer than the translation model loaded on this device can take in at once, even with the surrounding lines left out — a very long message, typically on a phone, where the model is given less room. Lowercase: it follows a colon or a dash.
+#. Why a translation failed, shown after 'Couldn't translate:' (so it reads 'Couldn't translate: too long for this device'): the message, even with the surrounding conversation left out, is longer than the translation model loaded on this device can take in at once — a very long message, typically on a phone, where the model is given less room. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.tooLong"
-msgid "too long to translate on this device"
-msgstr "задовге для перекладу на цьому пристрої"
+msgid "too long for this device"
+msgstr "задовге для цього пристрою"
 
 #. Why a translation failed, shown after 'Couldn't translate': no model on this device can handle that pair of languages. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
@@ -13774,11 +13774,11 @@ msgctxt "translate.why.noWebgpu"
 msgid "This browser has no WebGPU, which the GPU models need."
 msgstr "У цьому браузері немає WebGPU, потрібного моделям GPU."
 
-#. Reason a GPU translation model cannot run on this phone or tablet: the model is too large for the memory a mobile browser gives one page, whatever the graphics processor. {needed} is the model's graphics memory, a size such as "3.2 GiB" (binary units, kept as they are). Shown under the model's row in Settings → Translation (after 'Can't run on this device', its Download button greyed out), under the GPU model select after '{model} can't run on this device.', and wherever an action needing that model is unavailable, as a sentence of its own after a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason a GPU translation model cannot run on this phone or tablet: the model is too large for the memory a mobile browser gives one page, whatever the graphics processor. Shown under the model's row in Settings → Translation (after 'Can't run on this device', its Download button greyed out), under the GPU model select after '{model} can't run on this device.' (the select's own hint above it gives the model's memory size), and wherever an action needing that model is unavailable, as a sentence of its own after a lead sentence such as 'Correcting a message needs the GPU model.'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.phoneMemory"
-msgid "It needs about {needed} of memory, more than a phone or tablet lets a web page use."
-msgstr "Йому потрібно близько {needed} пам'яті — більше, ніж телефон чи планшет дає вебсторінці."
+msgid "It needs more memory than a phone or tablet lets a web page use."
+msgstr "Йому потрібно більше пам'яті, ніж телефон чи планшет дає вебсторінці."
 
 #. Reason nothing can translate: the app's check of the device's GPU and CPU features threw an error. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
 #: client/js/helpers/translateWhy.ts

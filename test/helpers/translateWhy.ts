@@ -65,14 +65,10 @@ describe("translateWhyText", () => {
 		expect(new Set(Object.values(reasons).map((key) => en[key])).size).to.equal(7);
 	});
 
-	it("says a phone cannot hold a model, with the memory it needs", () => {
-		const needed = 3_400_000_000;
-		const text = translateWhyText({kind: "memory", needed});
-
-		expect(text).to.equal(
-			en["translate.why.phoneMemory"].replace("{needed}", friendlysize(needed))
+	it("says a phone cannot hold a model", () => {
+		expect(translateWhyText({kind: "memory", needed: 3_400_000_000})).to.equal(
+			en["translate.why.phoneMemory"]
 		);
-		expect(text).to.include("GiB");
 	});
 
 	it("names both sizes of a buffer that is too small", () => {

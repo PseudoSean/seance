@@ -110,7 +110,7 @@ const DEVICES = {
 		gpu: {f16: true, max: 2 * GiB},
 		mobile: true,
 		runs: {[SMALL]: true, [LARGE]: false},
-		why: () => EN["translate.why.phoneMemory"].replace("{needed}", size(3_400_000_000)),
+		why: (id) => (id === LARGE ? EN["translate.why.phoneMemory"] : ""),
 	},
 };
 
