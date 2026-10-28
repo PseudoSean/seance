@@ -100,7 +100,7 @@ msgstr "Bumaba sa mga mensahe na nagawa na"
 #: client/components/Chat.vue:67
 msgctxt "chat.mentions"
 msgid "Open your mentions"
-msgstr "Ibabaw ang mga mensahe na nakasulat"
+msgstr "Buksan ang mga pagbanggit sa iyo"
 
 #. Badge on the @ button in the channel header when there are more unread mentions than it shows; {count} is the largest number shown (99), so it reads "99+".
 #: client/components/Chat.vue:384
@@ -113,8 +113,8 @@ msgstr ""
 msgctxt "chat.mentionsUnread"
 msgid "Open your mentions, {count} unread"
 msgid_plural "Open your mentions, {count} unread"
-msgstr[0] "Buksan ang iyong mga mention, {count} ang hindi pa nababasa"
-msgstr[1] "Buksan ang iyong mga mention, {count} ang hindi pa nababasa"
+msgstr[0] "Buksan ang mga pagbanggit sa iyo, {count} hindi pa nababasa"
+msgstr[1] "Buksan ang mga pagbanggit sa iyo, {count} hindi pa nababasa"
 
 #. aria-label of the save control at the right end of the topic editor, shown while the channel topic is being edited; clicking saves the new topic.
 #: client/components/Chat.vue:35
@@ -415,7 +415,7 @@ msgstr "I-una"
 #: client/components/ChatInput.vue:68
 msgctxt "composer.cancelEscape"
 msgid "Cancel (Escape)"
-msgstr "I-una (Escape)"
+msgstr "Kanselahin (Esc)"
 
 #. Tooltip and aria-label of the ✕ button on the upload progress bar above the message input; clicking it aborts the upload in progress.
 #: client/components/ChatInput.vue:45
@@ -427,25 +427,25 @@ msgstr "I-una pag-upload"
 #: client/components/ChatInput.vue:19
 msgctxt "composer.connect"
 msgid "Connect"
-msgstr "Kumple"
+msgstr "Kumonekta"
 
 #. Button in the connection bar shown above the message input while the app waits to retry a dropped connection to the chat network; clicking it skips the wait and dials the network immediately.
 #: client/components/ChatInput.vue:19
 msgctxt "composer.connectNow"
 msgid "Connect now"
-msgstr "Kumple ngayon"
+msgstr "Kumonekta ngayon"
 
 #. Text of the connection bar shown above the message input while the dial to the chat network is in flight (a spinner turns beside it). {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:344
 msgctxt "composer.connectingTo"
 msgid "Connecting to {network}…"
-msgstr "Kumplehan sa {network}…"
+msgstr "Kumokonekta sa {network}…"
 
 #. Text of the connection bar shown above the message input when the chat network is down and no reconnect attempt is running yet. {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:339
 msgctxt "composer.disconnectedFrom"
 msgid "Disconnected from {network}."
-msgstr "Nagsusulat na may problema sa {network}."
+msgstr "Nadiskonekta sa {network}."
 
 #. Label at the left of the compose bar shown while the user edits a message they already sent; the edited text follows it in the same line.
 #: client/components/ChatInput.vue:55
@@ -482,16 +482,16 @@ msgstr "Nagsusulat sa {name}"
 msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
-msgstr[0] "Nagsasalikay sa {network} sa {seconds}s…"
-msgstr[1] "Kumplehan uli sa {network} sa {seconds}s…"
+msgstr[0] "Muling kokonekta sa {network} sa loob ng {seconds} s…"
+msgstr[1] "Muling kokonekta sa {network} sa loob ng {seconds} s…"
 
 #. Text of the connection bar shown above the message input while the wait before the retry is the chat server's connection throttle (dialling sooner would be refused and prolong it). {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
 #: client/components/ChatInput.vue:524
 msgctxt "composer.reconnectInThrottled"
 msgid "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
 msgid_plural "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
-msgstr[0] "Muling kumokonekta sa {network} sa loob ng {seconds}s: nililimitahan ng server ang mabilis na muling pagkonekta."
-msgstr[1] "Muling kumokonekta sa {network} sa loob ng {seconds}s: nililimitahan ng server ang mabilis na muling pagkonekta."
+msgstr[0] "Muling kokonekta sa {network} sa loob ng {seconds} s: nililimitahan ng server ang mabilisang muling pagkonekta."
+msgstr[1] "Muling kokonekta sa {network} sa loob ng {seconds} s: nililimitahan ng server ang mabilisang muling pagkonekta."
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
@@ -540,70 +540,70 @@ msgstr "Nagsasagawa ng pag-upload sa {file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] ""
-msgstr[1] "nakalibot na {count} beses"
+msgstr[0] "{count} beses na minarkahang wala"
+msgstr[1] "{count} beses na minarkahang wala"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] ""
-msgstr[1] "napala na wala na {count} beses"
+msgstr[0] "{count} beses na minarkahang bumalik"
+msgstr[1] "{count} beses na minarkahang bumalik"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
-msgstr[0] "{count} user ay nagbabago ng hostname"
-msgstr[1] "{count} mga miembro na nag-change han hostname"
+msgstr[0] "{count} user ang nagpalit ng hostname"
+msgstr[1] "{count} user ang nagpalit ng hostname"
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.join"
 msgid "{count} user has joined"
 msgid_plural "{count} users have joined"
-msgstr[0] "{count} user ay nagsali"
-msgstr[1] "{count} mga miembro na nagsalibay"
+msgstr[0] "{count} user ang sumali"
+msgstr[1] "{count} user ang sumali"
 
 #. Condensed status block: {count} users were kicked while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
-msgstr[0] "{count} user ay nagsalungat"
-msgstr[1] ""
+msgstr[0] "{count} user ang pinaalis"
+msgstr[1] "{count} user ang pinaalis"
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.left"
 msgid "{count} user has left"
 msgid_plural "{count} users have left"
-msgstr[0] "{count} user ay nagsali ng pag-ibayo"
-msgstr[1] "{count} mga miembro na nagsalibay"
+msgstr[0] "{count} user ang umalis"
+msgstr[1] "{count} user ang umalis"
 
 #. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
-msgstr[0] "{count} mode ay nais set"
-msgstr[1] "{count} mga mode na nagsalibay"
+msgstr[0] "{count} mode ang itinakda"
+msgstr[1] "{count} mode ang itinakda"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] "{count} user ay naging nag-change ng nick"
-msgstr[1] "{count} users ay nag-change ng nickname"
+msgstr[0] "{count} user ang nagpalit ng nick"
+msgstr[1] "{count} user ang nagpalit ng nick"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.toggle"
 msgid "Toggle status messages"
-msgstr "I-toggle ang mga mensahe ng status"
+msgstr "Ipakita o itago ang mga status message"
 
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 #: client/components/ConfirmDialog.vue
@@ -1703,7 +1703,7 @@ msgstr "Autocompletions"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.intro"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the {up} and {down} keys to highlight an item, and insert it by pressing {tab} or {enter} (or by clicking the desired item)."
-msgstr ""
+msgstr "Para awtomatikong kumpletuhin ang mga nick, channel, command at emoji, i-type ang isa sa mga character sa ibaba para magbukas ng listahan ng mungkahi. Gamitin ang mga key na {up} at {down} para pumili ng item, at ilagay ito sa pagpindot ng {tab} o {enter} (o sa pag-click sa gustong item)."
 
 #. Description of the @ autocompletion trigger in the help window: typing @ suggests user names.
 #: client/components/Windows/Help.vue
@@ -1715,7 +1715,7 @@ msgstr "Pangalang personal"
 #: client/components/Windows/Help.vue
 msgctxt "help.builtFromCommit"
 msgid "{app} is built from {commit}, after v{version}."
-msgstr ""
+msgstr "Ang {app} ay binuo mula sa {commit}, pagkatapos ng v{version}."
 
 #. Lead-in of the alias line under a command description in the help window; the alternative command follows it as a code fragment. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1745,7 +1745,7 @@ msgstr "I-eliminahin ang iyong status ng pagkakaaway (nakuha sa"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ban"
 msgid "Ban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "Bina-ban ({mode}) ang isang user sa kasalukuyang channel. Puwedeng nick o hostmask."
 
 #. Description of the /banlist command in the help window.
 #: client/components/Windows/Help.vue
@@ -1769,19 +1769,19 @@ msgstr "I-ikot lahat ng mga preview sa kasalukuyang channel (kabalang ng"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connect"
 msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
-msgstr ""
+msgstr "Kumokonekta sa bagong IRC network. Kung nagsisimula ang {port} sa sign na {plus}, gagawing secure ang koneksyon gamit ang TLS."
 
 #. Description of the /ctcp command in the help window. {ctcp} is the abbreviation CTCP (never translated, an element with its expansion as tooltip); {link} is a link whose text is help.commands.ctcpLink ('the dedicated Wikipedia article') — write this frame so that phrase fits where {link} stands.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcp"
 msgid "Send a {ctcp} request. Read more about this on {link}."
-msgstr ""
+msgstr "Nagpapadala ng {ctcp} request. Basahin pa ang tungkol dito sa {link}."
 
 #. Text of the link at the end of the /ctcp command description in the help window (help.commands.ctcp, where it stands for {link}); it opens the Wikipedia article on CTCP. Use the form that fits that frame in your language.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
-msgstr "ang partikular na Wikipedia artikulo"
+msgstr "artikulo nito sa Wikipedia"
 
 #. Expansion of the acronym CTCP, shown as the abbreviation's hover tooltip in the help window's /ctcp command description.
 #: client/components/Windows/Help.vue
@@ -1793,13 +1793,13 @@ msgstr "protocol mula sa kliyente hanggang kliyente"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deop"
 msgid "Remove op ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "Inaalis ang op ({mode}) ng isa o higit pang user sa kasalukuyang channel."
 
 #. Description of the /devoice command in the help window. {mode} is the channel mode -v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoice"
 msgid "Remove voice ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "Inaalis ang voice ({mode}) ng isa o higit pang user sa kasalukuyang channel."
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
@@ -1835,7 +1835,7 @@ msgstr "I-load ang lista ng mga nangungunang user para sa kasalukuyang network."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.invite"
 msgid "Invite a user to the specified channel. If {channel} is omitted, user will be invited to the current channel."
-msgstr ""
+msgstr "Iniimbitahan ang isang user sa tinukoy na channel. Kung walang {channel}, iimbitahan siya sa kasalukuyang channel."
 
 #. Description of the /join command in the help window.
 #: client/components/Windows/Help.vue
@@ -1853,7 +1853,7 @@ msgstr "I-kick ang isang user mula sa kasalukuyang channel."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickban"
 msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
-msgstr ""
+msgstr "Pinaaalis at bina-ban ({mode}) ang isang user sa kasalukuyang channel. Hindi tulad ng {ban}, nick lang ang puwede (hindi hostmask)."
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1901,14 +1901,13 @@ msgstr "Sumayawin isyu na mensahe sa nangungunang channel."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.op"
 msgid "Give op ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "Nagbibigay ng op ({mode}) sa isa o higit pang user sa kasalukuyang channel."
 
 #. Description of the /part command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
-#, fuzzy
 msgctxt "help.commands.part"
 msgid "Close the specified channel or private message window, or the current channel if {channel} is omitted."
-msgstr "Ilang pabulaan ang nasa pagkakaiba-iba na pabulaan o mensahe pribado, o ang kasalukuyang pabulaan kung"
+msgstr "Isinasara ang tinukoy na channel o pribadong usapan, o ang kasalukuyang channel kung walang {channel}."
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue
@@ -1950,13 +1949,13 @@ msgstr "Saktan na isipan na nag-iiyak na tawag!"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.topic"
 msgid "Get the topic in the current channel. If {newtopic} is specified, sets the topic in the current channel."
-msgstr ""
+msgstr "Ipinapakita ang topic ng kasalukuyang channel. Kung may {newtopic}, itinatakda nito ang topic ng kasalukuyang channel."
 
 #. Description of the /unban command in the help window. {mode} is the channel mode -b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unban"
 msgid "Unban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "Inaalis ang ban ({mode}) ng isang user sa kasalukuyang channel. Puwedeng nick o hostmask."
 
 #. Description of the /unignore command in the help window.
 #: client/components/Windows/Help.vue
@@ -1968,19 +1967,19 @@ msgstr "Unblock ang mensahe mula sa nakasulat na user sa kasalukuyan network. It
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unmute"
 msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See {mute} for more information."
-msgstr ""
+msgstr "Ina-unmute ang mga tinukoy na channel, o ang kasalukuyang channel kung walang tinukoy. Tingnan ang {mute} para sa higit pang detalye."
 
 #. Description of the /ver command in the help window. {ctcp} is the abbreviation CTCP (never translated) and {command} the literal command /ctcp nick version as a code element; VERSION stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ver"
 msgid "Ask a user which client they run: a {ctcp} VERSION request, the same as {command}. The answer shows where you asked."
-msgstr ""
+msgstr "Tinatanong ang isang user kung anong client ang gamit niya: isang {ctcp} VERSION request, katulad ng {command}. Lalabas ang sagot kung saan ka nagtanong."
 
 #. Description of the /voice command in the help window. {mode} is the channel mode +v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voice"
 msgid "Give voice ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "Nagbibigay ng voice ({mode}) sa isa o higit pang user sa kasalukuyang channel."
 
 #. Help page, description of the /who command. {mask} is an example wildcard mask shown as code (nick!user@host); keep it.
 #: client/components/Windows/Help.vue
@@ -2004,13 +2003,13 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.compareBehind"
 msgid "Compare {range} to see what you are missing"
-msgstr ""
+msgstr "Ihambing {range} para makita ang kulang sa iyo"
 
 #. First item of the help window's past-release list. {range} is a link whose text is help.range ('between v5.2.0 and 1a2b3c4').
 #: client/components/Windows/Help.vue
 msgctxt "help.compareSince"
 msgid "Compare {range} to see what changed since the release"
-msgstr ""
+msgstr "Ihambing {range} para makita ang nagbago mula nang i-release"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -2023,7 +2022,7 @@ msgstr "Dokumentasyon"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "malakas"
+msgstr "makapal"
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2035,19 +2034,19 @@ msgstr "dito"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP1"
 msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range {range} to select the desired color, or use the autocompletion menu to choose a color name (see below)."
-msgstr ""
+msgstr "Kinukulayan ang lahat ng tekstong ita-type pagkatapos ng shortcut na ito. Pagkapindot nito, maglagay ng integer sa saklaw na {range} para pumili ng kulay, o gamitin ang autocomplete menu para pumili ng pangalan ng kulay (tingnan sa ibaba)."
 
 #. Second paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2"
 msgid "Background color can be specified by putting a comma and another integer in the range {range} after the foreground color number (autocompletion works too)."
-msgstr ""
+msgstr "Para sa kulay ng background, maglagay ng kuwit at isa pang integer sa saklaw na {range} pagkatapos ng numero ng kulay ng teksto (gumagana rin ang autocomplete)."
 
 #. Last paragraph of the Ctrl+K description in the help window. {link} is a link to an external IRC color reference whose text is help.formatting.colorHere ('here'); write the frame so that word fits it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorReference"
 msgid "A color reference can be found {link}."
-msgstr ""
+msgstr "May listahan ng mga kulay {link}."
 
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
 #: client/components/Windows/Help.vue
@@ -2059,19 +2058,19 @@ msgstr "Paglalagay ng mga shortcut"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "italik"
+msgstr "pahilig"
 
 #. Description of a text-formatting shortcut in the help window. {style} is the style's name (help.formatting.bold, italic, underline, strikethrough or monospace: 'bold', 'italics', 'underlined', 'struck through', 'monospaced'), shown in that style where the placeholder stands; write the frame so those words fit it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.markAs"
 msgid "Mark all text typed after this shortcut as {style}."
-msgstr ""
+msgstr "Ginagawang {style} ang lahat ng tekstong ita-type pagkatapos ng shortcut na ito."
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "naka-monospace"
+msgstr "monospace"
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2083,13 +2082,13 @@ msgstr "I-set na mag-iiwan ng text na nagsimula sa shortcut na ito para maging n
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.strikethrough"
 msgid "struck through"
-msgstr "tinig na nagsisimula"
+msgstr "may guhit sa gitna"
 
 #. The example word shown underlined in the help window's Ctrl+U formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.underline"
 msgid "underlined"
-msgstr "nakasulat"
+msgstr "may salungguhit"
 
 #. Heading of the touch-gestures section of the help window; lists what swiping on the sidebar does.
 #: client/components/Windows/Help.vue
@@ -2144,7 +2143,7 @@ msgstr "kasunduan ng kahalagahan"
 #: client/components/Windows/Help.vue
 msgctxt "help.range"
 msgid "between {from} and {to}"
-msgstr ""
+msgstr "sa pagitan ng {from} at {to}"
 
 #. Link beside the version number in the help window's title line; opens the changelog window. Mid-sentence between parentheses.
 #: client/components/Windows/Help.vue
@@ -2823,7 +2822,7 @@ msgstr "{file} · Click para i-show"
 #: client/components/LinkPreviewToggle.vue
 msgctxt "link.collapse"
 msgid "Collapse preview"
-msgstr "I-compact ang preview"
+msgstr "Itiklop ang preview"
 
 #. aria-label of the button on a message link preview while the preview is folded; clicking expands the media inline.
 #: client/components/LinkPreviewToggle.vue
@@ -3703,7 +3702,7 @@ msgstr "Ang topic ay:"
 #: client/components/MessageTypes/topic_set_by.vue
 msgctxt "msg.topicSet"
 msgid "Topic set by {nick} on {time}"
-msgstr ""
+msgstr "Itinakda ni {nick} ang topic noong {time}"
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -10955,7 +10954,7 @@ msgstr "Walay mga mensahe nga nakuha sa session na to nga nagsukod — ang kahay
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.searchingIn"
 msgid "Searching in {channel} for"
-msgstr ""
+msgstr "Naghahanap sa {channel}:"
 
 #. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
 #: client/components/Windows/SearchResults.vue
@@ -11071,7 +11070,7 @@ msgstr "Mayroon na isang /{name}."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorName"
 msgid "Give the alias a name."
-msgstr "I-ibigay ang pangalan ng alias."
+msgstr "Bigyan ng pangalan ang alias."
 
 #. Row error: the alias name contains characters other than letters, digits, hyphen and underscore. The - and _ are literal characters, keep them.
 #: client/components/Settings/Aliases.vue
@@ -11101,7 +11100,7 @@ msgstr "Narorun"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.intro"
 msgid "An alias is a slash command of your own. Typing {example} runs what you define here — one command per line, with the arguments filled in where the body says {first}, {rest} or {all}."
-msgstr ""
+msgstr "Ang alias ay sarili mong slash command. Kapag tinype mo ang {example}, tatakbo ang itinakda mo rito — isang command bawat linya, at ilalagay ang mga argument kung saan nakasulat sa body ang {first}, {rest} o {all}."
 
 #. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
 #: client/components/Settings/Aliases.vue
@@ -11119,7 +11118,7 @@ msgstr "pangalan"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nested"
 msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
-msgstr ""
+msgstr "Puwedeng tumawag ng ibang alias ang isang linya, at pinapalitan ng alias na kapangalan ng built-in na command ang command na iyon — puwedeng maging {expansion} ang {command} nang hindi umiikot."
 
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
 #: client/components/Settings/Aliases.vue
@@ -11711,7 +11710,7 @@ msgstr "Nalalayon na mayaman"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHelp"
 msgid "Media in these scopes loads without asking. Add one with {button} on any preview."
-msgstr ""
+msgstr "Naglo-load nang hindi nagtatanong ang media mula sa mga saklaw na ito. Magdagdag gamit ang {button} sa anumang preview."
 
 #. Subheading in the always-shown media list of Settings > Appearance above the user account entries.
 #: client/components/Settings/Appearance.vue
@@ -12103,7 +12102,7 @@ msgstr "Notifikasyon ng Browser"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserPerNetwork"
 msgid "Browser notifications are also per network — enabled by default, toggled in each network's settings (Edit network → “Browser notifications for this network”)."
-msgstr ""
+msgstr "Bawat network din ang browser notifications — naka-on bilang default, at binabago sa settings ng bawat network (I-edit ang network → “Notifikasyon ng browser para sa network na ito”)."
 
 #. Warning line in Settings > Notifications when the browser cannot show notifications at all.
 #: client/components/Settings/Notifications.vue
@@ -12229,7 +12228,7 @@ msgstr "Notifikasyon ng Push"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr ""
+msgstr "Bawat network ang pag-set up ng push — i-on o i-off ito sa settings ng bawat network (I-edit ang network → “Push notifications para sa network na ito”), kung saan makikita rin ang status ng enrollment. Ang browser ang naghahatid ng mga notification; ang bawat server na may push ang nagpapasya kung gigisingin ang app na ito."
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
@@ -12253,7 +12252,7 @@ msgstr "Ang push identity ng isang server (kanyo key) ay naging bagay, kaya ang 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.unsupported"
 msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
-msgstr "Ang push notifications ay hindi nakasubscribe sa browser na iyan (kailangan sila ng Push API, isang service worker at isang secure context)."
+msgstr "Hindi sinusuportahan ng browser na ito ang push notifications (kailangan nila ang Push API, isang service worker at secure na context)."
 
 #. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.
 #: client/components/Settings/Notifications.vue
@@ -12348,15 +12347,15 @@ msgstr "Pumunta ka..."
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.language"
 msgid "Display language"
-msgstr "Wika na isda"
+msgstr "Wika ng interface"
 
 #. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many messages highlight (mention) the user.
 #: client/components/ChannelWrapper.vue:97
 msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
-msgstr[0] "{count} nakikita"
-msgstr[1] "{count} nag-uusap"
+msgstr[0] "{count} pagbanggit"
+msgstr[1] "{count} pagbanggit"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -12400,8 +12399,8 @@ msgstr "Pabulok han eruda devtools"
 msgctxt "sidebar.unread"
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
-msgstr[0] "{count} nakakabitbit na mensahe"
-msgstr[1] "{count} mga mensahe na walay sagot"
+msgstr[0] "{count} hindi pa nababasang mensahe"
+msgstr[1] "{count} hindi pa nababasang mensahe"
 
 #. Column header of the channel-ban list: the banned hostmask, verbatim server data.
 #: client/components/Special/ListBans.vue
@@ -12630,91 +12629,91 @@ msgstr "{nick} ({count})"
 #: client/components/MessageTypes/away.vue:10
 msgctxt "system.away"
 msgid "{nick} is away"
-msgstr "{nick} ay nawawala"
+msgstr "Wala si {nick}"
 
 #. System line when a user returns from away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 #: client/components/MessageTypes/back.vue:10
 msgctxt "system.back"
 msgid "{nick} is back"
-msgstr "{nick} ay nagsimula na umabot"
+msgstr "Bumalik na si {nick}"
 
 #. System line tail case: a user's username/hostname changed but neither value arrived (degenerate). {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:4
 msgctxt "system.chghost"
 msgid "{nick} has changed"
-msgstr "{nick} ay nagsimula na mag-ubah"
+msgstr "Nagbago ang detalye ni {nick}"
 
 #. System line when a user's username AND hostname change together. {nick} and {ident} are VERBATIM user content; {host} is a verbatim technical value; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:12
 msgctxt "system.chghostBoth"
 msgid "{nick} has changed username to {ident} and hostname to {host}"
-msgstr "{nick} ay nagsimula na mag-ubah ng username sa {ident} at hostname sa {host}"
+msgstr "Pinalitan ni {nick} ang username niya ng {ident} at ang hostname ng {host}"
 
 #. System line when a user's hostname changes. {nick} is the user's nick (VERBATIM, renders as the interactive username element) and {host} the new hostname (verbatim technical value).
 #: client/components/MessageTypes/chghost.vue:9
 msgctxt "system.chghostHost"
 msgid "{nick} has changed hostname to {host}"
-msgstr "{nick} ay nagsimula na mag-ubah ng hostname sa {host}"
+msgstr "Pinalitan ni {nick} ang hostname niya ng {host}"
 
 #. System line when a user's username (ident) changes. {nick} is the user's nick and {ident} the new username — both VERBATIM, never translate; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:6
 msgctxt "system.chghostIdent"
 msgid "{nick} has changed username to {ident}"
-msgstr "{nick} ay nagsimula na mag-ubah ng username sa {ident}"
+msgstr "Pinalitan ni {nick} ang username niya ng {ident}"
 
 #. System line for an incoming CTCP request. {nick} is the sender's nick (VERBATIM user content, renders as the interactive username element); {ctcp} is the fixed abbreviation CTCP (never translate); {message} is the verbatim CTCP payload.
 #: client/components/MessageTypes/ctcp_request.vue:5
 msgctxt "system.ctcpRequest"
 msgid "{nick} sent a {ctcp} request: {message}"
-msgstr "{nick} ay nagsimula na gumawa ng {ctcp} request: {message}"
+msgstr "Nagpadala si {nick} ng {ctcp} request: {message}"
 
 #. System line when a user invites someone else. {nick} is the inviter's nick and {target} the invited user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands; {channel} is the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:9
 msgctxt "system.inviteTarget"
 msgid "{nick} has invited {target} to {channel}"
-msgstr "{nick} ay nagsimula na nag-ibahong {target} sa {channel}"
+msgstr "Inimbitahan ni {nick} si {target} sa {channel}"
 
 #. System line when the invite targets the reader. {nick} is the inviter's nick (VERBATIM user content, renders as the interactive username element) and {channel} the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:7
 msgctxt "system.inviteYou"
 msgid "{nick} has invited you to {channel}"
-msgstr "{nick} ay nagsimula na nag-ibahong you sa {channel}"
+msgstr "Inimbitahan ka ni {nick} sa {channel}"
 
 #. System line when a user joins a channel. {nick} is the joining user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element inline where the placeholder stands, so word order around it is the translator's.
 #: client/components/MessageTypes/join.vue:8
 msgctxt "system.join"
 msgid "{nick} has joined the channel"
-msgstr "{nick} ay nagsimula na nagsimula sa channel"
+msgstr "Sumali si {nick} sa channel"
 
 #. System line when a user is kicked from a channel. {nick} is the kicker's nick and {target} the kicked user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 #: client/components/MessageTypes/kick.vue:6
 msgctxt "system.kick"
 msgid "{nick} has kicked {target}"
-msgstr "{nick} ay nagsimula na nag-ibahong {target}"
+msgstr "Pinaalis ni {nick} si {target} sa channel"
 
 #. System line when a channel or user mode changes. {nick} is the nick that set the mode, VERBATIM user content; {modes} is the verbatim mode change (e.g. +o nick), rendered as-is.
 #: client/components/MessageTypes/mode.vue:6
 msgctxt "system.mode"
 msgid "{nick} sets mode {modes}"
-msgstr "{nick} ay nagsimula na nag-set mode {modes}"
+msgstr "Itinakda ni {nick} ang mode na {modes}"
 
 #. System line when a user changes nick. {nick} is the old nick and {newNick} the new one — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 #: client/components/MessageTypes/nick.vue:6
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr "{nick} ay nagsimula na nakakaraan na {newNick}"
+msgstr "Si {nick} ay {newNick} na ngayon"
 
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 #: client/components/MessageTypes/part.vue:6
 msgctxt "system.part"
 msgid "{nick} has left the channel"
-msgstr "{nick} ay nagsimula na nagsimula sa channel"
+msgstr "Umalis si {nick} sa channel"
 
 #. System line when a user disconnects from the network. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The quit reason (user-set, verbatim) follows the sentence in parentheses.
 #: client/components/MessageTypes/quit.vue:6
 msgctxt "system.quit"
 msgid "{nick} has quit"
-msgstr "{nick} ay nagsimula na nagsimula sa channel"
+msgstr "Nag-disconnect si {nick}"
 
 #. Reason given when pending token requests (upload tokens) are dropped because the connection closed; shown inside the upload error notice.
 #: client/js/irc/authtoken.ts
@@ -13693,8 +13692,8 @@ msgstr "Iyot ang pag-upload"
 msgctxt "upload.confirmCount"
 msgid "Upload {count} file"
 msgid_plural "Upload {count} files"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "I-upload ang {count} file"
+msgstr[1] "I-upload ang {count} file"
 
 #. Intro line of the upload confirmation dialog; asks the user to check the files and warns that every uploaded file is reachable through its link.
 #: client/components/UploadPreview.vue
@@ -14112,7 +14111,7 @@ msgstr "Kahit na"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.allReleasesLink"
 msgid "see all releases"
-msgstr "Tukuyan lahat ang mga pagsusulit"
+msgstr "tingnan ang lahat ng release"
 
 #. aria-label of the changelog window, which shows the app's release notes.
 #: client/components/Windows/Changelog.vue
@@ -14130,25 +14129,25 @@ msgstr "« Tulong"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.notBundledLine"
 msgid "Release notes are not bundled with the build. {readNotes} or {allReleases}."
-msgstr ""
+msgstr "Hindi kasama sa build ang release notes. {readNotes} o {allReleases}."
 
 #. Changelog window sentence shown when the running build is newer than its release. {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v; {since} is a link whose text is windows.changelog.sinceReleaseLink ('what changed since the release').
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.pastReleaseLine"
 msgid "This build is {commit}, after v{version}: {since}."
-msgstr ""
+msgstr "Ang build na ito ay {commit}, pagkatapos ng v{version}: {since}."
 
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.readNotesLink"
 msgid "Read the notes for v{version}"
-msgstr "Basahin ang mga note para sa v{version}"
+msgstr "Basahin ang notes ng v{version}"
 
 #. Text of the link in the changelog's past-release sentence that opens the list of changes between the release and this build. Mid-sentence.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.sinceReleaseLink"
 msgid "what changed since the release"
-msgstr "Ano ang nangyari sa pagpapalit"
+msgstr "ang nagbago mula nang i-release"
 
 #. Heading of the changelog window. {version} is the release version number, kept as written (a v followed by the number).
 #: client/components/Windows/Changelog.vue

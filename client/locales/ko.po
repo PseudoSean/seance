@@ -100,7 +100,7 @@ msgstr "최근 메시지로 이동"
 #: client/components/Chat.vue:67
 msgctxt "chat.mentions"
 msgid "Open your mentions"
-msgstr "언급된 메시지 열기"
+msgstr "언급 열기"
 
 #. Badge on the @ button in the channel header when there are more unread mentions than it shows; {count} is the largest number shown (99), so it reads "99+".
 #: client/components/Chat.vue:384
@@ -413,7 +413,7 @@ msgstr "취소"
 #: client/components/ChatInput.vue:68
 msgctxt "composer.cancelEscape"
 msgid "Cancel (Escape)"
-msgstr "취소 (탈출)"
+msgstr "취소 (Esc)"
 
 #. Tooltip and aria-label of the ✕ button on the upload progress bar above the message input; clicking it aborts the upload in progress.
 #: client/components/ChatInput.vue:45
@@ -437,13 +437,13 @@ msgstr "지금 연결"
 #: client/components/ChatInput.vue:344
 msgctxt "composer.connectingTo"
 msgid "Connecting to {network}…"
-msgstr "{network}에 연결 중..."
+msgstr "{network}에 연결하는 중…"
 
 #. Text of the connection bar shown above the message input when the chat network is down and no reconnect attempt is running yet. {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:339
 msgctxt "composer.disconnectedFrom"
 msgid "Disconnected from {network}."
-msgstr "{network}와의 연결이 끊어졌습니다."
+msgstr "{network}과(와)의 연결이 끊어졌습니다."
 
 #. Label at the left of the compose bar shown while the user edits a message they already sent; the edited text follows it in the same line.
 #: client/components/ChatInput.vue:55
@@ -480,14 +480,14 @@ msgstr "{name}으로 메시지 전송"
 msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
-msgstr[0] "{network}로 재연결 중({seconds})초..."
+msgstr[0] "{seconds}초 후 {network}에 다시 연결합니다…"
 
 #. Text of the connection bar shown above the message input while the wait before the retry is the chat server's connection throttle (dialling sooner would be refused and prolong it). {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
 #: client/components/ChatInput.vue:524
 msgctxt "composer.reconnectInThrottled"
 msgid "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
 msgid_plural "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
-msgstr[0] "{seconds}초 후 {network}에 다시 연결합니다: 서버가 빠른 재연결을 제한합니다."
+msgstr[0] "{seconds}초 후 {network}에 다시 연결합니다. 서버가 빠른 재연결을 제한하고 있습니다."
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
@@ -536,62 +536,62 @@ msgstr "{file} 업로드 중"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "{count}번 마크된 상태"
+msgstr[0] "자리 비움으로 {count}회 표시됨"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "{count}번 마크된 상태"
+msgstr[0] "복귀로 {count}회 표시됨"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
-msgstr[0] "{count} 명의 사용자가 호스트명을 변경했습니다"
+msgstr[0] "사용자 {count}명이 호스트 이름을 변경함"
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.join"
 msgid "{count} user has joined"
 msgid_plural "{count} users have joined"
-msgstr[0] "{count} 명의 사용자가 들어왔습니다"
+msgstr[0] "사용자 {count}명이 들어옴"
 
 #. Condensed status block: {count} users were kicked while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
-msgstr[0] "{count} 명의 사용자가 강제 추방되었습니다"
+msgstr[0] "사용자 {count}명이 내보내짐"
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.left"
 msgid "{count} user has left"
 msgid_plural "{count} users have left"
-msgstr[0] "{count} 명의 사용자가 떠났습니다"
+msgstr[0] "사용자 {count}명이 나감"
 
 #. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
-msgstr[0] "{count} 모드가 설정되었습니다"
+msgstr[0] "모드 {count}개가 설정됨"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] "{count} 사용자가 닉네임을 변경했습니다"
+msgstr[0] "사용자 {count}명이 닉네임을 변경함"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.toggle"
 msgid "Toggle status messages"
-msgstr "상태 메시지 토글"
+msgstr "상태 메시지 표시 전환"
 
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 #: client/components/ConfirmDialog.vue
@@ -1691,7 +1691,7 @@ msgstr "자동완성"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.intro"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the {up} and {down} keys to highlight an item, and insert it by pressing {tab} or {enter} (or by clicking the desired item)."
-msgstr ""
+msgstr "닉네임, 채널, 명령, 이모지를 자동 완성하려면 아래 문자 중 하나를 입력해 추천 목록을 여세요. {up} 및 {down} 키로 항목을 선택하고 {tab} 또는 {enter}를 눌러 넣습니다(원하는 항목을 클릭해도 됩니다)."
 
 #. Description of the @ autocompletion trigger in the help window: typing @ suggests user names.
 #: client/components/Windows/Help.vue
@@ -1703,7 +1703,7 @@ msgstr "니크네임"
 #: client/components/Windows/Help.vue
 msgctxt "help.builtFromCommit"
 msgid "{app} is built from {commit}, after v{version}."
-msgstr ""
+msgstr "{app}은(는) v{version} 이후의 {commit}에서 빌드되었습니다."
 
 #. Lead-in of the alias line under a command description in the help window; the alternative command follows it as a code fragment. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1733,7 +1733,7 @@ msgstr "자신을 어웨이 상태에서 제거합니다 (로 설정한"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ban"
 msgid "Ban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "현재 채널에서 사용자를 차단합니다({mode}). 닉네임이나 호스트 마스크를 쓸 수 있습니다."
 
 #. Description of the /banlist command in the help window.
 #: client/components/Windows/Help.vue
@@ -1757,19 +1757,19 @@ msgstr "현재 채널의 모든 미리보기를 축소합니다 (의 반대가"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connect"
 msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
-msgstr ""
+msgstr "새 IRC 네트워크에 연결합니다. {port}이(가) {plus} 기호로 시작하면 연결이 TLS로 보호됩니다."
 
 #. Description of the /ctcp command in the help window. {ctcp} is the abbreviation CTCP (never translated, an element with its expansion as tooltip); {link} is a link whose text is help.commands.ctcpLink ('the dedicated Wikipedia article') — write this frame so that phrase fits where {link} stands.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcp"
 msgid "Send a {ctcp} request. Read more about this on {link}."
-msgstr ""
+msgstr "{ctcp} 요청을 보냅니다. 자세한 내용은 {link}을(를) 참고하세요."
 
 #. Text of the link at the end of the /ctcp command description in the help window (help.commands.ctcp, where it stands for {link}); it opens the Wikipedia article on CTCP. Use the form that fits that frame in your language.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
-msgstr "전용 위키백과 항목에서"
+msgstr "관련 위키백과 문서"
 
 #. Expansion of the acronym CTCP, shown as the abbreviation's hover tooltip in the help window's /ctcp command description.
 #: client/components/Windows/Help.vue
@@ -1781,13 +1781,13 @@ msgstr "클라이언트 간 프로토콜"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deop"
 msgid "Remove op ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "현재 채널의 사용자 한 명 이상에게서 op 권한({mode})을 뺍니다."
 
 #. Description of the /devoice command in the help window. {mode} is the channel mode -v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoice"
 msgid "Remove voice ({mode}) from one or several users in the current channel."
-msgstr ""
+msgstr "현재 채널의 사용자 한 명 이상에게서 voice({mode})를 뺍니다."
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
@@ -1823,7 +1823,7 @@ msgstr "현재 네트워크의 무시하는 사용자 목록을 로드합니다.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.invite"
 msgid "Invite a user to the specified channel. If {channel} is omitted, user will be invited to the current channel."
-msgstr ""
+msgstr "지정한 채널에 사용자를 초대합니다. {channel}을(를) 생략하면 현재 채널에 초대합니다."
 
 #. Description of the /join command in the help window.
 #: client/components/Windows/Help.vue
@@ -1841,7 +1841,7 @@ msgstr "현재 채널의 사용자를 추방합니다."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickban"
 msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
-msgstr ""
+msgstr "현재 채널에서 사용자를 내보내고 차단합니다({mode}). {ban}과 달리 닉네임만 쓸 수 있습니다(호스트 마스크는 불가)."
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1889,14 +1889,13 @@ msgstr "지정된 채널로 메시지를 보내세요."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.op"
 msgid "Give op ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "현재 채널의 사용자 한 명 이상에게 op 권한({mode})을 줍니다."
 
 #. Description of the /part command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
-#, fuzzy
 msgctxt "help.commands.part"
 msgid "Close the specified channel or private message window, or the current channel if {channel} is omitted."
-msgstr "지정된 채널 또는 개인 메시지 창, 또는 현재 채널을 닫습니다."
+msgstr "지정한 채널이나 개인 대화 창을 닫으며, {channel}을(를) 생략하면 현재 채널을 닫습니다."
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue
@@ -1938,13 +1937,13 @@ msgstr "트로트로 누군가를 때리세요!"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.topic"
 msgid "Get the topic in the current channel. If {newtopic} is specified, sets the topic in the current channel."
-msgstr ""
+msgstr "현재 채널의 주제를 표시합니다. {newtopic}을(를) 지정하면 현재 채널의 주제를 설정합니다."
 
 #. Description of the /unban command in the help window. {mode} is the channel mode -b, rendered as a code element; the parentheses are part of the copy.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unban"
 msgid "Unban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr ""
+msgstr "현재 채널에서 사용자의 차단을 해제합니다({mode}). 닉네임이나 호스트 마스크를 쓸 수 있습니다."
 
 #. Description of the /unignore command in the help window.
 #: client/components/Windows/Help.vue
@@ -1956,19 +1955,19 @@ msgstr "현재 네트워크의 지정된 사용자로부터 메시지를 해제�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unmute"
 msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See {mute} for more information."
-msgstr ""
+msgstr "지정한 채널의 음소거를 해제하며, 채널을 지정하지 않으면 현재 채널의 음소거를 해제합니다. 자세한 내용은 {mute}을(를) 참고하세요."
 
 #. Description of the /ver command in the help window. {ctcp} is the abbreviation CTCP (never translated) and {command} the literal command /ctcp nick version as a code element; VERSION stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ver"
 msgid "Ask a user which client they run: a {ctcp} VERSION request, the same as {command}. The answer shows where you asked."
-msgstr ""
+msgstr "사용자에게 어떤 클라이언트를 쓰는지 묻습니다. {command}와(과) 같은 {ctcp} VERSION 요청입니다. 답변은 질문한 곳에 표시됩니다."
 
 #. Description of the /voice command in the help window. {mode} is the channel mode +v, rendered as a code element; 'voice' is the IRC right to speak in a moderated channel.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voice"
 msgid "Give voice ({mode}) to one or several users in the current channel."
-msgstr ""
+msgstr "현재 채널의 사용자 한 명 이상에게 voice({mode})를 줍니다."
 
 #. Help page, description of the /who command. {mask} is an example wildcard mask shown as code (nick!user@host); keep it.
 #: client/components/Windows/Help.vue
@@ -1986,19 +1985,19 @@ msgstr "현재 네트워크의 주어진 사용자에 대한 정보를 검색합
 #: client/components/Windows/Help.vue
 msgctxt "help.commitHash"
 msgid "commit {hash}"
-msgstr ""
+msgstr "커밋 {hash}"
 
 #. Second item of the help window's past-release list (comparing the running build with the development branch). {range} is a link whose text is help.range ('between 1a2b3c4 and develop').
 #: client/components/Windows/Help.vue
 msgctxt "help.compareBehind"
 msgid "Compare {range} to see what you are missing"
-msgstr ""
+msgstr "{range}을(를) 비교해 빠진 변경 보기"
 
 #. First item of the help window's past-release list. {range} is a link whose text is help.range ('between v5.2.0 and 1a2b3c4').
 #: client/components/Windows/Help.vue
 msgctxt "help.compareSince"
 msgid "Compare {range} to see what changed since the release"
-msgstr ""
+msgstr "{range}을(를) 비교해 릴리스 이후 바뀐 점 보기"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -2011,31 +2010,31 @@ msgstr "문서화"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "굵게 표시합니다."
+msgstr "굵게"
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorHere"
 msgid "here"
-msgstr "여기서"
+msgstr "여기"
 
 #. First paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP1"
 msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range {range} to select the desired color, or use the autocompletion menu to choose a color name (see below)."
-msgstr ""
+msgstr "이 단축키 다음에 입력한 모든 텍스트에 색을 입힙니다. 단축키를 누른 뒤 {range} 범위의 정수를 입력해 색을 고르거나, 자동 완성 메뉴에서 색 이름을 고르세요(아래 참고)."
 
 #. Second paragraph of the Ctrl+K (color) description in the help window. {range} is the range 0—15 as a code element.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2"
 msgid "Background color can be specified by putting a comma and another integer in the range {range} after the foreground color number (autocompletion works too)."
-msgstr ""
+msgstr "배경색은 글자색 번호 뒤에 쉼표와 {range} 범위의 정수를 하나 더 넣어 지정합니다(자동 완성도 됩니다)."
 
 #. Last paragraph of the Ctrl+K description in the help window. {link} is a link to an external IRC color reference whose text is help.formatting.colorHere ('here'); write the frame so that word fits it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorReference"
 msgid "A color reference can be found {link}."
-msgstr ""
+msgstr "색상표는 {link}에서 볼 수 있습니다."
 
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
 #: client/components/Windows/Help.vue
@@ -2047,19 +2046,19 @@ msgstr "단축키 설정"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "이탈릭스"
+msgstr "기울임꼴"
 
 #. Description of a text-formatting shortcut in the help window. {style} is the style's name (help.formatting.bold, italic, underline, strikethrough or monospace: 'bold', 'italics', 'underlined', 'struck through', 'monospaced'), shown in that style where the placeholder stands; write the frame so those words fit it.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.markAs"
 msgid "Mark all text typed after this shortcut as {style}."
-msgstr ""
+msgstr "이 단축키 다음에 입력한 모든 텍스트를 다음 서식으로 표시합니다: {style}."
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "고정 너비 글꼴"
+msgstr "고정폭"
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2132,7 +2131,7 @@ msgstr "개인정보 정책"
 #: client/components/Windows/Help.vue
 msgctxt "help.range"
 msgid "between {from} and {to}"
-msgstr ""
+msgstr "{from}와(과) {to} 사이"
 
 #. Link beside the version number in the help window's title line; opens the changelog window. Mid-sentence between parentheses.
 #: client/components/Windows/Help.vue
@@ -2811,7 +2810,7 @@ msgstr "{file} · 클릭하여 표시"
 #: client/components/LinkPreviewToggle.vue
 msgctxt "link.collapse"
 msgid "Collapse preview"
-msgstr "미리보기 축소"
+msgstr "미리보기 접기"
 
 #. aria-label of the button on a message link preview while the preview is folded; clicking expands the media inline.
 #: client/components/LinkPreviewToggle.vue
@@ -3689,7 +3688,7 @@ msgstr "주제는:"
 #: client/components/MessageTypes/topic_set_by.vue
 msgctxt "msg.topicSet"
 msgid "Topic set by {nick} on {time}"
-msgstr ""
+msgstr "{time}에 {nick} 님이 주제를 설정했습니다"
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -10900,7 +10899,7 @@ msgstr "이 세션에서 로드된 메시지만 검색됩니다 — 더 오래�
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.searchingIn"
 msgid "Searching in {channel} for"
-msgstr ""
+msgstr "{channel}에서 검색:"
 
 #. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
 #: client/components/Windows/SearchResults.vue
@@ -11016,7 +11015,7 @@ msgstr "이미 /{name}이 존재합니다."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorName"
 msgid "Give the alias a name."
-msgstr "앨리아스 이름을 지어주세요."
+msgstr "별칭의 이름을 입력하세요."
 
 #. Row error: the alias name contains characters other than letters, digits, hyphen and underscore. The - and _ are literal characters, keep them.
 #: client/components/Settings/Aliases.vue
@@ -11046,7 +11045,7 @@ msgstr "실행"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.intro"
 msgid "An alias is a slash command of your own. Typing {example} runs what you define here — one command per line, with the arguments filled in where the body says {first}, {rest} or {all}."
-msgstr ""
+msgstr "별칭은 나만의 슬래시 명령입니다. {example}을(를) 입력하면 여기서 정의한 내용이 실행됩니다. 한 줄에 명령 하나씩이며, 본문에서 {first}, {rest}, {all}이(가) 있는 자리에 인수가 들어갑니다."
 
 #. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
 #: client/components/Settings/Aliases.vue
@@ -11064,7 +11063,7 @@ msgstr "이름"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nested"
 msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
-msgstr ""
+msgstr "본문의 한 줄에서 다른 별칭을 호출할 수 있으며, 기본 제공 명령과 같은 이름의 별칭은 그 명령을 대체합니다. {command}은(는) 반복 없이 {expansion}이(가) 될 수 있습니다."
 
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
 #: client/components/Settings/Aliases.vue
@@ -11654,7 +11653,7 @@ msgstr "항상 표시됨"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHelp"
 msgid "Media in these scopes loads without asking. Add one with {button} on any preview."
-msgstr ""
+msgstr "이 범위의 미디어는 묻지 않고 불러옵니다. 미리보기의 {button} 버튼으로 추가하세요."
 
 #. Subheading in the always-shown media list of Settings > Appearance above the user account entries.
 #: client/components/Settings/Appearance.vue
@@ -12195,7 +12194,7 @@ msgstr "서버의 푸시 식별 (키)이 변경되었기 때문에, 이 기기�
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.unsupported"
 msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
-msgstr "이 브라우저는 푸시 알림을 지원하지 않습니다 (이것은 푸시 API, 서비스 워커 및 안전한 컨텍스트가 필요합니다)."
+msgstr "이 브라우저는 푸시 알림을 지원하지 않습니다(Push API, 서비스 워커, 보안 컨텍스트가 필요합니다)."
 
 #. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.
 #: client/components/Settings/Notifications.vue
@@ -12290,14 +12289,14 @@ msgstr "...로 이동"
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.language"
 msgid "Display language"
-msgstr "언어 표시"
+msgstr "표시 언어"
 
 #. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many messages highlight (mention) the user.
 #: client/components/ChannelWrapper.vue:97
 msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
-msgstr[0] "{count} 언급"
+msgstr[0] "언급 {count}개"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -12341,7 +12340,7 @@ msgstr "에러다 디버그 도구 토글"
 msgctxt "sidebar.unread"
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
-msgstr[0] "{count} 미확인 메시지"
+msgstr[0] "읽지 않은 메시지 {count}개"
 
 #. Column header of the channel-ban list: the banned hostmask, verbatim server data.
 #: client/components/Special/ListBans.vue
@@ -12570,91 +12569,91 @@ msgstr "{nick} ({count})"
 #: client/components/MessageTypes/away.vue:10
 msgctxt "system.away"
 msgid "{nick} is away"
-msgstr "{nick}이(가) 자리 비움 상태입니다"
+msgstr "{nick} 님이 자리를 비웠습니다"
 
 #. System line when a user returns from away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 #: client/components/MessageTypes/back.vue:10
 msgctxt "system.back"
 msgid "{nick} is back"
-msgstr "{nick}가 돌아왔습니다"
+msgstr "{nick} 님이 돌아왔습니다"
 
 #. System line tail case: a user's username/hostname changed but neither value arrived (degenerate). {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:4
 msgctxt "system.chghost"
 msgid "{nick} has changed"
-msgstr "{nick}가 변경되었습니다"
+msgstr "{nick} 님의 정보가 변경되었습니다"
 
 #. System line when a user's username AND hostname change together. {nick} and {ident} are VERBATIM user content; {host} is a verbatim technical value; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:12
 msgctxt "system.chghostBoth"
 msgid "{nick} has changed username to {ident} and hostname to {host}"
-msgstr "{nick}가 이름을 {ident}로 변경하고 호스트명을 {host}로 변경했습니다"
+msgstr "{nick} 님이 사용자 이름을 {ident}(으)로, 호스트 이름을 {host}(으)로 변경했습니다"
 
 #. System line when a user's hostname changes. {nick} is the user's nick (VERBATIM, renders as the interactive username element) and {host} the new hostname (verbatim technical value).
 #: client/components/MessageTypes/chghost.vue:9
 msgctxt "system.chghostHost"
 msgid "{nick} has changed hostname to {host}"
-msgstr "{nick}가 호스트명을 {host}로 변경했습니다"
+msgstr "{nick} 님이 호스트 이름을 {host}(으)로 변경했습니다"
 
 #. System line when a user's username (ident) changes. {nick} is the user's nick and {ident} the new username — both VERBATIM, never translate; {nick} renders as the interactive username element.
 #: client/components/MessageTypes/chghost.vue:6
 msgctxt "system.chghostIdent"
 msgid "{nick} has changed username to {ident}"
-msgstr "{nick}가 이름을 {ident}로 변경했습니다"
+msgstr "{nick} 님이 사용자 이름을 {ident}(으)로 변경했습니다"
 
 #. System line for an incoming CTCP request. {nick} is the sender's nick (VERBATIM user content, renders as the interactive username element); {ctcp} is the fixed abbreviation CTCP (never translate); {message} is the verbatim CTCP payload.
 #: client/components/MessageTypes/ctcp_request.vue:5
 msgctxt "system.ctcpRequest"
 msgid "{nick} sent a {ctcp} request: {message}"
-msgstr "{nick}가 {ctcp} 요청을 보냈습니다: {message}"
+msgstr "{nick} 님이 {ctcp} 요청을 보냈습니다: {message}"
 
 #. System line when a user invites someone else. {nick} is the inviter's nick and {target} the invited user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands; {channel} is the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:9
 msgctxt "system.inviteTarget"
 msgid "{nick} has invited {target} to {channel}"
-msgstr "{nick}가 {target}를 {channel}에 초대했습니다"
+msgstr "{nick} 님이 {target} 님을 {channel}에 초대했습니다"
 
 #. System line when the invite targets the reader. {nick} is the inviter's nick (VERBATIM user content, renders as the interactive username element) and {channel} the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:7
 msgctxt "system.inviteYou"
 msgid "{nick} has invited you to {channel}"
-msgstr "{nick}이(가) 당신을 {channel}에 초대했습니다"
+msgstr "{nick} 님이 회원님을 {channel}에 초대했습니다"
 
 #. System line when a user joins a channel. {nick} is the joining user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element inline where the placeholder stands, so word order around it is the translator's.
 #: client/components/MessageTypes/join.vue:8
 msgctxt "system.join"
 msgid "{nick} has joined the channel"
-msgstr "{nick}가 채널에 들어왔습니다"
+msgstr "{nick} 님이 채널에 들어왔습니다"
 
 #. System line when a user is kicked from a channel. {nick} is the kicker's nick and {target} the kicked user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 #: client/components/MessageTypes/kick.vue:6
 msgctxt "system.kick"
 msgid "{nick} has kicked {target}"
-msgstr "{nick}가 {target}를 키쳤습니다"
+msgstr "{nick} 님이 {target} 님을 채널에서 내보냈습니다"
 
 #. System line when a channel or user mode changes. {nick} is the nick that set the mode, VERBATIM user content; {modes} is the verbatim mode change (e.g. +o nick), rendered as-is.
 #: client/components/MessageTypes/mode.vue:6
 msgctxt "system.mode"
 msgid "{nick} sets mode {modes}"
-msgstr "{nick}가 모드 {modes}를 설정했습니다"
+msgstr "{nick} 님이 모드 {modes}을(를) 설정했습니다"
 
 #. System line when a user changes nick. {nick} is the old nick and {newNick} the new one — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 #: client/components/MessageTypes/nick.vue:6
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr "{nick}이 이제 {newNick}으로 알려졌습니다"
+msgstr "{nick} 님의 닉네임이 이제 {newNick}입니다"
 
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 #: client/components/MessageTypes/part.vue:6
 msgctxt "system.part"
 msgid "{nick} has left the channel"
-msgstr "{nick}이 채널을 떠났습니다"
+msgstr "{nick} 님이 채널을 나갔습니다"
 
 #. System line when a user disconnects from the network. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The quit reason (user-set, verbatim) follows the sentence in parentheses.
 #: client/components/MessageTypes/quit.vue:6
 msgctxt "system.quit"
 msgid "{nick} has quit"
-msgstr "{nick}이 채널을 떠났습니다"
+msgstr "{nick} 님이 접속을 종료했습니다"
 
 #. Reason given when pending token requests (upload tokens) are dropped because the connection closed; shown inside the upload error notice.
 #: client/js/irc/authtoken.ts
@@ -13292,19 +13291,19 @@ msgstr "이 메시지만"
 #: client/components/TranslationLine.vue
 msgctxt "translate.reason.answered"
 msgid "answered the question instead of translating it"
-msgstr "질문을 답변한 대신 번역했습니다"
+msgstr "번역하지 않고 질문에 답했습니다"
 
 #. Failure reason after 'Couldn't translate': the model returned runs of symbols or punctuation with no usable words. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
 msgctxt "translate.reason.degenerate"
 msgid "the answer was symbol garbage"
-msgstr "답변은 기호 쓰레기였습니다"
+msgstr "응답이 의미 없는 기호의 나열이었습니다"
 
 #. Failure reason after 'Couldn't translate': the model replied to the message's request (acknowledging it, describing what it would do) rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
 msgctxt "translate.reason.narration"
 msgid "talked about the request instead of translating"
-msgstr "요청에 대해 말했습니다 대신 번역했습니다"
+msgstr "번역하지 않고 요청에 대해 설명했습니다"
 
 #. Tooltip and aria-label of the circular-arrow button that retries a failed translation.
 #: client/components/TranslationLine.vue
@@ -13632,7 +13631,7 @@ msgstr "업로드 취소"
 msgctxt "upload.confirmCount"
 msgid "Upload {count} file"
 msgid_plural "Upload {count} files"
-msgstr[0] ""
+msgstr[0] "파일 {count}개 업로드"
 
 #. Intro line of the upload confirmation dialog; asks the user to check the files and warns that every uploaded file is reachable through its link.
 #: client/components/UploadPreview.vue
@@ -14048,7 +14047,7 @@ msgstr "네"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.allReleasesLink"
 msgid "see all releases"
-msgstr "모든 릴리즈 보기"
+msgstr "모든 릴리스 보기"
 
 #. aria-label of the changelog window, which shows the app's release notes.
 #: client/components/Windows/Changelog.vue
@@ -14066,25 +14065,25 @@ msgstr "« 도움"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.notBundledLine"
 msgid "Release notes are not bundled with the build. {readNotes} or {allReleases}."
-msgstr ""
+msgstr "릴리스 노트는 빌드에 포함되어 있지 않습니다. {readNotes} 또는 {allReleases}."
 
 #. Changelog window sentence shown when the running build is newer than its release. {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v; {since} is a link whose text is windows.changelog.sinceReleaseLink ('what changed since the release').
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.pastReleaseLine"
 msgid "This build is {commit}, after v{version}: {since}."
-msgstr ""
+msgstr "이 빌드는 v{version} 이후의 {commit}입니다: {since}."
 
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.readNotesLink"
 msgid "Read the notes for v{version}"
-msgstr "v{version}의 노트를 참조하세요"
+msgstr "v{version} 노트 읽기"
 
 #. Text of the link in the changelog's past-release sentence that opens the list of changes between the release and this build. Mid-sentence.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.sinceReleaseLink"
 msgid "what changed since the release"
-msgstr "릴리스 후 변경 사항"
+msgstr "릴리스 이후 바뀐 점"
 
 #. Heading of the changelog window. {version} is the release version number, kept as written (a v followed by the number).
 #: client/components/Windows/Changelog.vue

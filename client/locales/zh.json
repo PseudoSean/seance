@@ -14,9 +14,9 @@
   "chat.currentlyOpen": "当前打开{type}",
   "chat.historyLoading": "正在加载…",
   "chat.jumpToRecent": "跳转到最近消息",
-  "chat.mentions": "查看提及的消息",
+  "chat.mentions": "打开提及",
   "chat.mentionsUnread": {
-    "other": "打开提及（{count} 条未读）"
+    "other": "打开提及，{count} 条未读"
   },
   "chat.saveTopic": "保存话题",
   "chat.showOlder": "查看更早的消息",
@@ -68,22 +68,22 @@
   },
   "code.showLess": "显示更少",
   "composer.cancel": "取消",
-  "composer.cancelEscape": "取消（退出）",
+  "composer.cancelEscape": "取消 (Esc)",
   "composer.cancelUpload": "取消上传",
   "composer.connect": "连接",
   "composer.connectNow": "立即连接",
   "composer.connectingTo": "正在连接到 {network}…",
-  "composer.disconnectedFrom": "与{network}断开连接",
+  "composer.disconnectedFrom": "已与 {network} 断开连接。",
   "composer.editing": "编辑消息",
   "composer.fallbackNetwork": "网络",
   "composer.inputLabel": "消息输入",
   "composer.notConnected": "未连接",
   "composer.placeholder": "写给{name}",
   "composer.reconnectIn": {
-    "other": "正在重连到{network}，将在{seconds}s后连接…"
+    "other": "{seconds} 秒后重新连接到 {network}…"
   },
   "composer.reconnectInThrottled": {
-    "other": "{seconds} 秒后重新连接到 {network}：服务器限制了快速重连。"
+    "other": "{seconds} 秒后重新连接到 {network}：服务器限制频繁重连。"
   },
   "composer.replyingTo": "回复{nick}：",
   "composer.send": "发送消息",
@@ -93,30 +93,30 @@
   "composer.uploadWaiting": "等待服务器…",
   "composer.uploading": "上传{file}",
   "condensed.away": {
-    "other": "已标记远离 {count} 次"
+    "other": "{count} 次标记为离开"
   },
   "condensed.back": {
-    "other": "已标记返回 {count} 次"
+    "other": "{count} 次标记为回来"
   },
   "condensed.chghost": {
-    "other": "{count}名用户更改了主机名"
+    "other": "{count} 位用户更改了主机名"
   },
   "condensed.join": {
-    "other": "{count}名用户加入"
+    "other": "{count} 位用户加入"
   },
   "condensed.kicked": {
-    "other": "{count}名用户被踢出"
+    "other": "{count} 位用户被踢出"
   },
   "condensed.left": {
-    "other": "{count}名用户离开"
+    "other": "{count} 位用户离开"
   },
   "condensed.modes": {
-    "other": "{count} 模式已设置"
+    "other": "设置了 {count} 个模式"
   },
   "condensed.nick": {
-    "other": "{count} 用户更改了昵称"
+    "other": "{count} 位用户更改了昵称"
   },
-  "condensed.toggle": "切换状态消息",
+  "condensed.toggle": "显示或隐藏状态消息",
   "confirm.cancel": "取消",
   "connect.account": "账户",
   "connect.ariaLabel": "连接",
@@ -297,23 +297,32 @@
   "help.autocomplete.disabled": "自动补全可在设置中禁用。",
   "help.autocomplete.emoji": "表情符号（注意：需要两个搜索字符，以避免与常见表情符号如",
   "help.autocomplete.heading": "自动补全",
+  "help.autocomplete.intro": "要自动补全昵称、频道、命令和表情，请输入下方任一字符打开建议列表。用 {up} 和 {down} 键选中一项，按 {tab} 或 {enter} 插入（也可以直接点击所需项）。",
   "help.autocomplete.nick": "昵称",
+  "help.builtFromCommit": "{app} 构建自 {commit}，晚于 v{version}。",
   "help.commands.alias": "别名：",
   "help.commands.aliases": "别名：",
   "help.commands.away": "将自己标记为离开，可附带一条消息。",
   "help.commands.back": "清除你的离开状态（设置方式：",
+  "help.commands.ban": "在当前频道封禁（{mode}）一位用户。可以是昵称或主机掩码。",
   "help.commands.banlist": "加载当前频道的禁用列表。",
   "help.commands.cleartopic": "清除当前频道的主题。",
   "help.commands.collapse": "在当前频道中折叠所有预览（与",
-  "help.commands.ctcpLink": "专用的维基百科文章",
+  "help.commands.connect": "连接到新的 IRC 网络。如果 {port} 以 {plus} 号开头，连接将使用 TLS 加密。",
+  "help.commands.ctcp": "发送 {ctcp} 请求。详情请参阅{link}。",
+  "help.commands.ctcpLink": "维基百科上的相关条目",
   "help.commands.ctcpTitle": "客户到客户协议",
+  "help.commands.deop": "移除当前频道一位或多位用户的管理员权限（{mode}）。",
+  "help.commands.devoice": "移除当前频道一位或多位用户的发言权（{mode}）。",
   "help.commands.disconnectLong": "从当前网络断开连接，可选地提供一条消息",
   "help.commands.expand": "展开当前频道中的所有预览（与",
   "help.commands.heading": "命令",
   "help.commands.ignore": "阻止当前网络上指定用户的任何消息。可以是昵称或主机掩码",
   "help.commands.ignorelist": "加载当前网络上忽略用户的列表",
+  "help.commands.invite": "邀请一位用户加入指定频道。如果省略 {channel}，则邀请其加入当前频道。",
   "help.commands.join": "加入频道。密码仅在受保护的频道中需要，通常可以省略",
   "help.commands.kick": "将用户踢出当前频道",
+  "help.commands.kickban": "将一位用户踢出当前频道并封禁（{mode}）。与 {ban} 不同，只能使用昵称（不能使用主机掩码）。",
   "help.commands.list": "获取此网络上可用的频道列表。",
   "help.commands.me": "向当前频道发送一个动作消息。{appName} 会将其显示为 inline，如同消息是第三人称发出的。",
   "help.commands.mode": "如果活动窗口是频道，则将给定的标志设置为当前频道；如果活动窗口是私人消息窗口，则设置为另一个用户；如果当前窗口是服务器窗口，则设置为自己。",
@@ -321,20 +330,34 @@
   "help.commands.mute": "阻止消息生成任何反馈。这会关闭高亮指示器，隐藏提及，并抑制推送通知。静音网络大厅会静音整个网络。不指定任何频道目标会静音当前频道。恢复使用",
   "help.commands.nick": "更改当前网络上的昵称。",
   "help.commands.notice": "向指定的频道发送一条通知消息。",
+  "help.commands.op": "给当前频道的一位或多位用户管理员权限（{mode}）。",
+  "help.commands.part": "关闭指定的频道或私聊窗口；如果省略 {channel}，则关闭当前频道。",
   "help.commands.query": "向指定的用户发送私人消息。",
   "help.commands.quit": "从当前网络断开连接，可选地附带一条消息。",
   "help.commands.raw": "向当前 IRC 网络发送原始消息。",
   "help.commands.rejoin": "离开并立即重新加入当前频道。这有助于快速从 ChanServ 获取 op 权限，例如在空频道中。",
   "help.commands.search": "在当前频道/用户中搜索消息",
   "help.commands.slap": "用鳟鱼抽打某人！",
+  "help.commands.topic": "获取当前频道的主题。如果指定了 {newtopic}，则设置当前频道的主题。",
+  "help.commands.unban": "在当前频道解除对一位用户的封禁（{mode}）。可以是昵称或主机掩码。",
   "help.commands.unignore": "解除指定用户的消息禁言，该用户在当前网络上。这可以是昵称或主机掩码。",
+  "help.commands.unmute": "取消对指定频道的静音；未指定频道时取消当前频道的静音。详情请参阅 {mute}。",
+  "help.commands.ver": "询问一位用户使用的客户端：一个 {ctcp} VERSION 请求，与 {command} 相同。回复会显示在你询问的地方。",
+  "help.commands.voice": "给当前频道的一位或多位用户发言权（{mode}）。",
   "help.commands.who": "以表格列出与掩码（频道、昵称或通配符 {mask}）匹配的用户。不指定掩码时列出当前频道的用户。",
   "help.commands.whois": "获取当前网络上给定用户的详细信息。",
+  "help.commitHash": "提交 {hash}",
+  "help.compareBehind": "比较 {range}，查看你缺少的内容",
+  "help.compareSince": "比较 {range}，查看自发布以来的变化",
   "help.documentation": "文档",
   "help.formatting.bold": "粗体",
-  "help.formatting.colorHere": "这里",
+  "help.formatting.colorHere": "此处",
+  "help.formatting.colorP1": "为此快捷键之后输入的所有文本着色。按下快捷键后，输入 {range} 范围内的整数选择颜色，或使用自动补全菜单选择颜色名称（见下文）。",
+  "help.formatting.colorP2": "要指定背景色，请在前景色编号后加一个逗号和另一个 {range} 范围内的整数（同样支持自动补全）。",
+  "help.formatting.colorReference": "颜色对照表见{link}。",
   "help.formatting.heading": "格式快捷方式",
   "help.formatting.italic": "斜体",
+  "help.formatting.markAs": "将此快捷键之后输入的所有文本设为{style}。",
   "help.formatting.monospace": "等宽字体",
   "help.formatting.reset": "将此快捷方式之后输入的文本格式重置为原始格式。",
   "help.formatting.strikethrough": "删除线",
@@ -347,6 +370,7 @@
   "help.gestures.twoSwipeLeft": "双指向左滑动",
   "help.gestures.twoSwipeRight": "双指向右滑动",
   "help.privacy": "隐私政策",
+  "help.range": "{from} 与 {to} 之间",
   "help.releaseNotesLink": "发布说明",
   "help.reload": "重新加载",
   "help.reportIssue": "报告问题…",
@@ -607,6 +631,7 @@
   "msg.topicChanged": "已将话题更改为：",
   "msg.topicFor": "{channel} 的话题是：{topic}",
   "msg.topicIs": "话题是：",
+  "msg.topicSet": "主题由 {nick} 于 {time} 设置",
   "msg.topicUnset": "没有设置话题。",
   "msg.topicUnsetFor": "{channel} 没有设置话题。",
   "msg.youAreKnownAs": "现在您的昵称是 {nick}",
@@ -1821,6 +1846,7 @@
   "search.results.close": "关闭搜索窗口",
   "search.results.none": "没有找到结果。",
   "search.results.scopeNote": "只有当前会话中加载的消息会被搜索——旧历史不会被搜索。",
+  "search.results.searchingIn": "在 {channel} 中搜索：",
   "search.results.showOlder": "显示更早的结果（{count} 个更多）",
   "search.results.typePrompt": "输入要搜索的内容。",
   "send.editNoReply": "编辑未发送：没有从服务器收到回复。",
@@ -1839,13 +1865,15 @@
   "settings.aliases.empty": "暂无别名。",
   "settings.aliases.errorBody": "说明别名的作用。",
   "settings.aliases.errorDuplicate": "已经存在 /{name}。",
-  "settings.aliases.errorName": "为别名命名。",
+  "settings.aliases.errorName": "请为别名命名。",
   "settings.aliases.errorNameChars": "名称只能包含字母、数字、- 和 _，不能有空格或斜杠。",
   "settings.aliases.errorTooLong": "内容过长（超过 {limit} 个字符）。",
   "settings.aliases.headName": "别名",
   "settings.aliases.headRuns": "运行",
+  "settings.aliases.intro": "别名是你自己的斜杠命令。输入 {example} 会运行你在这里定义的内容——每行一条命令，参数填入正文中写有 {first}、{rest} 或 {all} 的位置。",
   "settings.aliases.nameAria": "别名名称 {number}",
   "settings.aliases.namePlaceholder": "名称",
+  "settings.aliases.nested": "正文中的一行可以调用另一个别名，与内置命令同名的别名会替换该命令——{command} 可以变成 {expansion} 而不会循环。",
   "settings.aliases.paneAria": "命令别名",
   "settings.aliases.previewMiss": "不是别名 — 这会作为输入直接发送。",
   "settings.aliases.removeAria": "删除别名 {name}",
@@ -1947,6 +1975,7 @@
   "settings.appearance.trustedClear": "清除所有",
   "settings.appearance.trustedEmpty": "还没有。",
   "settings.appearance.trustedHeading": "始终显示",
+  "settings.appearance.trustedHelp": "这些范围内的媒体会直接加载，不再询问。可在任意预览上点击 {button} 添加。",
   "settings.appearance.trustedPeople": "人们",
   "settings.appearance.trustedSites": "网站",
   "settings.appearance.untrustFrom": "停止始终显示来自 {name}",
@@ -2038,7 +2067,7 @@
   "settings.notifications.serverUnsupported": "推送通知需要一个支持草案/webpush能力且连接的服务器，以及您登录到一个账户。",
   "settings.notifications.sound": "启用通知声音",
   "settings.notifications.stale": "服务器的推送身份（其密钥）已更改，因此此设备的推送订阅不再生效。请从该网络的设置中重新订阅（编辑网络 → “重新获取推送通知”），以便在应用关闭时仍能收到通知。",
-  "settings.notifications.unsupported": "该浏览器不支持推送通知（需要推送API、服务工作者和安全上下文）。",
+  "settings.notifications.unsupported": "此浏览器不支持推送通知（需要 Push API、Service Worker 和安全上下文）。",
   "settings.notifications.warning": "警告",
   "settings.tabs.aliases": "别名",
   "settings.tabs.appearance": "外观",
@@ -2055,7 +2084,7 @@
   "sidebar.jumpTo": "跳转到...",
   "sidebar.language": "显示语言",
   "sidebar.mentions": {
-    "other": "{count} 提及"
+    "other": "{count} 条提及"
   },
   "sidebar.networkList": "网络和频道列表",
   "sidebar.noResults": "未找到结果。",
@@ -2064,7 +2093,7 @@
   "sidebar.toggle": "切换频道列表",
   "sidebar.toggleDevtools": "切换 eruda devtools",
   "sidebar.unread": {
-    "other": "{count} 未读消息"
+    "other": "{count} 条未读消息"
   },
   "special.bans.banned": "禁止",
   "special.bans.bannedAt": "禁止时间",
@@ -2103,21 +2132,21 @@
   "sw.titleChannel": "{nick} 在 {target}",
   "sw.titleChannelCount": "{nick} 在 {target} ({count})",
   "sw.titleNickCount": "{nick} ({count})",
-  "system.away": "{nick} 处于离开状态",
-  "system.back": "{nick} 已返回",
-  "system.chghost": "{nick} 已更改",
-  "system.chghostBoth": "{nick} 更改了用户名为 {ident} 和主机名为 {host}",
-  "system.chghostHost": "{nick} 更改了主机名为 {host}",
-  "system.chghostIdent": "{nick} 更改了用户名为 {ident}",
-  "system.ctcpRequest": "{nick} 发送了一个 {ctcp} 请求：{message}",
+  "system.away": "{nick} 已离开",
+  "system.back": "{nick} 已回来",
+  "system.chghost": "{nick} 的信息已更改",
+  "system.chghostBoth": "{nick} 已将用户名改为 {ident}，主机名改为 {host}",
+  "system.chghostHost": "{nick} 已将主机名改为 {host}",
+  "system.chghostIdent": "{nick} 已将用户名改为 {ident}",
+  "system.ctcpRequest": "{nick} 发送了 {ctcp} 请求：{message}",
   "system.inviteTarget": "{nick} 邀请 {target} 加入 {channel}",
   "system.inviteYou": "{nick} 邀请你加入 {channel}",
-  "system.join": "{nick} 已加入频道",
-  "system.kick": "{nick} 驱逐了 {target}",
-  "system.mode": "{nick} 设置模式 {modes}",
-  "system.nick": "{nick} 现在名为 {newNick}",
-  "system.part": "{nick} 已离开频道",
-  "system.quit": "{nick} 已退出",
+  "system.join": "{nick} 加入了频道",
+  "system.kick": "{nick} 将 {target} 踢出了频道",
+  "system.mode": "{nick} 设置了模式 {modes}",
+  "system.nick": "{nick} 已改名为 {newNick}",
+  "system.part": "{nick} 离开了频道",
+  "system.quit": "{nick} 已断开连接",
   "token.disconnected": "断开连接",
   "token.failed": "Token请求失败（{code}）",
   "token.timeout": "服务器未响应token请求",
@@ -2280,6 +2309,9 @@
   "upload.badType": "文件 {file} 不是此上传器接受的类型（{types}）",
   "upload.cancel": "取消",
   "upload.cancelled": "上传取消",
+  "upload.confirmCount": {
+    "other": "上传 {count} 个文件"
+  },
   "upload.confirmHint": "请确认这是您想要分享的内容，然后上传。任何人打开链接都能看到它。",
   "upload.confirmOne": "上传",
   "upload.confirmTitleMany": "上传这些文件？",
@@ -2355,8 +2387,10 @@
   "windows.changelog.allReleasesLink": "查看所有版本",
   "windows.changelog.aria": "版本日志",
   "windows.changelog.back": "« 帮助",
-  "windows.changelog.readNotesLink": "请阅读v{version}的说明",
-  "windows.changelog.sinceReleaseLink": "了解自发布以来的变化",
+  "windows.changelog.notBundledLine": "发行说明未包含在构建中。{readNotes}或{allReleases}。",
+  "windows.changelog.pastReleaseLine": "此构建为 {commit}，晚于 v{version}：{since}。",
+  "windows.changelog.readNotesLink": "阅读 v{version} 的说明",
+  "windows.changelog.sinceReleaseLink": "自发布以来的变化",
   "windows.changelog.title": "v{version}的发布说明",
   "windows.networkEdit.back": "← 网络",
   "windows.settings.close": "关闭设置",
