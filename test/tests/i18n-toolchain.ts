@@ -25,7 +25,12 @@ import {POT_PATH} from "../../tools/i18n/paths";
 import {DEV_ONLY_TAGS, readAvailableLocales} from "../../tools/i18n/available-locales";
 import {categoryIndexMap, compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
 import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
-import {PLURAL_RULES, planPluralSlots, pluralEval} from "../../tools/i18n/plural";
+import {
+	countsReadingSlot,
+	PLURAL_RULES,
+	planPluralSlots,
+	pluralEval,
+} from "../../tools/i18n/plural";
 import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
@@ -177,6 +182,26 @@ describe("i18n toolchain", () => {
 				readFileSync(join(tmp, "compile-plural", "de.json"), "utf8")
 			);
 			expect(written).to.deep.equal(result.catalogs.de);
+		});
+
+		it("drops a plural whose count-less form CLDR also serves for other counts", () => {
+			// fil's CLDR "one" covers 0, 2, 3, 5, … and ru's covers 21, 31, …:
+			// a "once" compiled there read "once" for five. de's "one" is 1
+			// alone, so the same shape is sound there.
+			expect(new Intl.PluralRules("fil").select(5)).to.equal("one");
+			const warn = sinon.stub(console, "warn");
+
+			try {
+				const result = compileFixture("compile/countless");
+				expect(result.catalogs.fil).to.not.have.property("condensed.away");
+				expect(result.catalogs.de["condensed.away"]).to.deep.equal({
+					one: "einmal als abwesend markiert",
+					other: "{count}-mal als abwesend markiert",
+				});
+				expect(result.warnings.join("\n")).to.match(/condensed\.away.*"one" form/);
+			} finally {
+				warn.restore();
+			}
 		});
 
 		it("prunes a compiled catalog whose tag is no longer a target", () => {
@@ -546,6 +571,29 @@ describe("i18n toolchain", () => {
 			}
 		});
 
+		it("gives the singular only to a slot that n = 1 alone reads, by CLDR", () => {
+			// The runtime picks a slot through Intl.PluralRules, not the gettext
+			// expression: fil's "one" also serves 0, 2, 3, 5, 7, …, ru's and uk's
+			// 21, 31, …, fr's and pt's 0. Those slots translate the plural
+			// text, the one carrying {count}; de's and pl's "one" is 1 alone.
+			const plan = (tag: string) =>
+				planPluralSlots(entry, PLURAL_RULES[tag].nplurals, PLURAL_RULES[tag].expr, tag).map(
+					(slot) => slot.source
+				);
+
+			expect(countsReadingSlot("fil", PLURAL_RULES.fil.expr, 0).slice(0, 6)).to.deep.equal([
+				0, 1, 2, 3, 5, 7,
+			]);
+			expect(plan("fil")).to.deep.equal(["msgidPlural", "msgidPlural"]);
+			expect(plan("ru")).to.deep.equal(["msgidPlural", "msgidPlural", "msgidPlural"]);
+			expect(plan("fr")).to.deep.equal(["msgidPlural", "msgidPlural"]);
+			expect(plan("de")).to.deep.equal(["msgid", "msgidPlural"]);
+			expect(plan("pl")).to.deep.equal(["msgid", "msgidPlural", "msgidPlural"]);
+			// ar: slot 0 is "zero", slot 1 "one" (1 alone) takes the singular.
+			expect(plan("ar")[1]).to.equal("msgid");
+			expect(plan("ar")[0]).to.equal("msgidPlural");
+		});
+
 		it("plans nothing for a singular entry", () => {
 			expect(planPluralSlots({msgid: "Connect"}, 2, "n != 1")).to.deep.equal([]);
 		});
@@ -602,7 +650,9 @@ describe("i18n toolchain", () => {
 			// compile, which then refuses the whole catalog.
 			const {entries} = sweepFixture("ru");
 			const entry = entries.find((item) => item.msgctxt === "condensed.away");
-			expect(entry?.msgstr).to.deep.equal(["помечено однажды", "помечено {count} раза", ""]);
+			// Slot 0 is emptied too: ru's CLDR "one" also serves 21, 31, …, so
+			// it translates the plural text, and "однажды" has no {count}.
+			expect(entry?.msgstr).to.deep.equal(["", "помечено {count} раза", ""]);
 		});
 
 		it("empties a machine answer that loops, runs away or leaves the script", () => {

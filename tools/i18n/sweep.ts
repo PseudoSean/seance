@@ -67,7 +67,7 @@ export function sweepEntries(
 		const slots =
 			entry.msgidPlural === undefined
 				? [{index: 0, english: entry.msgid}]
-				: planPluralSlots(entry, rule.nplurals, rule.expr).map(({index, source}) => ({
+				: planPluralSlots(entry, rule.nplurals, rule.expr, tag).map(({index, source}) => ({
 						index,
 						english: source === "msgid" ? entry.msgid : (entry.msgidPlural as string),
 				  }));

@@ -104,18 +104,6 @@
   "composer.uploadPreparing": "подготовка…",
   "composer.uploadWaiting": "Жду сервера....",
   "composer.uploading": "Загрузка {file}",
-  "condensed.away": {
-    "one": "помечено однажды",
-    "few": "помечено {count} раз",
-    "many": "помечено {count} раз",
-    "other": "помечено {count} раз"
-  },
-  "condensed.back": {
-    "one": "помечено назад один раз",
-    "few": "отметка {count}",
-    "many": "отметка {count}",
-    "other": "отметка {count}"
-  },
   "condensed.chghost": {
     "one": "{count} пользователь изменил имя узла",
     "few": "{count} пользователей сменили имя хоста",

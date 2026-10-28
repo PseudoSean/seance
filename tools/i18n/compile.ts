@@ -22,7 +22,16 @@
 import {mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync} from "node:fs";
 import {basename, dirname, resolve} from "node:path";
 import {parsePo, PoEntry} from "./po";
-import {PLURAL_RULES, parsePluralForms, pluralEval, PluralRule} from "./plural";
+import {
+	categoryIndexMap,
+	categoryReadsOtherCounts,
+	PLURAL_RULES,
+	parsePluralForms,
+	PluralRule,
+} from "./plural";
+
+// Re-exported: the toolchain test (and anything older) imports it from here.
+export {categoryIndexMap};
 import {pseudo} from "./pseudo";
 import {AVAILABLE_PATH, LOCALES_DIR} from "./paths";
 import {DEV_ONLY_TAGS} from "./available-locales";
@@ -61,79 +70,11 @@ export interface CompileResult {
 	pruned: string[];
 }
 
-const CLDR_CATEGORIES = ["zero", "one", "two", "few", "many", "other"] as const;
-
-// How far the probe counts. Load-bearing, not arbitrary: it has to reach
-// the first integer of every category a locale actually uses for chat
-// counts (ar's "other" first appears at 100), and it has to STOP before
-// the categories CLDR keeps for compact millions (pt/fr put 1e6 in
-// "many"). A category the scan never sees is simply left out of the map,
-// which is safe because core.ts's tCount falls back
-// `entry[category] ?? entry.other`.
-const PROBE_LIMIT = 199;
-
-/**
- * CLDR category -> gettext msgstr index, mapped by the counts CLDR samples
- * each category with: "zero" at n = 0, "one" at n = 1, "two" at n = 2 and
- * "few"/"many"/"other" at the smallest n >= 2 that CLDR puts in them. The
- * naive reading — the first n from 0 that the gettext expression sends to a
- * slot — disagrees with CLDR wherever the two systems draw the line
- * differently (CLDR counts pt's 0 as "one" while `n != 1` sends it to the
- * plural slot; tr's `(n > 1)` is 0 at n = 0, which CLDR calls "other"), and
- * the runtime asks Intl.PluralRules, so CLDR's reading is the one that
- * matters.
- */
-export function categoryIndexMap(tag: string, expr: string): Record<string, number> {
-	const rules = new Intl.PluralRules(tag);
-	const probed: Record<string, number> = {};
-
-	const sample = (category: string, n: number) => {
-		if (!(category in probed) && rules.select(n) === category) {
-			probed[category] = pluralEval(expr, n);
-		}
-	};
-
-	sample("zero", 0);
-	sample("one", 1);
-	sample("two", 2);
-
-	for (let n = 2; n <= PROBE_LIMIT; n++) {
-		const category = rules.select(n);
-
-		if (category === "few" || category === "many" || category === "other") {
-			sample(category, n);
-		}
-	}
-
-	// Every locale has an "other", but in the Slavic rules it is the
-	// fractions' category and no integer ever lands in it. gettext has no
-	// such slot either: its catch-all branch — the highest index the
-	// expression yields — is what those counts read, so "other" takes it.
-	if (!("other" in probed)) {
-		let catchAll = 0;
-
-		for (let n = 0; n <= PROBE_LIMIT; n++) {
-			catchAll = Math.max(catchAll, pluralEval(expr, n));
-		}
-
-		probed.other = catchAll;
-	}
-
-	// Emit in CLDR's canonical order so the compiled JSON reads stably.
-	const map: Record<string, number> = {};
-
-	for (const category of CLDR_CATEGORIES) {
-		if (category in probed) {
-			map[category] = probed[category];
-		}
-	}
-
-	return map;
-}
+/** A text's {name} tokens, sorted: what two texts must agree on. */
+const tokens = (text: string): string => (text.match(/\{(\w+)\}/g) ?? []).sort().join(",");
 
 /** {name} tokens must survive translation — an MT row that ate one is broken. */
 function assertPlaceholders(entry: PoEntry): void {
-	const tokens = (text: string): string => (text.match(/\{(\w+)\}/g) ?? []).sort().join(",");
 	// A plural entry's forms may legitimately follow either source: the
 	// singular can carry fewer tokens ("once" vs "{count} times"), so a
 	// form matches when it agrees with the singular or the plural source.
@@ -291,6 +232,9 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 		const catalog: Catalog = {};
 		// A per-locale fact, not a per-entry one.
 		const categories = categoryIndexMap(tag, rule.expr);
+		const wideCategories = Object.keys(categories).filter((category) =>
+			categoryReadsOtherCounts(tag, category)
+		);
 
 		for (const entry of entries) {
 			if (entry.flags.includes("fuzzy")) {
@@ -304,6 +248,31 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 
 			assertPlaceholders(entry);
 			const value = compileEntry(entry, categories);
+
+			// A form CLDR also serves for counts other than 1 (fil's "one" at
+			// 5, ru's at 21, fr's and pt's at 0) has to be the plural text:
+			// "marked away once" compiled there read "once" for five. Dropped
+			// like a fuzzy entry, so en serves the key until the slot is
+			// refilled from msgid_plural (plural.ts planPluralSlots).
+			const countless =
+				typeof value === "object" &&
+				entry.msgidPlural !== undefined &&
+				wideCategories.find(
+					(category) =>
+						category in value &&
+						tokens(value[category]) !== tokens(entry.msgidPlural as string)
+				);
+
+			if (countless) {
+				const warning = `compile: skipping ${
+					entry.msgctxt
+				}: its "${countless}" form serves counts other than 1 and lacks ${tokens(
+					entry.msgidPlural as string
+				)}`;
+				warnings.push(warning);
+				console.warn(warning);
+				continue;
+			}
 
 			// The runtime falls back to en on key ABSENCE, so an entry with
 			// nothing compiled must be left out — a present "" (or an empty
@@ -407,7 +376,9 @@ function main(): void {
 	const locales = result.tags.filter((tag) => tag !== "en" && tag !== "qqx");
 	console.log(
 		`compile: en.json, qqx.json, ${locales.length} locale catalog(s), available.ts, tags.json, ${targets.length} target language(s), ${callSites.length} static call-site key(s)` +
-			(result.warnings.length > 0 ? ` — ${result.warnings.length} fuzzy skipped` : "") +
+			(result.warnings.length > 0
+				? ` — ${result.warnings.length} skipped (fuzzy or a count-less plural form)`
+				: "") +
 			(result.pruned.length > 0 ? ` — pruned ${result.pruned.join(", ")}` : "")
 	);
 }

@@ -104,18 +104,6 @@
   "composer.uploadPreparing": "підготовка…",
   "composer.uploadWaiting": "чекаємо на сервер…",
   "composer.uploading": "завантаження {file}",
-  "condensed.away": {
-    "one": "відмічений відступив один раз",
-    "few": "відмічений відступив {count} разів",
-    "many": "відмічений відступив {count} разів",
-    "other": "відмічений відступив {count} разів"
-  },
-  "condensed.back": {
-    "one": "відмічений повернув один раз",
-    "few": "відмічений повернув {count} разів",
-    "many": "відмічено назад {count} разів",
-    "other": "відмічено назад {count} разів"
-  },
   "condensed.chghost": {
     "one": "{count} користувач змінив ім'я сервера",
     "few": "{count} користувачів змінили ім'я сервера",

@@ -96,14 +96,6 @@
   "composer.uploadPreparing": "preparando…",
   "composer.uploadWaiting": "aguardando o servidor…",
   "composer.uploading": "Upload de {file}",
-  "condensed.away": {
-    "one": "marcado como ausente uma vez",
-    "other": "marcado longe {count} vezes"
-  },
-  "condensed.back": {
-    "one": "marcado de volta uma vez",
-    "other": "marcado de volta {count} vezes"
-  },
   "condensed.chghost": {
     "one": "{count} usuário alterou o hostname",
     "other": "{count} usuários alteraram o hostname"

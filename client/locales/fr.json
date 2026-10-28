@@ -96,14 +96,6 @@
   "composer.uploadPreparing": "Préparation…",
   "composer.uploadWaiting": "En attente du serveur…",
   "composer.uploading": "Téléchargement de {file}",
-  "condensed.away": {
-    "one": "Marqué hors ligne une fois",
-    "other": "marqué loin {count} fois"
-  },
-  "condensed.back": {
-    "one": "Marqué en ligne une fois",
-    "other": "marqué près {count} fois"
-  },
   "condensed.chghost": {
     "one": "{count} utilisateur a changé d'hôte",
     "other": "{count} utilisateurs ont changé le nom d'hôte"

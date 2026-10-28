@@ -540,7 +540,7 @@ msgstr "Nagsasagawa ng pag-upload sa {file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "Nagsasagawa ng pag-una sa pag-una"
+msgstr[0] ""
 msgstr[1] "nakalibot na {count} beses"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
@@ -548,7 +548,7 @@ msgstr[1] "nakalibot na {count} beses"
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "Nagsasagawa ng pag-una sa pag-iba"
+msgstr[0] ""
 msgstr[1] "napala na wala na {count} beses"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.

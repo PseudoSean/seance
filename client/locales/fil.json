@@ -94,14 +94,6 @@
   "composer.uploadPreparing": "Nagsasagawa…",
   "composer.uploadWaiting": "Nagsasagawa ng pag-una…",
   "composer.uploading": "Nagsasagawa ng pag-upload sa {file}",
-  "condensed.away": {
-    "one": "Nagsasagawa ng pag-una sa pag-una",
-    "other": "nakalibot na {count} beses"
-  },
-  "condensed.back": {
-    "one": "Nagsasagawa ng pag-una sa pag-iba",
-    "other": "napala na wala na {count} beses"
-  },
   "condensed.chghost": {
     "one": "{count} user ay nagbabago ng hostname",
     "other": "{count} mga miembro na nag-change han hostname"
