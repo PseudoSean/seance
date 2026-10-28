@@ -4,7 +4,9 @@
 // comma in de, …). Memoized per tag, like the i18n date formatters.
 import {activeLocale} from "../i18n/core";
 
-const sizes = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB"];
+// "B", not "Bytes": a symbol like the others, so no locale reads an English
+// word under 1 KiB.
+const sizes = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
 
 const cache = new Map<string, Intl.NumberFormat>();
 
@@ -13,7 +15,7 @@ function formatter(tag: string): Intl.NumberFormat {
 
 	if (!fmt) {
 		// At most one decimal, no forced trailing zero, and no group
-		// separators — a byte count reads "1023 Bytes", not "1,023 Bytes"
+		// separators — a byte count reads "1023 B", not "1,023 B"
 		// (the shape of the old parseFloat(size.toFixed(1)) output; the
 		// decimal separator still follows the locale).
 		fmt = new Intl.NumberFormat(tag, {maximumFractionDigits: 1, useGrouping: false});
