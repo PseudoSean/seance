@@ -5,7 +5,7 @@
 
 import {AsyncQueue} from "./asyncQueue";
 import {EngineName, LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
-import {ModelCacheState, ModelCatalog} from "./models";
+import {GpuBudget, ModelCacheState, ModelCatalog} from "./models";
 import {EngineSnapshot, MainPort, WorkerToMain} from "./protocol";
 
 interface Deferred<T> {
@@ -88,8 +88,10 @@ export class TranslateClient {
 		port.onmessage = (event) => this.receive(event.data);
 	}
 
-	configure(catalog: ModelCatalog, ortBase: string): void {
-		this.port.postMessage({type: "configure", catalog, ortBase});
+	configure(catalog: ModelCatalog, ortBase: string, gpu?: GpuBudget): void {
+		this.port.postMessage(
+			gpu ? {type: "configure", catalog, ortBase, gpu} : {type: "configure", catalog, ortBase}
+		);
 	}
 
 	load(ref: ModelRef, onProgress: (p: LoadProgress) => void = () => {}): Promise<void> {

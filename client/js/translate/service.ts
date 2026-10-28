@@ -24,7 +24,15 @@ import {
 	TranslateRequest,
 } from "./engine";
 import {ABORTED} from "./outgoing";
-import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
+import {
+	Candidate,
+	GpuBudget,
+	ModelCatalog,
+	buildIdFor,
+	candidateOf,
+	catalogModels,
+	selectLlm,
+} from "./models";
 import {Route, RouteTable, explainRoute, mergeRoutes, routeInput} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
 
@@ -173,6 +181,8 @@ export class TranslateService {
 	private usageTimer: unknown = null;
 	/** The download question (consent.ts); null when no dialog was wired. */
 	private consent: DownloadConsent | null;
+	/** Settings (or a route) has asked the worker what is downloaded: asked again once the probe lands. */
+	private modelsAsked = false;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -376,11 +386,58 @@ export class TranslateService {
 					// An unset choice is the device's: now that the device
 					// has answered, the selection is resolved again.
 					this.applyLlmSelection();
+					this.probeLanded();
 					return capability;
 				});
 		}
 
 		return this.capability;
+	}
+
+	/**
+	 * What the worker is told about the GPU (models.ts `GpuBudget`): which
+	 * build of a GPU model loads follows the probe's binding limit, so a
+	 * worker started before the probe answered is told again once it has
+	 * (`probeLanded`). Undefined until then.
+	 */
+	private gpuBudget(): GpuBudget | undefined {
+		return this.probed
+			? {
+					maxBufferBytes: this.probed.maxBufferBytes,
+					capBytes: this.probed.bufferCapBytes ?? null,
+			  }
+			: undefined;
+	}
+
+	/**
+	 * The probe has answered. A worker already running was configured
+	 * without it and may have answered "is it downloaded" for the wrong
+	 * build: tell it, and ask again (Settings mounts before the probe lands).
+	 */
+	private probeLanded(): void {
+		const worker = this.worker;
+
+		if (!worker) {
+			return;
+		}
+
+		worker.client.configure(this.options.catalog, this.options.ortBase, this.gpuBudget());
+
+		if (this.modelsAsked) {
+			this.models().catch(() => {
+				// The next ask reports it; a refresh nobody waits for has no one to tell.
+			});
+		}
+	}
+
+	/**
+	 * The id a download's consent is kept under: the build that would be
+	 * downloaded here (models.ts `buildIdFor`). A yes to the model itself on
+	 * a desktop is not a yes to its small-buffer build — another download of
+	 * the same size — once the test switch makes that the build.
+	 */
+	private consentId(ref: ModelRef): string {
+		return buildIdFor(ref, this.probed?.maxBufferBytes);
 	}
 
 	/** A tier switched off gives its memory back at once, once nothing runs on it. */
@@ -499,7 +556,9 @@ export class TranslateService {
 				return {route, refused: null};
 			}
 
-			const yes = await consent.ask(route.ref, () => this.needsConsent(route.ref));
+			const yes = await consent.ask({...route.ref, id: this.consentId(route.ref)}, () =>
+				this.needsConsent(route.ref)
+			);
 
 			// Yes: route again, the model now agreed to (the selection or the
 			// cache may have moved meanwhile). Not now: again, taking only
@@ -522,7 +581,11 @@ export class TranslateService {
 
 		const view = this.views.get(ref.id);
 
-		return !view?.cached && view?.status !== "downloading" && !this.consent.granted(ref.id);
+		return (
+			!view?.cached &&
+			view?.status !== "downloading" &&
+			!this.consent.granted(this.consentId(ref))
+		);
 	}
 
 	/**
@@ -788,6 +851,7 @@ export class TranslateService {
 
 		this.inFlight++;
 		this.clearIdle();
+		this.modelsAsked = true;
 
 		try {
 			const states = await this.client().models();
@@ -888,7 +952,7 @@ export class TranslateService {
 		const view = this.view(ref);
 
 		// Settings' Download, which shows the size: the user's yes.
-		this.consent?.grant(ref.id);
+		this.consent?.grant(this.consentId(ref));
 
 		view.status = "downloading";
 		view.fraction = 0;
@@ -979,8 +1043,14 @@ export class TranslateService {
 			}
 
 			await this.client().deleteModel(ref);
-			// Deleted on purpose: downloading it again is a new question.
+			// Deleted on purpose: downloading it again is a new question. The
+			// worker deletes every build of the model, so every build's yes goes.
 			this.consent?.revoke(ref.id);
+
+			if (ref.smallBuffer) {
+				this.consent?.revoke(ref.smallBuffer.id);
+			}
+
 			view.cached = false;
 			view.status = "idle";
 			view.fraction = 0;
@@ -1111,7 +1181,7 @@ export class TranslateService {
 			this.worker = worker;
 			worker.client.onWorkerError = (message: string) => this.reportWorkerError(message);
 			worker.client.onDead = (detail: string) => this.workerDied(worker, detail);
-			worker.client.configure(this.options.catalog, this.options.ortBase);
+			worker.client.configure(this.options.catalog, this.options.ortBase, this.gpuBudget());
 		}
 
 		return this.worker.client;

@@ -41,11 +41,15 @@ function cap(overrides: Partial<Capability>): Capability {
 	};
 }
 
-/** The five devices the browser scenario stubs, and two more the probe can report. */
+/** The five devices the browser scenario stubs, and three more the probe can report. */
 const DEVICES: Record<string, Capability> = {
 	noWebgpu: cap({tier: "cpu", reasons: ["NO_WEBGPU"], f16: false, maxBufferBytes: 0}),
 	noF16: cap({tier: "cpu", reasons: ["NO_F16"], f16: false}),
-	binds128: cap({tier: "cpu", reasons: ["SMALL_BUFFER"], maxBufferBytes: 128 * MiB}),
+	// A phone: WebGPU's 128 MiB floor, which the 1.7B's small-buffer build fits.
+	binds128: cap({maxBufferBytes: 128 * MiB}),
+	// Below even the small-buffer build (no WebGPU device is: its floor is
+	// 128 MiB), so the tier is cpu and every GPU row says what it needs.
+	binds64: cap({tier: "cpu", reasons: ["SMALL_BUFFER"], maxBufferBytes: 64 * MiB}),
 	binds160: cap({maxBufferBytes: 160 * MiB}),
 	desktop: cap({}),
 	noSimd: cap({
@@ -104,12 +108,21 @@ describe("translate availability", () => {
 		});
 
 		it("gives each GPU model its own buffer numbers, on a cpu-tier device too", () => {
-			// 128 MiB: the tier is cpu (SMALL_BUFFER), and both rows still say what they need.
-			expect(modelBlock(small, DEVICES.binds128, on)).to.deep.equal({
+			// 64 MiB: the tier is cpu (SMALL_BUFFER), and both rows still say
+			// what they need: the 1.7B its small-buffer build's need.
+			expect(modelBlock(small, DEVICES.binds64, on)).to.deep.equal({
 				kind: "buffer",
-				needed: small.largestBufferBytes,
-				limit: 128 * MiB,
+				needed: small.smallBuffer!.largestBufferBytes,
+				limit: 64 * MiB,
 			});
+			expect(modelBlock(large, DEVICES.binds64, on)).to.deep.equal({
+				kind: "buffer",
+				needed: large.largestBufferBytes,
+				limit: 64 * MiB,
+			});
+			// 128 MiB, a phone: the 1.7B runs as its small-buffer build; the
+			// 4B has none and says what it needs.
+			expect(modelBlock(small, DEVICES.binds128, on)).to.equal(null);
 			expect(modelBlock(large, DEVICES.binds128, on)).to.deep.equal({
 				kind: "buffer",
 				needed: large.largestBufferBytes,
@@ -128,10 +141,10 @@ describe("translate availability", () => {
 			const deploy = buildCatalog({llm: {model: "Custom-q4f16_1-MLC"}}).llm;
 
 			expect(modelBlock(deploy, DEVICES.binds160, on)).to.equal(null);
-			expect(modelBlock(deploy, DEVICES.binds128, on)).to.deep.equal({
+			expect(modelBlock(deploy, DEVICES.binds64, on)).to.deep.equal({
 				kind: "buffer",
 				needed: LLM_MIN_BUFFER_BYTES,
-				limit: 128 * MiB,
+				limit: 64 * MiB,
 			});
 		});
 
@@ -249,15 +262,17 @@ describe("translate availability", () => {
 		});
 
 		it("explains the cleanup pass by the GPU model's own block", () => {
-			const binds128 = ask(DEVICES.binds128, on, "en", "en");
+			const binds64 = ask(DEVICES.binds64, on, "en", "en");
 
-			expect(binds128.route).to.equal(null);
-			expect(binds128.polish).to.equal(true);
-			expect(binds128.why).to.deep.equal({
+			expect(binds64.route).to.equal(null);
+			expect(binds64.polish).to.equal(true);
+			expect(binds64.why).to.deep.equal({
 				kind: "buffer",
-				needed: small.largestBufferBytes,
-				limit: 128 * MiB,
+				needed: small.smallBuffer!.largestBufferBytes,
+				limit: 64 * MiB,
 			});
+			// A phone's 128 MiB runs the 1.7B's small-buffer build: on offer.
+			expect(ask(DEVICES.binds128, on, "en", "en").route?.ref.id).to.equal(QWEN3_1_7B_ID);
 			expect(ask(DEVICES.noF16, on, "en", "en").why).to.deep.equal({
 				kind: "device",
 				reason: "NO_F16",
@@ -304,10 +319,10 @@ describe("translate availability", () => {
 		});
 
 		it("explains an LLM-only pair on a device without the GPU model by the device", () => {
-			expect(ask(DEVICES.binds128, on, "en", "fil").why).to.deep.equal({
+			expect(ask(DEVICES.binds64, on, "en", "fil").why).to.deep.equal({
 				kind: "buffer",
-				needed: small.largestBufferBytes,
-				limit: 128 * MiB,
+				needed: small.smallBuffer!.largestBufferBytes,
+				limit: 64 * MiB,
 			});
 			expect(ask(DEVICES.desktop, on, "en", "fil").route?.candidate).to.equal("llm");
 		});
@@ -452,9 +467,14 @@ describe("translate availability", () => {
 				kind: "off",
 				engine: "seq2seq",
 			});
-			expect(block(DEVICES.binds128, {llm: false, cpu: false, nllb: true})).to.deep.equal({
+			expect(block(DEVICES.binds64, {llm: false, cpu: false, nllb: true})).to.deep.equal({
 				kind: "off",
 				engine: "seq2seq",
+			});
+			// A phone runs the 1.7B's small-buffer build: either switch would serve.
+			expect(block(DEVICES.binds128, {llm: false, cpu: false, nllb: true})).to.deep.equal({
+				kind: "off",
+				engine: "all",
 			});
 		});
 

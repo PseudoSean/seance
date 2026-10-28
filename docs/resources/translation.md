@@ -12,17 +12,20 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   of output. Needs an adapter with `shader-f16` and a storage binding
   (`capability.ts`: `min(maxBufferSize, maxStorageBufferBindingSize)`)
   that holds the smallest GPU model's largest tensor -- `models.ts`
-  `LLM_MIN_BUFFER_BYTES`, the 1.7B's 148 MiB vocabulary embedding, since a
-  model binds each weight tensor whole. Which model fits is `llmFits(ref, maxBufferBytes)` against its `largestBufferBytes` (185 MiB for the 4B,
-  read from each model's `tensor-cache.json`). WebLLM 0.2.85 itself asks
-  the GPU for 1 GiB, or WebGPU's 128 MiB floor when the adapter cannot give
-  that -- nothing between -- so on a phone offering 512 MiB it got 128 MiB
-  and no model loaded; the worker wraps `GPUAdapter.prototype.requestDevice`
-  (`engines/gpuLimits.ts`, installed by `webllm.real.ts`) to ask for what
-  the adapter offers, capped at WebLLM's own 1 GiB so a desktop's device is
-  unchanged, and to make the original request should the raised one be
-  refused. A device whose binding is under 148 MiB (WebGPU's 128 MiB
-  minimum, which many phones report) runs no GPU model yet.
+  `LLM_MIN_BUFFER_BYTES`, since a model binds each weight tensor whole. The
+  1.7B's own largest tensor is its 148 MiB vocabulary embedding
+  (155,582,464 bytes), the 4B's 185 MiB; the floor is the 1.7B's
+  small-buffer build, 74.2 MiB (§ Phones and small GPUs). Which model fits
+  is `llmFits(ref, maxBufferBytes)` against its smallest build. WebLLM
+  0.2.85 itself asks the GPU for 1 GiB, or WebGPU's 128 MiB floor when the
+  adapter cannot give that -- nothing between -- so on a phone offering
+  512 MiB it got 128 MiB and no model loaded; the worker wraps
+  `GPUAdapter.prototype.requestDevice` (`engines/gpuLimits.ts`, installed
+  by `webllm.real.ts`) to ask for what the adapter offers, capped at
+  WebLLM's own 1 GiB so a desktop's device is unchanged, and to make the
+  original request should the raised one be refused. A device whose
+  binding is under 148 MiB (WebGPU's 128 MiB minimum, which many phones
+  report) runs the 1.7B as its small-buffer build.
   There must be a `navigator.gpu` at all: away from localhost a plain-HTTP
   origin is not a secure context and the API does not exist, so the probe's
   reason says so — "insecure origin: WebGPU needs HTTPS or localhost —
@@ -309,6 +312,88 @@ consent"; browser check `tools/scenarios/translate-capability.mjs` (one
 question for a channel's lines, Not now naming the model on each line, no
 pause) and `tools/scenarios/translate-consent.mjs` (the fake: Not now
 falling back to a downloaded OPUS pair).
+
+### Phones and small GPUs
+
+A WebGPU device binds at most `maxStorageBufferBindingSize` per storage
+buffer, WebGPU's floor is 128 MiB, and many phone GPUs (Adreno 7xx) offer
+no more. The 1.7B's quantized vocabulary table is one 148 MiB tensor, so
+the model as published cannot load there. The app ships a build of the
+1.7B's library of its own that splits the table by rows into two halves
+(`model.embed_tokens.part0.*`, rows 0–75967, and `part1.*`), whose largest
+tensor is 75968 × 1024 bytes = 74.2 MiB (`tools/translate-split/`: the
+model patch, the toolchain, how it is rebuilt and checked).
+
+- **The same weights.** Each half is a byte range of the same published
+  shard record, so nothing is re-hosted: before WebLLM loads the build, the
+  worker fetches the model's `tensor-cache.json` from Hugging Face at a
+  pinned commit (`models.ts` `QWEN3_1_7B_PINNED_MODEL`; the byte ranges
+  cannot drift, and none of the build's cache keys is the model's own
+  `resolve/main/` one), rewrites the two table records into four
+  (`engines/splitManifest.ts` `splitManifest`: each row's bytes are the
+  record's `nbytes` over its rows) and puts the result into WebLLM's
+  `webllm/model` Cache Storage under the exact URL WebLLM will fetch the
+  manifest from (`seedSplitManifest`). WebLLM matches its cache before it
+  fetches, so it reads the rewrite. A seed of our own (`metadata` carries
+  `SeanceEmbeddingSplit`) is kept; anything else under the key -- the stock
+  manifest WebLLM's delete fetches into a missing key -- is replaced. A
+  published manifest whose table is not the shape and type the library was
+  compiled for is refused, nothing is seeded, and the row says why.
+- **The app's own library.** `client/models/qwen3-1.7b-q4f16_1-split-<sha8>.wasm`,
+  copied to `public/models/`, which the service worker neither precaches
+  nor caches; WebLLM keeps it in `webllm/wasm` by its URL, so a rebuilt
+  library gets a new name. The worker resolves it against its own location
+  (`js/translate-worker.js`'s parent), so a deploy under a subpath
+  (`/seance/develop/`) finds it.
+- **One model in Settings.** The user sees "Qwen3 1.7B"; its `ModelRef`
+  carries the build (`smallBuffer`: its own WebLLM id
+  `Qwen3-1.7B-q4f16_1-MLC-split`, the pinned weights, the library, the
+  split, 77,791,232 bytes). Which build loads is one rule, `models.ts`
+  `smallBufferBuildFor(ref, maxBufferBytes)`: the model itself where it
+  fits or the limit is unknown, the build where only it fits. The engine's
+  load, the worker's "is it downloaded" (`engines/webllmCache.ts`), Settings
+  and the download consent read it, so a phone's Download downloads the
+  build and a desktop's the model; everything above the engine keeps the
+  model's id. Delete removes every build whose manifest is in the cache,
+  and the seeded manifest. The page tells the worker what its probe
+  measured (`configure`'s `gpu`, again when the probe lands after the
+  worker started). The 1.7B row on such a device says "This GPU gets a
+  build of the model made for small graphics buffers: its largest buffer
+  is 74.2 MiB."
+- **What has no build.** The 4B (its row keeps "Needs a GPU buffer of
+  185.5 MiB; this device binds at most 128 MiB"); a deploy that mirrors the
+  weights (`translation.modelBase`) or names its own library for the 1.7B,
+  since the build reads Hugging Face through the app's library.
+- **What is proven.** The rewrite is byte-for-byte the one the bench ran
+  (2026-10-28, headless Chromium on SwiftShader, which has no
+  `shader-f16`, so with the q4f32 twin of the library): the stock library
+  at a 128 MiB cap gave WebGPU validation errors and garbage, the split one
+  no errors and the stock library's greedy tokens. The f16 library the app
+  ships was built the same way from the same source but has not run on a
+  GPU yet: its first run is the desktop test below, then a phone.
+
+**The test switch.** `localStorage["thelounge.state.gpuTestLimitMiB"]`, a
+number of MiB (at least 128, WebGPU's own floor; `translate/gpuTestLimit.ts`),
+makes the probe report `min(real, cap)` and the worker hold WebLLM's
+device request to it (`gpuLimits.ts` `setBufferCap`, its fallback request
+too), so a desktop GPU binds what a phone does and runs the build. Read
+once per page: set it in the console and reload --
+
+```js
+localStorage.setItem("thelounge.state.gpuTestLimitMiB", "128");
+location.reload();
+```
+
+-- and Settings → Translation says "Limited to 128 MiB for testing …" under
+the device line. To clear it, delete the model in Settings first (Delete
+there removes both builds either way), then
+`localStorage.removeItem("thelounge.state.gpuTestLimitMiB")` and reload. A
+`thelounge.state.*` key, so the settings backup never carries it. Browser
+check, no ircd and no model run: `tools/scenarios/translate-small-gpu.mjs`
+(the phone, the switch and a desktop over a stubbed `navigator.gpu`, the
+app served under a subpath; Download seeds the pinned manifest and fetches
+the library from the app's own URL, and stops at WebLLM's device check,
+before any weight).
 
 ## Reading a channel
 
@@ -1592,7 +1677,8 @@ python3 -c 'import http.server as h, mimetypes as m, functools; m.add_type("text
 
 **CPU models and ONNX Runtime.** The seq2seq engine loads the `q8` weights with `session_options: {graphOptimizationLevel: "basic"}` (`engines/seq2seq.real.ts`). ONNX Runtime's default level is _extended_, and one of its transforms rejects the QDQ graphs these models ship: `Can't create a session. ERROR_CODE: 1 … qdq_actions.cc:137 TransposeDQWeightsForMatMulNBits Missing required scale: model.shared.weight_merged_0_scale`. Every CPU model then fails to load, which the composer shows as "couldn't translate, send as written?" and the reading line as "couldn't translate" — the whole tier looks broken. `basic` stops short of that transform and the same weights load and run, so do not raise the level to fix a slow load. This is the other half of the serving note above: a wrong `.mjs` type and a wrong optimizer level both end as "no CPU model would load", and only the reason on the model row (Settings → Translation) or beside the failure tells them apart. Browser check, opt-in because it downloads real weights: `SEANCE_REAL_MODELS=1 node tools/browser-drive.mjs tools/scenarios/translate-cpu-real.mjs`.
 
-WebLLM caches under its own Cache Storage keys (`webllm/model`,
+WebLLM caches under its own Cache Storage keys (`webllm/model` -- where the
+worker also seeds the small-buffer build's rewritten manifest --
 `webllm/wasm`, `webllm/config`), transformers.js under
 `transformers-cache`; `service-worker.js` never touches either, nor a
 same-origin mirror under `models/` — and its `activate` cache sweep

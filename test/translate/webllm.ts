@@ -14,7 +14,14 @@ import {
 	type ModelRecord,
 	type WebLlmDeps,
 } from "../../client/js/translate/engines/webllm";
-import {QWEN3_1_7B_ID, QWEN3_4B_ID, buildCatalog} from "../../client/js/translate/models";
+import {
+	QWEN3_1_7B_ID,
+	QWEN3_1_7B_PINNED_MODEL,
+	QWEN3_1_7B_SPLIT_ID,
+	QWEN3_1_7B_SPLIT_LIB,
+	QWEN3_4B_ID,
+	buildCatalog,
+} from "../../client/js/translate/models";
 import {EXAMPLES} from "../../client/js/translate/prompt";
 import {promptProfileFor} from "../../client/js/translate/prompts";
 
@@ -250,6 +257,115 @@ describe("translate/engines/webllm", () => {
 		expect(engine.status()).to.equal("ready");
 		expect(engine.loadedModels()).to.deep.equal([catalog.llm.id]);
 		expect(engine.isLoaded(catalog.llm.id)).to.equal(true);
+	});
+
+	describe("the small-buffer build", () => {
+		const MiB = 1024 * 1024;
+		const APP = "https://example.github.io/seance/develop/";
+
+		function splitDeps(seed: (build: unknown) => Promise<unknown> = () => Promise.resolve()) {
+			const d = deps(["Good morning."]);
+			const order: string[] = [];
+			const seeded: unknown[] = [];
+
+			d.deps.appRoot = APP;
+
+			d.deps.seedSplit = (build) => {
+				order.push("seed");
+				seeded.push(build);
+
+				return seed(build);
+			};
+
+			const create = d.deps.create.bind(d.deps);
+
+			d.deps.create = (appConfig, onProgress) => {
+				order.push("create");
+
+				return create(appConfig, onProgress);
+			};
+
+			return {...d, order, seeded};
+		}
+
+		it("on a GPU that binds 128 MiB: seeds its manifest, then reloads the build", async () => {
+			const d = splitDeps();
+			const engine = new WebLlmEngine(d.deps, name);
+
+			engine.configure(catalog, {maxBufferBytes: 128 * MiB, capBytes: null});
+			await engine.load(catalog.llm, () => {});
+
+			expect(d.order).to.deep.equal(["seed", "create"]);
+			expect(d.seeded).to.deep.equal([catalog.llm.smallBuffer]);
+			expect(d.created[0].appConfig.model_list).to.deep.equal([
+				{
+					...prebuilt[0],
+					model_id: QWEN3_1_7B_SPLIT_ID,
+					model: QWEN3_1_7B_PINNED_MODEL,
+					model_lib: APP + QWEN3_1_7B_SPLIT_LIB,
+				},
+			]);
+			expect(d.calls.reload).to.deep.equal([QWEN3_1_7B_SPLIT_ID]);
+			// Everything above the engine keeps the model's own id.
+			expect(engine.loadedModels()).to.deep.equal([catalog.llm.id]);
+			expect(engine.isLoaded(catalog.llm.id)).to.equal(true);
+
+			const chunks: string[] = [];
+
+			for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+				chunks.push(chunk.text);
+			}
+
+			expect(chunks.at(-1)).to.equal("Good morning.");
+		});
+
+		it("on a desktop, and before the probe, loads the model itself and seeds nothing", async () => {
+			for (const gpu of [{maxBufferBytes: 2048 * MiB, capBytes: null}, undefined]) {
+				const d = splitDeps();
+				const engine = new WebLlmEngine(d.deps, name);
+
+				engine.configure(catalog, gpu);
+				await engine.load(catalog.llm, () => {});
+
+				expect(d.seeded).to.deep.equal([]);
+				expect(d.calls.reload).to.deep.equal([catalog.llm.id]);
+			}
+		});
+
+		it("does not load when its manifest cannot be seeded, and says why", async () => {
+			const d = splitDeps(() =>
+				Promise.reject(
+					new Error(
+						"model.embed_tokens.q_weight is [151936, 320], the library expects [151936, 256]"
+					)
+				)
+			);
+			const engine = new WebLlmEngine(d.deps, name);
+			let error: unknown = null;
+
+			engine.configure(catalog, {maxBufferBytes: 128 * MiB, capBytes: null});
+			await engine.load(catalog.llm, () => {}).catch((e: unknown) => (error = e));
+
+			expect((error as Error).message).to.contain("the library expects [151936, 256]");
+			expect(d.created).to.have.length(0);
+			expect(engine.status()).to.equal("failed");
+			expect(engine.loadedModels()).to.deep.equal([]);
+		});
+
+		it("refuses to load without a way to seed or an app root", async () => {
+			const noSeed = deps([]);
+
+			noSeed.deps.appRoot = APP;
+
+			const engine = new WebLlmEngine(noSeed.deps, name);
+
+			engine.configure(catalog, {maxBufferBytes: 128 * MiB, capBytes: null});
+			let error: unknown = null;
+
+			await engine.load(catalog.llm, () => {}).catch((e: unknown) => (error = e));
+			expect((error as Error).message).to.contain("needs its manifest seeded");
+			expect(noSeed.created).to.have.length(0);
+		});
 	});
 
 	it("translate streams cumulative text, then the trimmed result, with the spec's decoding settings", async () => {

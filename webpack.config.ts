@@ -260,7 +260,9 @@ const config: webpack.Configuration = {
 		// Clean the output directory before emit — except the service worker's
 		// push chunk, which the second configuration below emits into the same
 		// tree (and runs after this one; see `dependencies`).
-		clean: {keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\//},
+		clean: {
+			keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\/|^models\//,
+		},
 		path: path.resolve(__dirname, "public"),
 		filename: "[name]",
 		// Lazily loaded chunks (the highlighter, its Prism grammars, the
@@ -621,6 +623,18 @@ const translateConfig: webpack.Configuration = {
 					from: "ort-wasm-simd-threaded.wasm",
 					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
 					to: "js/ort/[name][ext]",
+				},
+				// The GPU models' libraries of our own (tools/translate-split/):
+				// the 1.7B's small-buffer build, which WebLLM fetches from
+				// public/models/ by an absolute URL the worker resolves against
+				// its own location (models.ts QWEN3_1_7B_SPLIT_LIB). Under
+				// models/, so the service worker never caches it
+				// (`excludedPathsFromCache`), nor precaches it (its shell list
+				// is explicit); WebLLM keeps it in its own "webllm/wasm" cache.
+				{
+					from: "*.wasm",
+					context: path.resolve(__dirname, "client/models"),
+					to: "models/[name][ext]",
 				},
 			],
 		}),

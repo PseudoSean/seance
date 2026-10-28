@@ -7,7 +7,8 @@
 //   noF16     an adapter without shader-f16
 //   lowLimits shader-f16 and 2 GiB, but WebGPU's default 8 storage buffers
 //             per shader stage, below WebLLM's floor of 10 (GPU_LIMITS)
-//   binds128  shader-f16, 128 MiB in one storage binding (the tier is cpu)
+//   binds128  shader-f16, 128 MiB in one storage binding (a phone): the 1.7B
+//             runs as its small-buffer build, the 4B does not
 //   binds160  160 MiB: the 1.7B fits, the 4B does not
 //   desktop   2 GiB: everything runs
 //
@@ -36,7 +37,7 @@
 // noWebgpu English -> Japanese (no OPUS pair) is disabled in the composer's
 // dialog with "This needs NLLB-200, which is switched off …" until the switch
 // is turned on. The GPU model select greys a model this GPU cannot bind
-// (binds160: the 4B, with a hint naming it and the buffer numbers) and no
+// (binds128, binds160: the 4B, with a hint naming it and the buffer numbers) and no
 // other. Last, on the desktop device, the download question: a channel with
 // several German lines switched to reading asks once ("Download <model>?",
 // its size, Download / Not now), Not now fails every line with "Needs
@@ -70,8 +71,8 @@ const GiB = 1024 * MiB;
 const SMALL = "Qwen3-1.7B-q4f16_1-MLC";
 const LARGE = "Qwen3-4B-q4f16_1-MLC";
 const NLLB = "Xenova/nllb-200-distilled-600M";
-// models.ts LLM_CHOICES largestBufferBytes.
-const NEEDS = {[SMALL]: 155_574_272, [LARGE]: 194_478_080};
+// models.ts LLM_CHOICES largestBufferBytes (the 4B has no small-buffer build).
+const NEEDS = {[SMALL]: 155_582_464, [LARGE]: 194_478_080};
 
 const DEVICES = {
 	noWebgpu: {
@@ -91,7 +92,7 @@ const DEVICES = {
 	},
 	binds128: {
 		gpu: {f16: true, max: 128 * MiB},
-		runs: {[SMALL]: false, [LARGE]: false},
+		runs: {[SMALL]: true, [LARGE]: false},
 		why: (id) => needsBuffer(NEEDS[id], 128 * MiB),
 	},
 	binds160: {
@@ -440,7 +441,7 @@ export default async function run(page) {
 		const inUse = await page.evaluate(
 			`[...document.querySelectorAll(".translate-model-in-use")].map((el) => el.closest(".translate-model").dataset.model).join(",")`
 		);
-		const expectInUse = {binds160: SMALL}[name];
+		const expectInUse = {binds128: SMALL, binds160: SMALL}[name];
 
 		page.check(
 			`${name}: "In use" is on ${
@@ -482,7 +483,7 @@ export default async function run(page) {
 				described: s.getAttribute("aria-describedby"),
 			};
 		})()`);
-		const unfit = name === "binds160" ? [LARGE] : [];
+		const unfit = name === "binds128" || name === "binds160" ? [LARGE] : [];
 
 		page.check(
 			`${name}: the GPU model select greys ${unfit.join(", ") || "nothing"} (${

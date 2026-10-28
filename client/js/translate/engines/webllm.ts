@@ -16,6 +16,14 @@
 //
 // The library arrives through `WebLlmDeps` so this file never imports it;
 // webllm.real.ts does.
+//
+// A GPU model may load as its small-buffer build (models.ts
+// `smallBufferBuildFor`, docs/resources/translation.md § Phones and small
+// GPUs): WebLLM is then handed that build's own record — its id, the pinned
+// weights, the app's library — after its rewritten manifest has been put
+// where WebLLM reads it (`WebLlmDeps.seedSplit`). Everything above the
+// engine keeps the model's own id: `isLoaded`, `loadedModels` and the
+// requests' `model` name the 1.7B whichever build runs.
 
 import {
 	Engine,
@@ -24,10 +32,11 @@ import {
 	EngineStatus,
 	LoadProgress,
 	ModelRef,
+	SmallBufferBuild,
 	TranslateChunk,
 	TranslateRequest,
 } from "../engine";
-import {ModelCatalog} from "../models";
+import {GpuBudget, ModelCatalog, smallBufferBuildFor} from "../models";
 import {
 	ChatMessage,
 	END_SENTINEL,
@@ -79,6 +88,19 @@ export interface WebLlmDeps {
 	prebuilt: ModelRecord[];
 	/** The loaded model's prompt profile; `prompts/index.ts` `promptProfileFor` unless a caller swaps it. */
 	promptProfileFor?: (modelId: string) => PromptProfile;
+	/**
+	 * The app's root URL, which a small-buffer build's `lib` is relative
+	 * to: the worker's own location less its `js/` (webllm.real.ts), never
+	 * "/", since a deploy may live under a subpath.
+	 */
+	appRoot?: string;
+	/**
+	 * Puts a small-buffer build's rewritten manifest where WebLLM will read
+	 * it, before its reload (splitManifest.ts `seedSplitManifest`). Rejects
+	 * with the reason when the published manifest is not the model the
+	 * library was built from; the build then does not load.
+	 */
+	seedSplit?(build: SmallBufferBuild): Promise<unknown>;
 }
 
 const HF_MLC = "https://huggingface.co/mlc-ai/";
@@ -118,6 +140,38 @@ export function appConfigFor(
 	const model = base ? `${base}/${ref.id}/` : known?.model ?? `${HF_MLC}${ref.id}/resolve/main/`;
 
 	return {model_list: [{...known, model_id: ref.id, model, model_lib: lib}]};
+}
+
+/**
+ * The `model_list` for `ref`'s small-buffer build: the model's prebuilt
+ * record — its context window, its memory figures — under the build's own
+ * id, pointed at the pinned weights and at the app's library resolved
+ * against `appRoot`. An absolute library URL, so WebLLM caches it by that
+ * URL (a changed library has a changed name) instead of resolving it
+ * against the worker's origin.
+ */
+export function smallBufferConfig(
+	ref: ModelRef,
+	build: SmallBufferBuild,
+	prebuilt: ModelRecord[],
+	appRoot: string
+): {model_list: ModelRecord[]} {
+	const known = prebuilt.find((record) => record.model_id === ref.id);
+
+	if (!known) {
+		throw new Error(`unknown WebLLM model ${ref.id}: no record to build ${build.id} from`);
+	}
+
+	return {
+		model_list: [
+			{
+				...known,
+				model_id: build.id,
+				model: build.model,
+				model_lib: new URL(build.lib, appRoot).href,
+			},
+		],
+	};
 }
 
 /** Qwen3-1.7B's token budget (prompts/qwen3-1.7b.ts); each profile has its own. */
@@ -295,6 +349,8 @@ export class WebLlmEngine implements Engine {
 	private loading = new Map<string, Promise<void>>();
 	private state: EngineStatus = "cold";
 	private catalog: ModelCatalog | null = null;
+	/** What the page's probe measured (protocol.ts `configure`); null before it. */
+	private gpu: GpuBudget | null = null;
 	private deps: WebLlmDeps;
 	private languageName: (code: string) => string;
 	private failures = 0;
@@ -318,8 +374,17 @@ export class WebLlmEngine implements Engine {
 		return this.failures;
 	}
 
-	configure(catalog: ModelCatalog): void {
+	configure(catalog: ModelCatalog, gpu?: GpuBudget | null): void {
 		this.catalog = catalog;
+
+		if (gpu !== undefined) {
+			this.gpu = gpu;
+		}
+	}
+
+	/** The build of `ref` this device loads (models.ts `smallBufferBuildFor`); null: the model itself. */
+	buildFor(ref: ModelRef): SmallBufferBuild | null {
+		return smallBufferBuildFor(ref, this.gpu?.maxBufferBytes);
 	}
 
 	// Two callers can ask for the same model at once — Settings downloading it
@@ -349,10 +414,13 @@ export class WebLlmEngine implements Engine {
 		this.state = "loading";
 
 		try {
-			const appConfig = appConfigFor(ref, this.deps.prebuilt, {
-				modelBase: this.catalog?.modelBase,
-				lib: ref.lib,
-			});
+			const build = this.buildFor(ref);
+			const appConfig = build
+				? smallBufferConfig(ref, build, this.deps.prebuilt, this.appRoot())
+				: appConfigFor(ref, this.deps.prebuilt, {
+						modelBase: this.catalog?.modelBase,
+						lib: ref.lib,
+				  });
 			// Let go of the old engine before awaiting its unload, not after: a
 			// translate() landing in between must report "model not loaded"
 			// rather than generate on an engine that is being torn down.
@@ -365,10 +433,20 @@ export class WebLlmEngine implements Engine {
 				await previous.unload();
 			}
 
+			if (build) {
+				if (!this.deps.seedSplit) {
+					throw new Error(`${build.id} needs its manifest seeded, and nothing here can`);
+				}
+
+				await this.deps.seedSplit(build);
+			}
+
 			this.engine = this.deps.create(appConfig, (report) =>
 				onProgress({fraction: report.progress, text: report.text})
 			);
-			await this.engine.reload(ref.id);
+			// The build's own id is what WebLLM knows; this engine answers
+			// for the model's (isLoaded, loadedModels, the requests' model).
+			await this.engine.reload(build?.id ?? ref.id);
 			this.model = ref.id;
 			this.state = "ready";
 
@@ -389,6 +467,14 @@ export class WebLlmEngine implements Engine {
 
 			throw e;
 		}
+	}
+
+	private appRoot(): string {
+		if (!this.deps.appRoot) {
+			throw new Error("the small-buffer build needs the app's root URL");
+		}
+
+		return this.deps.appRoot;
 	}
 
 	async unload(): Promise<void> {
