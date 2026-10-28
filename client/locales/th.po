@@ -2233,7 +2233,7 @@ msgstr "กระตุ้นการเปิดตัวการดูช่
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleMarkdown"
 msgid "Toggle Markdown rendering."
-msgstr "ตั้งค่าการเรnder Markdown"
+msgstr "สลับการแสดงผล Markdown"
 
 #. Help page, keyboard shortcuts table: what the shortcut does — opens or closes the popup listing the unread messages that mention you.
 #: client/components/Windows/Help.vue

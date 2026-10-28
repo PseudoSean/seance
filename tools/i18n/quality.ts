@@ -199,6 +199,7 @@ export type SlotVerdict =
 	| "padding"
 	| "artifact"
 	| "mixed-script"
+	| "stray-latin"
 	| "english"
 	| "sentences";
 
@@ -364,6 +365,70 @@ export function hasMixedScriptWord(text: string): boolean {
 		}
 
 		if (seen > 1) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/** A run of Latin letters, a hyphen inside it kept (`G-line` is one token). */
+const LATIN_TOKEN = /[A-Za-zÀ-ɏ]+(?:-[A-Za-zÀ-ɏ]+)*/gu;
+
+/**
+ * True when a non-Latin answer carries a Latin token its English never had:
+ * a stray of the English the model gave up on, glued straight onto the
+ * target's own script, or a word of another Latin language. ja came back
+ * with `変iaz` for "Variant", `あなたをmentionsする` for "…that mention
+ * you", th with `การเรnder` for "rendering", ar with a Spanish `líneas`, and
+ * every other rule passed them: Han and Thai run without spaces, so the
+ * mixed-script rule cannot tell a clause from a word and skips the run, and
+ * the target's script is there, so the own-script rule is satisfied.
+ *
+ * Two shapes, both judged against the Latin words of the source:
+ * - a token touching a character of an unsegmented script (Han, kana,
+ *   Hangul, Thai) — how ja and th write a Latin word into a sentence; it is
+ *   copy only when the source has the word, or a word it begins (the
+ *   answer dropped an ending: `kill` for "Killed", `G-line` for "G-lines");
+ * - in a catalog with a script of its own, any token with a letter outside
+ *   ASCII — no English source word has one, so it is another language.
+ * An all-capitals token is an acronym or a command (IRC, WHO) and is left
+ * alone, as everywhere else.
+ */
+export function hasStrayLatin(tag: string, source: string, text: string): boolean {
+	if (!OWN_SCRIPTS[tag]) {
+		return false;
+	}
+
+	const sourceWords: string[] = Array.from(
+		withoutIdentifiers(source).matchAll(LATIN_TOKEN),
+		(match) => match[0].toLowerCase()
+	);
+
+	const fromSource = (token: string) => {
+		const lower = token.toLowerCase();
+
+		return sourceWords.some((word) => word.startsWith(lower));
+	};
+
+	const body = withoutIdentifiers(text);
+
+	for (const match of body.matchAll(LATIN_TOKEN)) {
+		const token = match[0];
+
+		if (token === token.toUpperCase() || fromSource(token)) {
+			continue;
+		}
+
+		if (/[^\x00-\x7F]/u.test(token)) {
+			return true;
+		}
+
+		const start = match.index ?? 0;
+		const before = body[start - 1] ?? "";
+		const after = body[start + token.length] ?? "";
+
+		if (UNSEGMENTED.test(before) || UNSEGMENTED.test(after)) {
 			return true;
 		}
 	}
@@ -588,5 +653,10 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 		return "sentences";
 	}
 
-	return isSuspectCatalogEntry(tag, source, text);
+	// Last: an answer with none of the target's script in it is foreign
+	// as a whole, which is the better report.
+	return (
+		isSuspectCatalogEntry(tag, source, text) ??
+		(hasStrayLatin(tag, source, text) ? "stray-latin" : null)
+	);
 }

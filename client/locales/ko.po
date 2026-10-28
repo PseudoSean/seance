@@ -1799,7 +1799,7 @@ msgstr "현재 네트워크에서 연결을 종료합니다. 선택적으로 메
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.expand"
 msgid "Expand all previews in the current channel (opposite of"
-msgstr "현재 채널의 모든 예비 내용을 확장합니다. (Commands의 반대)"
+msgstr ""
 
 #. Heading of the commands section of the help window; one row per slash command with its syntax and description.
 #: client/components/Windows/Help.vue
@@ -12098,7 +12098,7 @@ msgstr "메시지에 이 표현들 중 하나라도 포함되어 있으면, high
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.iosNotInstalled"
 msgid "On iOS, push notifications are only available after installing the app to the Home Screen (Share → Add to Home Screen)."
-msgstr "iOS에서는 앱을 홈 화면에 설치한 후(공유 → 홈 화면에 추가)에만 push notification이 가능합니다."
+msgstr "iOS에서는 앱을 홈 화면에 설치한 후(공유 → 홈 화면에 추가)에만 푸시 알림을 사용할 수 있습니다."
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: show a confirmation prompt before the device re-subscribes. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue

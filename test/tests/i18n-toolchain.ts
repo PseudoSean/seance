@@ -942,6 +942,52 @@ describe("i18n toolchain", () => {
 				).to.equal(null);
 			});
 
+			it("refuses a Latin stray the English never had", () => {
+				// Glued to Han, kana or Thai, where the mixed-script rule
+				// cannot see a word: all three shipped in the catalogs.
+				expect(slotVerdict("ja", "Variant", "変iaz")).to.equal("stray-latin");
+				expect(
+					slotVerdict(
+						"ja",
+						"Highlight messages that mention you",
+						"あなたをmentionsするメッセージをハイライトする"
+					)
+				).to.equal("stray-latin");
+				expect(
+					slotVerdict("th", "Toggle Markdown rendering.", "ตั้งค่าการเรnder Markdown")
+				).to.equal("stray-latin");
+				expect(
+					slotVerdict(
+						"ko",
+						"Expand all previews in the current channel (opposite of {command})",
+						"현재 채널의 모든 미리보기를 펼칩니다 (Commands의 반대: {command})"
+					)
+				).to.equal("stray-latin");
+				// Another Latin language inside Arabic prose.
+				expect(
+					slotVerdict(
+						"ar",
+						"Lines others send are shown with a translation underneath.",
+						"تظهر الأ líneas الأخرى مع ترجمة تحتها."
+					)
+				).to.equal("stray-latin");
+
+				// A word of the source, or one it begins (the answer dropped
+				// the ending), an acronym, a hyphenated jargon word, and any
+				// Latin in a Latin-script catalog: copy.
+				expect(
+					slotVerdict("ja", "Toggle Markdown rendering.", "Markdownの表示を切り替える")
+				).to.equal(null);
+				expect(slotVerdict("ko", "Killed {nick}.", "{nick}을(를) kill했습니다.")).to.equal(
+					null
+				);
+				expect(
+					slotVerdict("ko", "The bot that takes G-lines", "G-line을 처리하는 봇")
+				).to.equal(null);
+				expect(slotVerdict("ja", "Connect", "IRCに接続")).to.equal(null);
+				expect(slotVerdict("de", "Variant", "Variante")).to.equal(null);
+			});
+
 			it("refuses a word that mixes two scripts", () => {
 				// ru came back with "нickname" — a Cyrillic н glued to the
 				// English word the model gave up on. Every other gate found it

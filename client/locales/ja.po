@@ -1071,7 +1071,7 @@ msgstr "ブラウザは理由を示しません。可能性のある原因: サ�
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "WebSocketが開かれたが、サーバーが登録完了前に切断されました - これはポートがIRCBotをWebSocketで話していることを確認し、上部にあるサーバーの通知を確認してください。"
+msgstr "WebSocketは開きましたが、登録が完了する前にサーバーに切断されました。このポートが本当にWebSocket経由でIRCを話すか確認し、上にあるサーバー通知で理由を確認してください。"
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
@@ -1804,7 +1804,7 @@ msgstr "現在のネットワークから接続を切断し、オプションで
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.expand"
 msgid "Expand all previews in the current channel (opposite of"
-msgstr "現在のチャンネル内のすべてのプレビューを展開します（Commandsの逆です）"
+msgstr ""
 
 #. Heading of the commands section of the help window; one row per slash command with its syntax and description.
 #: client/components/Windows/Help.vue
@@ -12067,7 +12067,7 @@ msgstr "コマ区切り、例：word, some more words, anotherword"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "あなたをmentionsするメッセージをハイライトする"
+msgstr "あなたに言及したメッセージをハイライトする"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
@@ -12085,7 +12085,7 @@ msgstr "メッセージにこれらのカンマ区切りの表現のどれかが
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "あなたをmentionsするメッセージやカスタムハイライトに一致するメッセージには、チャンネル内で色付きの背景と境界線が付きます。"
+msgstr "あなたに言及したメッセージや、カスタムハイライトに一致するメッセージは、チャンネル内で色付きの背景と枠線で表示されます。"
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
@@ -12219,7 +12219,7 @@ msgstr "エイリアス"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
-msgstr "オプション"
+msgstr "外観"
 
 #. aria-label of the row of tab buttons across the top of the settings window, used to switch between its pages.
 #: client/components/Settings/Navigation.vue
@@ -12700,7 +12700,7 @@ msgstr "GPUの最大バッファ: {size}"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.cpu"
 msgid "The GPU model is unavailable here; the CPU models still work."
-msgstr "ここではGPUモデルが入手できないため、CPUモデルはまだ動作します。"
+msgstr "ここではGPUモデルを使用できませんが、CPUモデルは引き続き動作します。"
 
 #. Verdict of the device check in Settings → Translation: the graphics processor is good enough for the large model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
@@ -12712,7 +12712,7 @@ msgstr "このデバイスでGPUモデルを実行できます。"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.none"
 msgid "Translation cannot run on this device."
-msgstr "これはこのデバイスで翻訳できません。"
+msgstr "このデバイスでは翻訳を実行できません。"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Lowercase start, short phrase like the other reasons in the list.
 #: client/components/Settings/Translation.vue
@@ -12864,7 +12864,7 @@ msgstr "書かれた通りに"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "けっして丁寧に"
+msgstr "くだけた口調で"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
@@ -12878,7 +12878,7 @@ msgstr "丁寧に"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "人々に届ける"
+msgstr "相手への口調"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
@@ -13041,7 +13041,7 @@ msgstr "失敗: {error}"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.failedUnknown"
 msgid "Failed: unknown error"
-msgstr "失敗: 知らないエラー"
+msgstr "失敗: 不明なエラー"
 
 #. The name of a translation model in Settings → Translation: a large language model that runs on the graphics processor. {name} is the model's product name, never translated; GPU is the usual abbreviation for the graphics processor.
 #: client/js/helpers/modelLabel.ts
@@ -13053,7 +13053,7 @@ msgstr "{name} (GPU, すべての言語)"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
-msgstr "負荷中… {percent}%"
+msgstr "読み込み中… {percent}%"
 
 #. Reason a GPU translation model cannot load here: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Shown under the model's row in Settings → Translation (its Download button greyed out) and, after a lead sentence such as 'Correcting a message needs the GPU model.', wherever an action needing that model is unavailable.
 #: client/components/Settings/Translation.vue
@@ -13157,7 +13157,7 @@ msgstr "オン"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readHint"
 msgid "Lines others send are shown with a translation underneath."
-msgstr "他人が送る行は、下に翻訳が表示されます。"
+msgstr "他の人が送った行の下に翻訳が表示されます。"
 
 #. Label of the on/off switch for translating incoming messages in the translation panel. {language} is the language name they would be translated into.
 #: client/components/TranslationPanel.vue
@@ -13169,13 +13169,13 @@ msgstr "{language}のメッセージを読む"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.reading"
 msgid "Reading"
-msgstr "読み込み中"
+msgstr "読む"
 
 #. Link at the foot of the translation panel; it opens the application's Translation settings page.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.settingsLink"
 msgid "Language and models in Settings"
-msgstr "設定で言語とモデル"
+msgstr "言語とモデルの設定"
 
 #. aria-label of the translation panel, a dialog of translation settings for one conversation. {channel} is the channel name or nickname.
 #: client/components/TranslationPanel.vue
@@ -13187,13 +13187,13 @@ msgstr "{channel}の翻訳"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "変iaz"
+msgstr "言語の変種"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variantHint"
 msgid "A regional flavour the model should aim for."
-msgstr "モデルが目指すべき地域的な味わいです。"
+msgstr "モデルが目指す地域ごとの言葉づかいです。"
 
 #. Placeholder of the free-text field naming a regional variety of the target language, in the translation panel. Replace the example with one that suits the target language.
 #: client/components/TranslationPanel.vue
@@ -13211,13 +13211,13 @@ msgstr "エンターで翻訳が表示され、再度エンターで送信され
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeLabel"
 msgid "Send my messages in"
-msgstr "ここにメッセージを送る"
+msgstr "メッセージを送る言語"
 
 #. Heading of the translation panel's section about the messages the user sends.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writing"
 msgid "Writing"
-msgstr "書き込み"
+msgstr "書く"
 
 #. Button that closes the retranslate-from dialog without doing anything.
 #: client/components/SourceLanguagePicker.vue
@@ -13247,19 +13247,19 @@ msgstr "自動で検出"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromLabel"
 msgid "Translate from"
-msgstr "から翻訳する"
+msgstr "翻訳元"
 
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
-msgstr "ここから翻訳"
+msgstr "この行の翻訳元"
 
 #. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.sameLanguage"
 msgid "Same language: spelling and grammar are corrected instead."
-msgstr "同じ言語: 括り書きと文法は修正されます。"
+msgstr "同じ言語: 代わりにスペルと文法を校正します。"
 
 #. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the GPU model can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
@@ -13272,7 +13272,7 @@ msgstr "メッセージの校正にはGPUモデルが必要です。"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirm"
 msgid "Translate"
-msgstr "翻訳してください"
+msgstr "翻訳"
 
 #. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
 #: client/components/SourceLanguagePicker.vue
@@ -13284,13 +13284,13 @@ msgstr "校正する"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"
 msgid "Translate this message into a language"
-msgstr "このメッセージを言語に翻訳してください"
+msgstr "このメッセージを翻訳する言語"
 
 #. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetLabel"
 msgid "Translate into"
-msgstr "に翻訳してください"
+msgstr "翻訳先"
 
 #. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
 #: client/components/SourceLanguagePicker.vue
@@ -13362,19 +13362,19 @@ msgstr "使用中"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.intro"
 msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
-msgstr "このデバイスでメッセージを翻訳するモデルは一度ダウンロードしてから使用し、何も翻訳サービスに送られません。翻訳ボタンからチャンネルヘッダーでオンします。"
+msgstr "メッセージは、一度だけダウンロードするモデルによってこのデバイス上で翻訳されます。翻訳サービスには何も送信されません。チャンネルヘッダーの翻訳ボタンから、チャンネルごとにオンにできます。"
 
 #. Explanatory note under the language picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageHint"
 msgid "The language the interface is written in and messages are translated into — one control. Automatic follows your browser's language."
-msgstr "インターフェースが書かれた言語とメッセージが翻訳される言語 — 1つの制御。自動はブラウザの言語に合わせます。"
+msgstr "インターフェースの表示言語であり、メッセージの翻訳先の言語でもあります（1つの設定）。自動を選ぶとブラウザの言語に従います。"
 
 #. Label of the picker in Settings → Translation that chooses one language for both the interface and the translations of incoming messages.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageLabel"
 msgid "Interface and reading language"
-msgstr "インターフェースと読み取り言語"
+msgstr "表示言語と翻訳先の言語"
 
 #. One option of the GPU model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
 #: client/components/Settings/Translation.vue
@@ -13392,19 +13392,19 @@ msgstr "モデル"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
 msgid "Use the CPU models where they are the better choice"
-msgstr "CPUモデルを使用してください（それがあなたにとってより良い選択です）"
+msgstr "CPUモデルの方が適している場合はCPUモデルを使う"
 
 #. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
 msgid "Use the GPU model where it is the better choice"
-msgstr "GPUモデルを使用してください（それがより良い選択です）"
+msgstr "GPUモデルの方が適している場合はGPUモデルを使う"
 
 #. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.workerError"
 msgid "Could not reach the translation worker: {error}"
-msgstr "翻訳ワーカーに届けられなかった: {error}"
+msgstr "翻訳ワーカーに接続できませんでした: {error}"
 
 #. Text of the second row of the composer's translation strip when translating the translation back into the user's own language failed.
 #: client/components/ChatInput.vue

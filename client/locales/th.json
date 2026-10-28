@@ -388,7 +388,7 @@
   "help.shortcuts.prevUnread": "ไปยังหน้าต่างที่ผ่านมาที่มีข้อความไม่ได้อ่านแล้วในรายการห้องสนทนา",
   "help.shortcuts.prevWindow": "ไปยังหน้าต่างที่ผ่านมาในรายการห้องสนทนา",
   "help.shortcuts.toggleJump": "กระตุ้นการเปิดตัวการดูช่องทาง",
-  "help.shortcuts.toggleMarkdown": "ตั้งค่าการเรnder Markdown",
+  "help.shortcuts.toggleMarkdown": "สลับการแสดงผล Markdown",
   "help.shortcuts.toggleMentions": "เปิดหรือปิดหน้าต่างการกล่าวถึงที่ยังไม่ได้อ่าน",
   "help.shortcuts.toggleSidebar": "กระตุ้นการเปิดตัวด้านข้าง",
   "help.shortcuts.toggleUserlist": "กระตุ้นการเปิดตัวรายการผู้ใช้ในช่อง",

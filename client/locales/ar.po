@@ -12510,7 +12510,7 @@ msgstr "المظهر"
 #: client/components/Settings/Navigation.vue
 msgctxt "settings.tabs.aria"
 msgid "Settings tabs"
-msgstr "أوراق الإعدادات"
+msgstr "علامات تبويب الإعدادات"
 
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
 #: client/components/Settings/Navigation.vue
@@ -13025,13 +13025,13 @@ msgstr "مصدر غير آمن: يحتاج WebGPU إلى HTTPS أو localhost �
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noAdapter"
 msgid "WebGPU adapter unavailable"
-msgstr "لا يوجد مُعدّل WebGPU"
+msgstr "محوّل WebGPU غير متاح"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware lacks half-precision arithmetic.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noF16"
 msgid "no 16-bit float shaders"
-msgstr "لا توجد شرائح float بت 16"
+msgstr "لا توجد مظللات فاصلة عائمة 16 بت"
 
 #. One reason no model can run, listed under the device verdict in Settings → Translation: the browser lacks the WebAssembly SIMD instructions. Both are technical names.
 #: client/components/Settings/Translation.vue
@@ -13049,7 +13049,7 @@ msgstr "لا يوجد WebGPU"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.probeFailed"
 msgid "the device check itself failed"
-msgstr "فشل التحقق نفسه للجهاز"
+msgstr "فشل فحص الجهاز نفسه"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation. {limit} is what this device's graphics processor can bind in one buffer, {needed} what the smallest GPU model needs (its largest piece); both are sizes such as "128 MiB" (binary units, kept as they are). GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
@@ -13152,7 +13152,7 @@ msgstr "كما في الأصل"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.formality.autoShort"
 msgid "As written"
-msgstr "كما نُقِل"
+msgstr "كما كُتب"
 
 #. Choice for how formally a translation addresses people: always use the familiar form.
 #: client/components/TranslationPanel.vue
@@ -13173,7 +13173,7 @@ msgstr "بشكل رسمي"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "توجيه الرسائل"
+msgstr "أسلوب المخاطبة"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
@@ -13434,7 +13434,7 @@ msgstr "الترجمة"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.languagesHint"
 msgid "Lines in these languages are recognised even when they are short or look alike."
-msgstr "تمت إدراك الأسطر في هذه اللغات حتى لو كانت قصيرة أو تبدو متشابهة."
+msgstr "يُتعرَّف على الأسطر المكتوبة بهذه اللغات حتى لو كانت قصيرة أو متشابهة."
 
 #. The off choice: the segmented switch for translating incoming messages, and the first option of the 'send my messages in' picker, both in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13446,19 +13446,19 @@ msgstr "إيقاف"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
-msgstr "على"
+msgstr "تشغيل"
 
 #. Explanatory note under the reading switch in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readHint"
 msgid "Lines others send are shown with a translation underneath."
-msgstr "تظهر الأ líneas الأخرى التي يرسلها الآخرون مع ترجمة تحتها."
+msgstr "تظهر الأسطر التي يرسلها الآخرون مع ترجمة تحتها."
 
 #. Label of the on/off switch for translating incoming messages in the translation panel. {language} is the language name they would be translated into.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readIn"
 msgid "Read messages in {language}"
-msgstr "اقرأ الرسائل في {language}"
+msgstr "اقرأ الرسائل باللغة {language}"
 
 #. Heading of the translation panel's section about incoming messages, and the label of the on/off control in it.
 #: client/components/TranslationPanel.vue
@@ -13482,13 +13482,13 @@ msgstr "الترجمة لـ {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "الإصدار"
+msgstr "التنويعة"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variantHint"
 msgid "A regional flavour the model should aim for."
-msgstr "طابع منطقي يجب أن يسعى النموذج إليه."
+msgstr "طابع إقليمي ينبغي أن يقصده النموذج."
 
 #. Placeholder of the free-text field naming a regional variety of the target language, in the translation panel. Replace the example with one that suits the target language.
 #: client/components/TranslationPanel.vue
@@ -13506,7 +13506,7 @@ msgstr "يعرض الترجمة عند الضغط على إدخال؛ يرسل �
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeLabel"
 msgid "Send my messages in"
-msgstr "أرسل رسالتي في"
+msgstr "أرسل رسائلي باللغة"
 
 #. Heading of the translation panel's section about the messages the user sends.
 #: client/components/TranslationPanel.vue
@@ -13542,19 +13542,19 @@ msgstr "اكتشف تلقائيًا"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.fromLabel"
 msgid "Translate from"
-msgstr "من ترجمة"
+msgstr "الترجمة من"
 
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
-msgstr "ترجم هذه الجملة من"
+msgstr "ترجم هذا السطر من"
 
 #. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.sameLanguage"
 msgid "Same language: spelling and grammar are corrected instead."
-msgstr "لغة واحدة: تتم تصحيح التهجئة والقواعد بدلًا من ذلك."
+msgstr "اللغة نفسها: يُصحَّح الإملاء والقواعد بدلًا من ذلك."
 
 #. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the GPU model can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
@@ -13567,7 +13567,7 @@ msgstr "يحتاج تصحيح الرسالة إلى نموذج GPU."
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirm"
 msgid "Translate"
-msgstr "اترجم"
+msgstr "ترجم"
 
 #. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
 #: client/components/SourceLanguagePicker.vue
@@ -13579,19 +13579,19 @@ msgstr "صحِّح"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"
 msgid "Translate this message into a language"
-msgstr "اترجم هذا الرسالة إلى لغة"
+msgstr "ترجم هذه الرسالة إلى لغة"
 
 #. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetLabel"
 msgid "Translate into"
-msgstr "اترجم إلى"
+msgstr "الترجمة إلى"
 
 #. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.thisMessageOnly"
 msgid "This message only"
-msgstr "هذا الرسالة فقط"
+msgstr "هذه الرسالة فقط"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -13621,7 +13621,7 @@ msgstr "حاول الترجمة مرة أخرى"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.disabled"
 msgid "Translation is turned off in this deployment."
-msgstr "الترجمة مُغلَّقة في هذا الاقتران."
+msgstr "الترجمة معطّلة في هذا النشر."
 
 #. The first option of the GPU model picker in Settings → Translation: the client picks the largest model the device can run.
 #: client/components/Settings/Translation.vue
@@ -13651,25 +13651,25 @@ msgstr "الترجمة"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.inUse"
 msgid "In use"
-msgstr "في الاستخدام"
+msgstr "قيد الاستخدام"
 
 #. Introductory paragraph of the Translation tab in Settings, explaining that translation runs locally.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.intro"
 msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
-msgstr "يتم ترجمة الرسائل على هذا الجهاز من خلال نموذج يحمله الجهاز مسبقًا؛ لا يتم إرسال أي شيء إلى خدمة الترجمة. افتحها من زر الترجمة في رأس القناة."
+msgstr "تُترجَم الرسائل على هذا الجهاز بنموذج يُنزَّل مرة واحدة؛ ولا يُرسَل أي شيء إلى خدمة ترجمة. فعّلها لكل قناة من زر الترجمة في رأس القناة."
 
 #. Explanatory note under the language picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageHint"
 msgid "The language the interface is written in and messages are translated into — one control. Automatic follows your browser's language."
-msgstr "لغة الواجهة ورسائلها المُرَبَّطَة بها — واحد التحكم. تلقائي يتبع لغة متصفحك."
+msgstr "اللغة التي تُكتب بها الواجهة وتُترجَم إليها الرسائل — عنصر تحكم واحد. يتبع الخيار «تلقائي» لغة متصفحك."
 
 #. Label of the picker in Settings → Translation that chooses one language for both the interface and the translations of incoming messages.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageLabel"
 msgid "Interface and reading language"
-msgstr "اللغة الواجهة والقراءة"
+msgstr "لغة الواجهة والقراءة"
 
 #. One option of the GPU model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
 #: client/components/Settings/Translation.vue
