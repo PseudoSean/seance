@@ -2655,6 +2655,7 @@
   "translate.why.noAdapter": "يدعم هذا المتصفح WebGPU لكنه لم يجد وحدة GPU يمكنه استخدامها.",
   "translate.why.noCpuCopy": "لا يمكن تشغيل {model} على CPU. اختر {choice} لتشغيله هناك.",
   "translate.why.noF16": "لا يدعم هذا GPU مظللات الفاصلة العائمة بدقة 16 بت التي تحتاجها النماذج للعمل على GPU.",
+  "translate.why.noGpuCopy": "لا يمكن تشغيل هذا النموذج على GPU في هذا الإصدار من التطبيق.",
   "translate.why.noMemory64": "لا يستطيع هذا المتصفح تشغيل النموذج اللغوي على CPU (ليست لديه ذاكرة WebAssembly بسعة 64 بت).",
   "translate.why.noWasmSimd": "لا يدعم هذا المتصفح WebAssembly SIMD الذي تحتاجه النماذج للعمل على CPU.",
   "translate.why.noWebgpu": "لا يدعم هذا المتصفح WebGPU الذي تحتاجه النماذج للعمل على GPU.",

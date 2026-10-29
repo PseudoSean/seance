@@ -2392,6 +2392,7 @@
   "translate.why.noAdapter": "Ebben a böngészőben van WebGPU, de nem talált használható GPU-t.",
   "translate.why.noCpuCopy": "A(z) {model} nem futhat a CPU-n. Válaszd ezt: {choice}, hogy ott futhasson.",
   "translate.why.noF16": "Ennek a GPU-nak nincsenek 16 bites lebegőpontos shaderei, amelyekre a modelleknek szükségük van a GPU-n való futáshoz.",
+  "translate.why.noGpuCopy": "Ez a modell az alkalmazás ezen verziójában nem futhat a GPU-n.",
   "translate.why.noMemory64": "Ez a böngésző nem tudja a nyelvi modellt a CPU-n futtatni (nincs 64 bites WebAssembly-memóriája).",
   "translate.why.noWasmSimd": "Ebben a böngészőben nincs WebAssembly SIMD, amelyre a modelleknek szükségük van a CPU-n való futáshoz.",
   "translate.why.noWebgpu": "Ebben a böngészőben nincs WebGPU, amelyre a modelleknek szükségük van a GPU-n való futáshoz.",

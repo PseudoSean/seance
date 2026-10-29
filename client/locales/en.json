@@ -2416,6 +2416,7 @@
   "translate.why.noAdapter": "This browser has WebGPU but found no GPU it can use.",
   "translate.why.noCpuCopy": "{model} can't run on the CPU. Choose {choice} to run it there.",
   "translate.why.noF16": "This GPU has no 16-bit float shaders, which models need to run on the GPU.",
+  "translate.why.noGpuCopy": "This model can't run on the GPU in this version of the app.",
   "translate.why.noMemory64": "This browser can't run the language model on the CPU (it has no 64-bit WebAssembly memory).",
   "translate.why.noWasmSimd": "This browser has no WebAssembly SIMD, which models need to run on the CPU.",
   "translate.why.noWebgpu": "This browser has no WebGPU, which models need to run on the GPU.",

@@ -2291,6 +2291,7 @@
   "translate.why.noAdapter": "Ce navigateur a WebGPU mais n'a trouvé aucun GPU utilisable.",
   "translate.why.noCpuCopy": "{model} ne peut pas s'exécuter sur le CPU. Choisissez {choice} pour l'exécuter là.",
   "translate.why.noF16": "Ce GPU n'a pas de shaders à virgule flottante 16 bits, dont les modèles ont besoin pour s'exécuter sur le GPU.",
+  "translate.why.noGpuCopy": "Ce modèle ne peut pas s'exécuter sur le GPU dans cette version de l'application.",
   "translate.why.noMemory64": "Ce navigateur ne peut pas exécuter le modèle de langage sur le CPU (il n'a pas de mémoire WebAssembly 64 bits).",
   "translate.why.noWasmSimd": "Ce navigateur n'a pas WebAssembly SIMD, dont les modèles ont besoin pour s'exécuter sur le CPU.",
   "translate.why.noWebgpu": "Ce navigateur n'a pas WebGPU, dont les modèles ont besoin pour s'exécuter sur le GPU.",

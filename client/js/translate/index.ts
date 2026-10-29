@@ -187,7 +187,9 @@ function create(): TranslateService {
 	// device the probe has since measured, both reach everyone who never
 	// picked one. Nothing writes a resolved id back to the settings.
 	const selectedLlm = store.state.settings.translateLlmModel || null;
-	const catalog = buildCatalog(branding, selectedLlm);
+	// `seq2seqGpu` stays off whatever the deploy says (models.ts
+	// CatalogOptions): this build cannot run OPUS-MT or NLLB-200 on the GPU.
+	const catalog = buildCatalog({...branding, seq2seqGpu: false}, selectedLlm);
 	const created = new TranslateService(
 		deps,
 		{

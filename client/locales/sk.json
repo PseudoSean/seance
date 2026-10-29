@@ -2447,6 +2447,7 @@
   "translate.why.noAdapter": "Tento prehliadač má WebGPU, ale nenašiel žiadne použiteľné GPU.",
   "translate.why.noCpuCopy": "{model} nemôže bežať na CPU. Vyberte {choice}, aby tam bežal.",
   "translate.why.noF16": "Toto GPU nemá 16-bitové shadery s pohyblivou rádovou čiarkou, ktoré modely potrebujú na spustenie na GPU.",
+  "translate.why.noGpuCopy": "Tento model nemôže v tejto verzii aplikácie bežať na GPU.",
   "translate.why.noMemory64": "Tento prehliadač nemôže spustiť jazykový model na CPU (nemá 64-bitovú pamäť WebAssembly).",
   "translate.why.noWasmSimd": "Tento prehliadač nemá WebAssembly SIMD, ktoré modely potrebujú na spustenie na CPU.",
   "translate.why.noWebgpu": "Tento prehliadač nemá WebGPU, ktoré modely potrebujú na spustenie na GPU.",

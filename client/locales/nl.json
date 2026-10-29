@@ -2301,6 +2301,7 @@
   "translate.why.noAdapter": "Deze browser heeft WebGPU, maar vond geen bruikbare GPU.",
   "translate.why.noCpuCopy": "{model} kan niet op de CPU draaien. Kies {choice} om het daar uit te voeren.",
   "translate.why.noF16": "Deze GPU heeft geen 16-bits float-shaders, die modellen nodig hebben om op de GPU te draaien.",
+  "translate.why.noGpuCopy": "Dit model kan in deze versie van de app niet op de GPU draaien.",
   "translate.why.noMemory64": "Deze browser kan het taalmodel niet op de CPU uitvoeren (er is geen 64-bits WebAssembly-geheugen).",
   "translate.why.noWasmSimd": "Deze browser heeft geen WebAssembly SIMD, dat modellen nodig hebben om op de CPU te draaien.",
   "translate.why.noWebgpu": "Deze browser heeft geen WebGPU, dat modellen nodig hebben om op de GPU te draaien.",

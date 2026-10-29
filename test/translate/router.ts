@@ -29,7 +29,9 @@ import {
 } from "../../client/js/translate/routes.default";
 import {nllbCode} from "../../client/js/translate/languages";
 
-const catalog = buildCatalog();
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 const table: RouteTable = {
 	"*": {"*": ["llm", "nllb"], sw: ["nllb", "llm"]},
 	en: {

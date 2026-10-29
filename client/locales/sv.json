@@ -2341,6 +2341,7 @@
   "translate.why.noAdapter": "Den här webbläsaren har WebGPU men hittade ingen GPU som den kan använda.",
   "translate.why.noCpuCopy": "{model} kan inte köras på CPU:n. Välj {choice} för att köra den där.",
   "translate.why.noF16": "Den här GPU:n saknar 16-bitars flyttalsshaders, som modeller behöver för att köras på GPU:n.",
+  "translate.why.noGpuCopy": "Den här modellen kan inte köras på GPU:n i den här versionen av appen.",
   "translate.why.noMemory64": "Den här webbläsaren kan inte köra språkmodellen på CPU:n (den har inget 64-bitars WebAssembly-minne).",
   "translate.why.noWasmSimd": "Den här webbläsaren har inte WebAssembly SIMD, som modeller behöver för att köras på CPU:n.",
   "translate.why.noWebgpu": "Den här webbläsaren har inte WebGPU, som modeller behöver för att köras på GPU:n.",

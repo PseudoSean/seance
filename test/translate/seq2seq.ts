@@ -11,7 +11,9 @@ import {
 import {buildCatalog} from "../../client/js/translate/models";
 import {placeholder} from "../../client/js/translate/spans";
 
-const catalog = buildCatalog();
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 
 function deps() {
 	const calls = {

@@ -577,10 +577,14 @@ const translateConfig: webpack.Configuration = {
 		// transformers.js references Node modules behind its `browser` field;
 		// the webworker target honours that field, these are belt and braces.
 		fallback: {fs: false, path: false, url: false, crypto: false},
-		// transformers.js imports the WebGPU ORT bundle unconditionally, but
-		// seq2seq.real.ts always requests `device: "wasm"`; alias it to the
-		// smaller wasm-only bundle so the WebGPU backend (and the wasm/mjs
-		// pair only it references) never enters the worker bundle.
+		// transformers.js imports the WebGPU ORT bundle unconditionally;
+		// alias it to the smaller wasm-only bundle so the WebGPU backend (and
+		// the jsep wasm/mjs pair only it references) never enters the worker
+		// bundle. The alias stays: this build has no WebGPU backend for
+		// OPUS-MT and NLLB-200, so the shipped catalog gives them no GPU copy
+		// (models.ts CatalogOptions `seq2seqGpu`). Shipping one means dropping
+		// this alias and shipping the jsep wasm, which changes the CPU path
+		// too (docs/projects/translation-devices.md § Not in this build).
 		alias: {
 			"onnxruntime-web/webgpu": "onnxruntime-web/wasm",
 		},

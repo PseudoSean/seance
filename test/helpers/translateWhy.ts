@@ -60,6 +60,13 @@ describe("translateWhyText", () => {
 		);
 	});
 
+	it("says a model without a GPU copy cannot run on the GPU in this version", () => {
+		// OPUS-MT and NLLB-200 in this build (models.ts CatalogOptions `seq2seqGpu`).
+		expect(translateWhyText({kind: "noCopy", device: "gpu"})).to.equal(
+			"This model can't run on the GPU in this version of the app."
+		);
+	});
+
 	it("says which device a declined download was for, with that copy's size", () => {
 		const llm = buildCatalog().llm;
 		const opus = buildCatalog().opus["de-en"];

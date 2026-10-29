@@ -2392,6 +2392,7 @@
   "translate.why.noAdapter": "Bu tarayıcıda WebGPU var ama kullanabileceği bir GPU bulamadı.",
   "translate.why.noCpuCopy": "{model} CPU'da çalışamaz. Orada çalıştırmak için {choice} modelini seç.",
   "translate.why.noF16": "Bu GPU'da, modellerin GPU'da çalışmak için ihtiyaç duyduğu 16 bit kayan noktalı gölgelendiriciler yok.",
+  "translate.why.noGpuCopy": "Bu model, uygulamanın bu sürümünde GPU'da çalışamaz.",
   "translate.why.noMemory64": "Bu tarayıcı dil modelini CPU'da çalıştıramıyor (64 bit WebAssembly belleği yok).",
   "translate.why.noWasmSimd": "Bu tarayıcıda, modellerin CPU'da çalışmak için ihtiyaç duyduğu WebAssembly SIMD yok.",
   "translate.why.noWebgpu": "Bu tarayıcıda, modellerin GPU'da çalışmak için ihtiyaç duyduğu WebGPU yok.",

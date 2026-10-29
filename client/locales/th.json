@@ -2337,6 +2337,7 @@
   "translate.why.noAdapter": "เบราว์เซอร์นี้มี WebGPU แต่ไม่พบ GPU ที่ใช้งานได้",
   "translate.why.noCpuCopy": "{model} ทำงานบน CPU ไม่ได้ เลือก {choice} เพื่อรันบน CPU",
   "translate.why.noF16": "GPU นี้ไม่มีเชเดอร์ทศนิยมแบบ 16 บิต ซึ่งโมเดลต้องใช้เพื่อทำงานบน GPU",
+  "translate.why.noGpuCopy": "โมเดลนี้ทำงานบน GPU ไม่ได้ในแอปเวอร์ชันนี้",
   "translate.why.noMemory64": "เบราว์เซอร์นี้รันโมเดลภาษาบน CPU ไม่ได้ (ไม่มีหน่วยความจำ WebAssembly แบบ 64 บิต)",
   "translate.why.noWasmSimd": "เบราว์เซอร์นี้ไม่มี WebAssembly SIMD ซึ่งโมเดลต้องใช้เพื่อทำงานบน CPU",
   "translate.why.noWebgpu": "เบราว์เซอร์นี้ไม่มี WebGPU ซึ่งโมเดลต้องใช้เพื่อทำงานบน GPU",

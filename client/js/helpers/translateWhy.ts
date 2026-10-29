@@ -141,12 +141,14 @@ export function translateWhyText(block: RouteBlock, llm: string = defaultLlmName
 					return t("translate.why.allOff");
 			}
 
-		// The model has no copy for the pinned device: only the CPU lacks one
-		// (the 4B), and the way out is the 1.7B, which has it.
+		// The model has no copy for the pinned device. On the CPU that is the
+		// 4B, and the way out is the 1.7B, which has one; on the GPU it is
+		// OPUS-MT and NLLB-200, which this build runs on the CPU alone
+		// (models.ts CatalogOptions `seq2seqGpu`).
 		case "noCopy":
 			return block.device === "cpu"
 				? t("translate.why.noCpuCopy", {model: llm, choice: cpuLlmName()})
-				: t("translate.error.unavailable");
+				: t("translate.why.noGpuCopy");
 
 		case "down":
 			return t("translate.why.down");

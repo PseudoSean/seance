@@ -11,9 +11,10 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 > GPU or the CPU (§ Devices). Read "GPU" and "CPU" below as the device a
 > model ran on **before** that: the language model on the GPU through WebLLM,
 > OPUS-MT and NLLB-200 on the CPU through transformers.js. The language model
-> now also has a CPU copy (wllama), OPUS-MT and NLLB-200 now also have GPU
-> copies (transformers.js on WebGPU), and the switches are one per model:
-> `translateLlm`, `translateCpu` (= OPUS-MT) and `translateNllb`.
+> now also has a CPU copy (wllama); OPUS-MT and NLLB-200 have GPU copies
+> (transformers.js on WebGPU) in the catalog's logic but not in this build,
+> which runs them on the CPU alone (§ Devices); and the switches are one per
+> model: `translateLlm`, `translateCpu` (= OPUS-MT) and `translateNllb`.
 
 - **The language model on the GPU: WebLLM.** An instruction LLM on WebGPU, prompted to translate with
   the channel's context. Greedy at temperature 0.1, thinking off, one line
@@ -523,12 +524,24 @@ copy with its own Download and Remove. A pinned device is that device alone; a
 copy that cannot run there says why and the model never falls to the other
 device behind the user's back.
 
-| Model                       | GPU copy                                                                             | CPU copy                                                                                                       |
-| --------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Language model (Qwen3 1.7B) | WebLLM q4f16, ~984 MB (a small-buffer build for a 128 MiB binding)                   | wllama 3.8.1, `unsloth/Qwen3-1.7B-GGUF` Q4_K_M, 1,107,409,472 bytes (pinned commit `CPU_LLM_REVISION`)         |
-| Language model (Qwen3 4B)   | WebLLM, ~2.3 GB                                                                      | none: pinning the CPU blocks it with `noCopy`; an unset choice resolves to the 1.7B when the CPU is the device |
-| OPUS-MT pair                | transformers.js on WebGPU, fp16, ~210 MB (encoder ~93 MiB, merged decoder ~106 MiB)  | transformers.js on WASM, q8, ~113 MB                                                                           |
-| NLLB-200 600M               | transformers.js on WebGPU, q4f16, ~1.26 GB (encoder 584 MiB, merged decoder 612 MiB) | transformers.js on WASM, q8, ~912 MB                                                                           |
+| Model                       | GPU copy                                                                                                                      | CPU copy                                                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Language model (Qwen3 1.7B) | WebLLM q4f16, ~984 MB (a small-buffer build for a 128 MiB binding)                                                            | wllama 3.8.1, `unsloth/Qwen3-1.7B-GGUF` Q4_K_M, 1,107,409,472 bytes (pinned commit `CPU_LLM_REVISION`)         |
+| Language model (Qwen3 4B)   | WebLLM, ~2.3 GB                                                                                                               | none: pinning the CPU blocks it with `noCopy`; an unset choice resolves to the 1.7B when the CPU is the device |
+| OPUS-MT pair                | none in this build\*; with `seq2seqGpu`: transformers.js on WebGPU, fp16, ~210 MB (encoder ~93 MiB, merged decoder ~106 MiB)  | transformers.js on WASM, q8, ~113 MB                                                                           |
+| NLLB-200 600M               | none in this build\*; with `seq2seqGpu`: transformers.js on WebGPU, q4f16, ~1.26 GB (encoder 584 MiB, merged decoder 612 MiB) | transformers.js on WASM, q8, ~912 MB                                                                           |
+
+\* The worker's ONNX Runtime is the wasm-only bundle (`webpack.config.ts`
+aliases `onnxruntime-web/webgpu` to `onnxruntime-web/wasm`, and `js/ort/`
+ships no WebGPU wasm), so a seq2seq GPU copy would download its weights and
+then fail to start a session. The shipped catalog therefore has none
+(`models.ts` `CatalogOptions.seq2seqGpu`, off, never read from `config.json`):
+their **Run on** GPU choice is struck through with "This model can't run on
+the GPU in this version of the app." (`noCopy`, `device: "gpu"`), Settings
+lists only their CPU copy, and Auto runs them on the CPU. The tests build the
+catalog with the option on, so the GPU logic below stays covered; what
+shipping the copies needs is in `docs/projects/translation-devices.md` § Not
+in this build.
 
 What each copy needs (`models.ts` `modelBlock`, per device):
 
@@ -553,12 +566,14 @@ language model reading a channel waits tens of seconds per batch; it runs on
 the CPU only when the user pins it); NLLB-200, GPU then CPU where its GPU copy
 fits (never a phone), else CPU; OPUS-MT, CPU then GPU on a phone (the models
 are small and the GPU's memory is kept for the language model), GPU then CPU
-on a computer. The router walks candidate x device in that order, passing over
+on a computer. Auto leaves out a device the model has no copy for, so in this
+build OPUS-MT and NLLB-200 are CPU only. The router walks candidate x device in that order, passing over
 a copy that is blocked, marked down or whose download the user declined, so
 under Auto a declined download falls back to the other device's downloaded
 copy for OPUS-MT and NLLB-200 and never for the language model. A GPU loss
 (`GPU_LOST`) marks down that model's GPU copy alone, for the session
-(`DownKey` is `<candidate>@<device>`). A device switch lets the running request
+(`DownKey` is `<candidate>@<device>`); in this build that is only ever the
+language model's, since OPUS-MT and NLLB-200 have no GPU copy to lose. A device switch lets the running request
 finish; the next one loads on the new device and the old device's model is
 unloaded. Deleting a copy that is loaded unloads it first and leaves the other
 device's copy untouched. `OnDevice` (`engines/onDevice.ts`) is the seq2seq

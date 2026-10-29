@@ -2404,6 +2404,7 @@
   "translate.why.noAdapter": "Acest browser are WebGPU, dar nu a găsit niciun GPU pe care să-l poată folosi.",
   "translate.why.noCpuCopy": "{model} nu poate rula pe CPU. Alege {choice} pentru a-l rula acolo.",
   "translate.why.noF16": "Acest GPU nu are shadere în virgulă mobilă pe 16 biți, de care modelele au nevoie pentru a rula pe GPU.",
+  "translate.why.noGpuCopy": "Acest model nu poate rula pe GPU în această versiune a aplicației.",
   "translate.why.noMemory64": "Acest browser nu poate rula modelul de limbaj pe CPU (nu are memorie WebAssembly pe 64 de biți).",
   "translate.why.noWasmSimd": "Acest browser nu are WebAssembly SIMD, de care modelele au nevoie pentru a rula pe CPU.",
   "translate.why.noWebgpu": "Acest browser nu are WebGPU, de care modelele au nevoie pentru a rula pe GPU.",

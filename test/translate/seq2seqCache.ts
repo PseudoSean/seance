@@ -2,7 +2,9 @@ import {expect} from "chai";
 import {onnxDtype, seq2seqCacheApi} from "../../client/js/translate/engines/seq2seqCache";
 import {buildCatalog} from "../../client/js/translate/models";
 
-const catalog = buildCatalog();
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 const repo = "https://huggingface.co/Xenova/opus-mt-en-de/resolve/main";
 const other = "https://huggingface.co/Xenova/opus-mt-de-en/resolve/main";
 

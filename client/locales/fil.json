@@ -2313,6 +2313,7 @@
   "translate.why.noAdapter": "May WebGPU ang browser na ito pero wala itong nakitang GPU na magagamit.",
   "translate.why.noCpuCopy": "Hindi tatakbo ang {model} sa CPU. Piliin ang {choice} para patakbuhin ito roon.",
   "translate.why.noF16": "Walang 16-bit float shader ang GPU na ito, na kailangan ng mga modelo para tumakbo sa GPU.",
+  "translate.why.noGpuCopy": "Hindi tatakbo ang modelong ito sa GPU sa bersyong ito ng app.",
   "translate.why.noMemory64": "Hindi mapatakbo ng browser na ito ang modelo ng wika sa CPU (walang 64-bit na WebAssembly memory).",
   "translate.why.noWasmSimd": "Walang WebAssembly SIMD ang browser na ito, na kailangan ng mga modelo para tumakbo sa CPU.",
   "translate.why.noWebgpu": "Walang WebGPU ang browser na ito, na kailangan ng mga modelo para tumakbo sa GPU.",

@@ -57,7 +57,7 @@ describe("translate/models", () => {
 	});
 
 	it("lists each model's copies by device", () => {
-		const catalog = buildCatalog();
+		const catalog = buildCatalog({seq2seqGpu: true});
 		const [small, large] = catalog.llmChoices;
 
 		expect(small.copies.gpu?.largestBufferBytes).to.equal(155_582_464);
@@ -79,17 +79,43 @@ describe("translate/models", () => {
 		});
 	});
 
-	it("gives a deploy's own language model a GPU copy alone, and its seq2seq ids both", () => {
-		const catalog = buildCatalog({
+	it("gives OPUS-MT and NLLB-200 no GPU copy unless asked", () => {
+		// This build has no WebGPU backend for them (webpack.config.ts's
+		// onnxruntime-web alias): a GPU copy would download and fail to start.
+		const catalog = buildCatalog();
+
+		expect(Object.keys(catalog.nllb.copies)).to.deep.equal(["cpu"]);
+
+		for (const ref of Object.values(catalog.opus)) {
+			expect(Object.keys(ref.copies), ref.id).to.deep.equal(["cpu"]);
+		}
+
+		// The language models keep theirs.
+		expect(catalog.llmChoices.every((ref) => ref.copies.gpu)).to.equal(true);
+		// A deploy's config cannot turn it on: BrandingTranslation has no such
+		// field and index.ts passes it as false.
+		expect(Object.keys(buildCatalog({seq2seqGpu: false}).nllb.copies)).to.deep.equal(["cpu"]);
+		expect(buildCatalog({seq2seqGpu: true}).nllb.copies.gpu?.sizeBytes).to.equal(1_260_000_000);
+	});
+
+	it("gives a deploy's own language model a GPU copy alone, and its seq2seq ids the shipped ones' copies", () => {
+		const options = {
 			llm: {model: "gemma-3-1b-it-q4f16_1-MLC"},
 			cpu: {nllb: "mirror/nllb-small", opus: {"fi-en": "mirror/opus-fi-en"}},
-		});
+		};
+		const catalog = buildCatalog(options);
 
 		expect(Object.keys(catalog.llm.copies)).to.deep.equal(["gpu"]);
-		expect(catalog.nllb.copies.gpu?.source).to.equal("mirror/nllb-small");
 		expect(catalog.nllb.copies.cpu?.source).to.equal("mirror/nllb-small");
-		expect(catalog.opus["fi-en"].copies.gpu?.source).to.equal("mirror/opus-fi-en");
 		expect(catalog.opus["fi-en"].copies.cpu?.source).to.equal("mirror/opus-fi-en");
+		expect(catalog.nllb.copies.gpu).to.equal(undefined);
+		expect(catalog.opus["fi-en"].copies.gpu).to.equal(undefined);
+
+		// With the GPU copies on, both from the deploy's repos.
+		const withGpu = buildCatalog({...options, seq2seqGpu: true});
+
+		expect(withGpu.nllb.copies.gpu?.source).to.equal("mirror/nllb-small");
+		expect(withGpu.opus["fi-en"].copies.gpu?.source).to.equal("mirror/opus-fi-en");
 	});
 
 	it("resolves a candidate to its model", () => {
@@ -353,7 +379,7 @@ describe("translate/models", () => {
 				return Promise.resolve();
 			},
 		};
-		const states = await cacheStates(buildCatalog(), api);
+		const states = await cacheStates(buildCatalog({seq2seqGpu: true}), api);
 
 		expect(asked.length).to.equal(states.length);
 		// Each copy asked for by its own device, the GPU copy first.
@@ -368,5 +394,12 @@ describe("translate/models", () => {
 			["cpu", true],
 		]);
 		expect(states.find((s) => s.ref.id === DEFAULT_LLM_ID)?.cached).to.equal(false);
+
+		// The shipped catalog has no GPU copy of NLLB-200 to ask about.
+		asked.length = 0;
+		await cacheStates(buildCatalog(), api);
+		expect(asked.filter((a) => a.startsWith(`${DEFAULT_NLLB_ID}@`))).to.deep.equal([
+			`${DEFAULT_NLLB_ID}@cpu`,
+		]);
 	});
 });

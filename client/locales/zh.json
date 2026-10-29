@@ -2340,6 +2340,7 @@
   "translate.why.noAdapter": "此浏览器支持 WebGPU，但没有找到可用的 GPU。",
   "translate.why.noCpuCopy": "{model} 无法在 CPU 上运行。请选择 {choice} 以在 CPU 上运行。",
   "translate.why.noF16": "此 GPU 没有 16 位浮点着色器，而模型需要它才能在 GPU 上运行。",
+  "translate.why.noGpuCopy": "在此版本的应用中，此模型无法在 GPU 上运行。",
   "translate.why.noMemory64": "此浏览器无法在 CPU 上运行语言模型（它没有 64 位 WebAssembly 内存）。",
   "translate.why.noWasmSimd": "此浏览器没有 WebAssembly SIMD，而模型需要它才能在 CPU 上运行。",
   "translate.why.noWebgpu": "此浏览器没有 WebGPU，而模型需要它才能在 GPU 上运行。",

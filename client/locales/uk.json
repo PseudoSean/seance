@@ -2525,6 +2525,7 @@
   "translate.why.noAdapter": "У цьому браузері є WebGPU, але він не знайшов придатного GPU.",
   "translate.why.noCpuCopy": "Модель {model} не може працювати на CPU. Виберіть {choice}, щоб запускати її там.",
   "translate.why.noF16": "У цьому GPU немає 16-бітних шейдерів із плаваючою комою, потрібних моделям для роботи на GPU.",
+  "translate.why.noGpuCopy": "У цій версії застосунку ця модель не може працювати на GPU.",
   "translate.why.noMemory64": "Цей браузер не може запустити мовну модель на CPU (у ньому немає 64-бітної пам’яті WebAssembly).",
   "translate.why.noWasmSimd": "У цьому браузері немає WebAssembly SIMD, потрібного моделям для роботи на CPU.",
   "translate.why.noWebgpu": "У цьому браузері немає WebGPU, потрібного моделям для роботи на GPU.",

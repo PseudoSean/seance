@@ -2337,6 +2337,7 @@
   "translate.why.noAdapter": "Trình duyệt này có WebGPU nhưng không tìm thấy GPU nào dùng được.",
   "translate.why.noCpuCopy": "{model} không thể chạy trên CPU. Hãy chọn {choice} để chạy ở đó.",
   "translate.why.noF16": "GPU này không có shader dấu phẩy động 16 bit, thứ mà các mô hình cần để chạy trên GPU.",
+  "translate.why.noGpuCopy": "Mô hình này không thể chạy trên GPU trong phiên bản ứng dụng này.",
   "translate.why.noMemory64": "Trình duyệt này không thể chạy mô hình ngôn ngữ trên CPU (nó không có bộ nhớ WebAssembly 64 bit).",
   "translate.why.noWasmSimd": "Trình duyệt này không có WebAssembly SIMD, thứ mà các mô hình cần để chạy trên CPU.",
   "translate.why.noWebgpu": "Trình duyệt này không có WebGPU, thứ mà các mô hình cần để chạy trên GPU.",

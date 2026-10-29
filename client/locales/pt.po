@@ -13836,6 +13836,12 @@ msgctxt "translate.why.noF16"
 msgid "This GPU has no 16-bit float shaders, which models need to run on the GPU."
 msgstr "Esta GPU não tem shaders de ponto flutuante de 16 bits, de que os modelos precisam para rodar na GPU."
 
+#. Reason a translation model cannot run on the GPU: in this version of the app the translation models OPUS-MT and NLLB-200 have no GPU version, only a CPU one. Shown beside the struck-through 'GPU' choice of a model's 'Run on' setting in Settings → Translation, and wherever a translation action is unavailable because that model was set to run on the GPU (the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Translating this message needs a translation model.'. 'The app' is this IRC client; GPU and CPU are the usual abbreviations, keep them as the language normally writes them.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noGpuCopy"
+msgid "This model can't run on the GPU in this version of the app."
+msgstr "Este modelo não pode rodar na GPU nesta versão do app."
+
 #. Reason the language model (a large AI model) cannot run on the main processor (CPU): the browser's WebAssembly has no 64-bit memory, which the model needs. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. Keep 'WebAssembly'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.noMemory64"

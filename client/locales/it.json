@@ -2304,6 +2304,7 @@
   "translate.why.noAdapter": "Questo browser ha WebGPU ma non ha trovato una GPU utilizzabile.",
   "translate.why.noCpuCopy": "{model} non può girare sulla CPU. Scegli {choice} per eseguirlo lì.",
   "translate.why.noF16": "Questa GPU non ha shader in virgola mobile a 16 bit, di cui i modelli hanno bisogno per girare sulla GPU.",
+  "translate.why.noGpuCopy": "Questo modello non può girare sulla GPU in questa versione dell'app.",
   "translate.why.noMemory64": "Questo browser non può eseguire il modello linguistico sulla CPU (non ha memoria WebAssembly a 64 bit).",
   "translate.why.noWasmSimd": "Questo browser non ha WebAssembly SIMD, di cui i modelli hanno bisogno per girare sulla CPU.",
   "translate.why.noWebgpu": "Questo browser non ha WebGPU, di cui i modelli hanno bisogno per girare sulla GPU.",

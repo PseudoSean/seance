@@ -2340,6 +2340,7 @@
   "translate.why.noAdapter": "このブラウザにはWebGPUがありますが、使用できるGPUが見つかりませんでした。",
   "translate.why.noCpuCopy": "{model} はCPUでは動作しません。CPUで使うには {choice} を選んでください。",
   "translate.why.noF16": "このGPUには、モデルがGPUで動作するために必要な16ビット浮動小数点のシェーダーがありません。",
+  "translate.why.noGpuCopy": "このバージョンのアプリでは、このモデルはGPUで動作しません。",
   "translate.why.noMemory64": "このブラウザは言語モデルをCPUで実行できません（64ビットのWebAssemblyメモリがありません）。",
   "translate.why.noWasmSimd": "このブラウザには、モデルがCPUで動作するために必要なWebAssembly SIMDがありません。",
   "translate.why.noWebgpu": "このブラウザには、モデルがGPUで動作するために必要なWebGPUがありません。",

@@ -190,6 +190,11 @@ describe("translate availability", () => {
 		describe("per device", () => {
 			const opus = base.opus["de-en"];
 			const all = {llm: true, opus: true, nllb: true};
+			// The seq2seq GPU copies are off in the shipped catalog (models.ts
+			// CatalogOptions `seq2seqGpu`); their rules are tested with them on.
+			const withGpu = buildCatalog({seq2seqGpu: true});
+			const gpuOpus = withGpu.opus["de-en"];
+			const gpuNllb = withGpu.nllb;
 
 			it("the language model on the CPU needs Memory64", () => {
 				const noMemory64 = cap({reasons: ["NO_MEMORY64"]});
@@ -201,7 +206,7 @@ describe("translate availability", () => {
 				// The seq2seq models do not, on either device; nor does the GPU.
 				expect(modelBlock(opus, "cpu", noMemory64, all)).to.equal(null);
 				expect(modelBlock(nllb, "cpu", noMemory64, all)).to.equal(null);
-				expect(modelBlock(opus, "gpu", noMemory64, all)).to.equal(null);
+				expect(modelBlock(gpuOpus, "gpu", noMemory64, all)).to.equal(null);
 				expect(modelBlock(small, "gpu", noMemory64, all)).to.equal(null);
 				// No SIMD is still said first.
 				expect(
@@ -248,25 +253,25 @@ describe("translate availability", () => {
 			});
 
 			it("holds NLLB's GPU copy to the binding, an f16 device and the probe's codes", () => {
-				expect(modelBlock(nllb, "gpu", DEVICES.binds128, all)).to.deep.equal({
+				expect(modelBlock(gpuNllb, "gpu", DEVICES.binds128, all)).to.deep.equal({
 					kind: "buffer",
 					needed: 524_709_888,
 					limit: 134_217_728,
 				});
 				expect(
-					modelBlock(nllb, "gpu", cap({f16: false, maxBufferBytes: GiB}), all)
+					modelBlock(gpuNllb, "gpu", cap({f16: false, maxBufferBytes: GiB}), all)
 				).to.deep.equal({
 					kind: "device",
 					reason: "NO_F16",
 				});
-				expect(modelBlock(nllb, "gpu", DEVICES.noWebgpu, all)).to.deep.equal({
+				expect(modelBlock(gpuNllb, "gpu", DEVICES.noWebgpu, all)).to.deep.equal({
 					kind: "device",
 					reason: "NO_WEBGPU",
 				});
 				// WebLLM's shader floors are the language model's rule alone.
 				expect(
 					modelBlock(
-						nllb,
+						gpuNllb,
 						"gpu",
 						cap({reasons: ["GPU_LIMITS"], tier: "cpu", maxBufferBytes: GiB}),
 						all
@@ -275,7 +280,21 @@ describe("translate availability", () => {
 			});
 
 			it("runs OPUS-MT on a GPU with f16 and a 1 GiB binding", () => {
-				expect(modelBlock(opus, "gpu", cap({maxBufferBytes: GiB}), all)).to.equal(null);
+				expect(modelBlock(gpuOpus, "gpu", cap({maxBufferBytes: GiB}), all)).to.equal(null);
+			});
+
+			it("has no GPU copy of OPUS-MT or NLLB-200 in the shipped catalog", () => {
+				// A 1 GiB desktop with f16 that would run either copy (above).
+				const desktop = cap({maxBufferBytes: GiB});
+
+				for (const ref of [opus, nllb]) {
+					expect(ref.copies.gpu, ref.id).to.equal(undefined);
+					expect(modelBlock(ref, "gpu", desktop, all), ref.id).to.deep.equal({
+						kind: "noCopy",
+						device: "gpu",
+					});
+					expect(modelBlock(ref, "cpu", desktop, all), ref.id).to.equal(null);
+				}
 			});
 
 			it("gates each of OPUS-MT and NLLB by its own switch", () => {

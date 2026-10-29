@@ -6,7 +6,9 @@ import {createPortPair} from "../../client/js/translate/protocol";
 import {serveEngines} from "../../client/js/translate/worker";
 import {FakeEngine} from "./fakeEngine";
 
-const catalog = buildCatalog();
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 const llmRef: ModelRef = catalog.llm;
 const nllbRef: ModelRef = catalog.nllb;
 

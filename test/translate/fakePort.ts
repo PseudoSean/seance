@@ -5,7 +5,9 @@ import {FAKE_CAPABILITY, fakePort} from "../../client/js/translate/fakePort";
 import {buildCatalog} from "../../client/js/translate/models";
 import {parseBatchedOutput} from "../../client/js/translate/prompt";
 
-const catalog = buildCatalog();
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 
 describe("translate/fakePort", () => {
 	afterEach(() => {

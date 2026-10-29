@@ -13,6 +13,7 @@ import {
 	buildCatalog,
 	type CacheApi,
 	type DeviceChoices,
+	type ModelCatalog,
 } from "../../client/js/translate/models";
 import {ABORTED} from "../../client/js/translate/outgoing";
 import {createPortPair} from "../../client/js/translate/protocol";
@@ -44,7 +45,9 @@ import {FakeEngine} from "./fakeEngine";
 
 const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
 
-const catalog = buildCatalog();
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 
 /**
  * A service whose workers never answer: `dies` fires each one's `error`
@@ -122,7 +125,8 @@ function rig(
 	tier: Capability["tier"] = "gpu",
 	enabled = true,
 	routes: RouteTable = DEFAULT_ROUTES,
-	consent: Pick<ServiceDeps, "askDownload" | "consent"> = {}
+	consent: Pick<ServiceDeps, "askDownload" | "consent"> = {},
+	shape: {catalog?: ModelCatalog; maxBufferBytes?: number} = {}
 ) {
 	const clock = sinon.useFakeTimers();
 	const workers: {terminated: boolean}[] = [];
@@ -202,7 +206,13 @@ function rig(
 		},
 		probe() {
 			probes += 1;
-			return Promise.resolve(capability(tier));
+			const probed = capability(tier);
+
+			return Promise.resolve(
+				shape.maxBufferBytes === undefined
+					? probed
+					: {...probed, maxBufferBytes: shape.maxBufferBytes}
+			);
 		},
 		setTimeout: (fn, ms) => setTimeout(fn, ms),
 		clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
@@ -211,7 +221,7 @@ function rig(
 	const service = new TranslateService(
 		deps,
 		{
-			catalog,
+			catalog: shape.catalog ?? catalog,
 			// A chosen model, so the probe's own default (an unset choice
 			// resolves against the device) leaves these rigs alone.
 			selectedLlm: QWEN3_1_7B_ID,
@@ -2126,6 +2136,38 @@ describe("translate/service", () => {
 
 			await r.service.remove(catalog.nllb, "cpu");
 			expect(store.has(catalog.nllb.id)).to.equal(false);
+			r.service.dispose();
+		});
+
+		it("the shipped catalog runs OPUS-MT and NLLB-200 on the CPU under Auto, never asking for a GPU copy", async () => {
+			const ask = dialog();
+			const shipped = buildCatalog();
+			// A computer whose GPU binds 1 GiB with f16: either GPU copy would
+			// fit it, were there one (translation-devices.md § Not in this build).
+			const r = rig(
+				"gpu",
+				true,
+				{en: {de: ["opus:de-en"], sw: ["nllb"]}},
+				{askDownload: ask.askDownload},
+				{catalog: shipped, maxBufferBytes: 1024 * 1024 * 1024}
+			);
+			clock = r.clock;
+
+			const opus = r.service.route("de", "en");
+
+			await r.clock.tickAsync(10);
+			expect(ask.devices).to.deep.equal(["cpu"]);
+			expect(ask.asked).to.deep.equal([shipped.opus["de-en"].id]);
+			ask.answer(true);
+			expect(await opus).to.deep.include({candidate: "opus:de-en", device: "cpu"});
+
+			const nllb = r.service.route("sw", "en");
+
+			await r.clock.tickAsync(10);
+			expect(ask.devices).to.deep.equal(["cpu", "cpu"]);
+			expect(ask.asked).to.deep.equal([shipped.opus["de-en"].id, shipped.nllb.id]);
+			ask.answer(true);
+			expect(await nllb).to.deep.include({candidate: "nllb", device: "cpu"});
 			r.service.dispose();
 		});
 

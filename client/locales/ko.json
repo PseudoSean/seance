@@ -2335,6 +2335,7 @@
   "translate.why.noAdapter": "이 브라우저에는 WebGPU가 있지만 사용할 수 있는 GPU를 찾지 못했습니다.",
   "translate.why.noCpuCopy": "{model}은(는) CPU에서 실행할 수 없습니다. CPU에서 실행하려면 {choice}을(를) 선택하세요.",
   "translate.why.noF16": "이 GPU에는 모델이 GPU에서 실행되는 데 필요한 16비트 부동 소수점 셰이더가 없습니다.",
+  "translate.why.noGpuCopy": "이 버전의 앱에서는 이 모델을 GPU에서 실행할 수 없습니다.",
   "translate.why.noMemory64": "이 브라우저는 언어 모델을 CPU에서 실행할 수 없습니다(64비트 WebAssembly 메모리가 없습니다).",
   "translate.why.noWasmSimd": "이 브라우저에는 모델이 CPU에서 실행되는 데 필요한 WebAssembly SIMD가 없습니다.",
   "translate.why.noWebgpu": "이 브라우저에는 모델이 GPU에서 실행되는 데 필요한 WebGPU가 없습니다.",

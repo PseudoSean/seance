@@ -357,6 +357,36 @@ with a reason, and the rest of the design still stands.
   translation bullet, `docs/projects/client-translation.md` where it says
   GPU tier / CPU tier.
 
+## Not in this build (2026-10-29, the final review, Ruling Z)
+
+**The seq2seq GPU copies.** OPUS-MT and NLLB-200 ship with their CPU copy
+alone. The worker's ONNX Runtime is the wasm-only bundle:
+`webpack.config.ts` aliases `onnxruntime-web/webgpu` to
+`onnxruntime-web/wasm`, whose `ort.wasm.bundle.min.mjs` registers only the
+cpu/wasm backends, and `js/ort/` ships no jsep wasm (`test/tests/build.ts`
+pins that). `seq2seq.real.ts`'s `device: "webgpu"` would find no backend,
+and transformers.js downloads the weights before ORT fails the session: a
+yes would cost 210 MB per OPUS-MT pair or 1.26 GB for NLLB-200, and Auto
+(GPU first on a computer) would ask it of every desktop with WebGPU and f16.
+So the shipped catalog leaves the copies out (`models.ts`
+`CatalogOptions.seq2seqGpu`, off, never read from a deploy's
+`config.json`); their GPU choice is struck through with its own reason
+(`noCopy`, `device: "gpu"`, `translate.why.noGpuCopy`), Auto leaves out a
+device the model has no copy for, and the tests turn the option on so the
+GPU rules, routing, consent and loading stay covered.
+
+Shipping them needs:
+
+- onnxruntime-web's WebGPU bundle in the worker (drop the alias) and its
+  jsep wasm (~26 MB) under `js/ort/`, which changes the CPU path for
+  everyone too (the same runtime serves both) and the build test's pins;
+- a check on a real GPU (none here: this host has no headless GPU) that
+  both models load, translate and fit the bindings `largestBufferBytes`
+  claims, with OPUS-MT's per-pair figure measured rather than the en-de one;
+- seq2seq GPU-loss handling (Ruling AA, deferred): a lost device marks the
+  copy down and Auto moves to the CPU copy, as the language model's does;
+- `seq2seqGpu: true` in `index.ts`, and the docs' copies table back.
+
 ## Left to the builder
 
 The names of types and functions above are suggestions; the module

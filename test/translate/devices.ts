@@ -58,7 +58,9 @@ describe("translate/devices", () => {
 	});
 
 	describe("deviceOrder", () => {
-		const catalog = buildCatalog();
+		// The GPU copies of OPUS-MT and NLLB-200 are off in the shipped
+		// catalog (models.ts CatalogOptions `seq2seqGpu`); on here.
+		const catalog = buildCatalog({seq2seqGpu: true});
 		const opus = catalog.opus["en-de"];
 
 		it("keeps the language model on the GPU under Auto, phone or computer", () => {
@@ -78,6 +80,16 @@ describe("translate/devices", () => {
 		it("puts OPUS-MT on the CPU first on a phone and on the GPU first on a computer", () => {
 			expect(deviceOrder(opus, "auto", phone)).to.deep.equal(["cpu", "gpu"]);
 			expect(deviceOrder(opus, "auto", desktop)).to.deep.equal(["gpu", "cpu"]);
+		});
+
+		it("leaves out a device the model has no copy for under Auto", () => {
+			const shipped = buildCatalog();
+
+			expect(deviceOrder(shipped.nllb, "auto", desktop)).to.deep.equal(["cpu"]);
+			expect(deviceOrder(shipped.opus["en-de"], "auto", desktop)).to.deep.equal(["cpu"]);
+			expect(deviceOrder(shipped.opus["en-de"], "auto", phone)).to.deep.equal(["cpu"]);
+			// A pinned GPU is still that device alone: the router says why not.
+			expect(deviceOrder(shipped.opus["en-de"], "gpu", desktop)).to.deep.equal(["gpu"]);
 		});
 
 		it("gives a pinned choice that device alone", () => {

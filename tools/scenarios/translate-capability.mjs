@@ -19,10 +19,12 @@
 // only."), then each model family's Run on (Auto / GPU / CPU, a radiogroup):
 // a device that cannot run the family is a disabled radio with the reason as
 // visible text and as its description -- the language model's GPU on
-// noWebgpu says WebGPU, NLLB-200's GPU on binds128 gives the buffer numbers,
-// the language model's CPU is open everywhere -- and under Auto the line
-// saying what Auto picks here (OPUS-MT's CPU on a phone, its GPU on a
-// computer that can run it); then one line per copy: a GPU copy's Download
+// noWebgpu says WebGPU, OPUS-MT's and NLLB-200's GPU says this version has
+// no GPU copy wherever the device itself would not say why first (this build
+// ships them CPU only: models.ts CatalogOptions `seq2seqGpu`), the language
+// model's CPU is open everywhere -- and under Auto the line saying what Auto
+// picks here (the CPU for OPUS-MT and NLLB-200, the GPU can't run them);
+// then one line per copy (none on the GPU for OPUS-MT and NLLB-200): a GPU copy's Download
 // is disabled exactly where it cannot run and is described by that reason,
 // and "In use" marks a language model only where one can run. Under
 // --mobile every device is a phone (`userAgentData.mobile`): the 4B is
@@ -84,8 +86,10 @@ const LARGE = "Qwen3-4B-q4f16_1-MLC";
 const NLLB = "Xenova/nllb-200-distilled-600M";
 // models.ts LLM_CHOICES largestBufferBytes (the 4B has no small-buffer build).
 const NEEDS = {[SMALL]: 155_582_464, [LARGE]: 194_478_080};
-// NLLB-200's GPU copy binds its vocabulary table in fp16 (models.ts).
-const NLLB_GPU_LARGEST = 524_709_888;
+// OPUS-MT and NLLB-200 have no GPU copy in this build (models.ts
+// CatalogOptions `seq2seqGpu`): where the device itself is no reason, that
+// is what their GPU choice says.
+const NO_GPU_COPY = () => EN["translate.why.noGpuCopy"];
 // The 1.7B's CPU copy (models.ts CPU_LLM_COPY).
 const SMALL_CPU_SIZE = 1_107_409_472;
 
@@ -94,7 +98,8 @@ const DEVICES = {
 		gpu: null,
 		runs: {[SMALL]: false, [LARGE]: false},
 		why: () => EN["translate.why.noWebgpu"],
-		// NLLB-200's and OPUS-MT's GPU copies: null = it runs there.
+		// NLLB-200's and OPUS-MT's GPU choice: null = it runs there. The
+		// device's own reason comes before the missing copy (models.ts gpuBlock).
 		seq2seqGpu: () => EN["translate.why.noWebgpu"],
 		nllbGpu: () => EN["translate.why.noWebgpu"],
 	},
@@ -110,29 +115,29 @@ const DEVICES = {
 		runs: {[SMALL]: false, [LARGE]: false},
 		why: () => EN["translate.why.gpuLimits"],
 		// WebLLM's shader floors are the language model's alone.
-		seq2seqGpu: null,
-		nllbGpu: null,
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 	binds128: {
 		gpu: {f16: true, max: 128 * MiB},
 		runs: {[SMALL]: true, [LARGE]: false},
 		why: (id) => needsBuffer(NEEDS[id], 128 * MiB),
-		seq2seqGpu: null,
-		nllbGpu: () => needsBuffer(NLLB_GPU_LARGEST, 128 * MiB),
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 	binds160: {
 		gpu: {f16: true, max: 160 * MiB},
 		runs: {[SMALL]: true, [LARGE]: false},
 		why: (id) => needsBuffer(NEEDS[id], 160 * MiB),
-		seq2seqGpu: null,
-		nllbGpu: () => needsBuffer(NLLB_GPU_LARGEST, 160 * MiB),
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 	desktop: {
 		gpu: {f16: true, max: 2 * GiB},
 		runs: {[SMALL]: true, [LARGE]: true},
 		why: () => "",
-		seq2seqGpu: null,
-		nllbGpu: null,
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 	// The desktop's GPU on a phone (`userAgentData.mobile`): the 4B is too
 	// large for a phone's page whatever the GPU binds (models.ts
@@ -142,8 +147,8 @@ const DEVICES = {
 		mobile: true,
 		runs: {[SMALL]: true, [LARGE]: false},
 		why: (id) => (id === LARGE ? EN["translate.why.phoneMemory"] : ""),
-		seq2seqGpu: null,
-		nllbGpu: null,
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 };
 
@@ -655,6 +660,21 @@ export default async function run(page) {
 		page.check(
 			`${name}: NLLB-200 is off until switched on, its licence named, its CPU Download open (${nllb.licence})`,
 			!nllb.switchOn && nllb.licence === EN["translate.settings.nllbLicence"] && nllb.cpuOpen
+		);
+
+		// No GPU copy of OPUS-MT or NLLB-200 to download in this build.
+		const seq2seqCopies = await page.evaluate(`(() => ({
+			nllb: [...document.querySelectorAll(${JSON.stringify(
+				`${ROW(NLLB)} .translate-copy`
+			)})].map((el) => el.dataset.device).join(","),
+			opus: [...document.querySelectorAll(${JSON.stringify(
+				`${FAMILY("opus")} .translate-copy, ${FAMILY("opus")} .translate-opus-device`
+			)})].map((el) => el.dataset.device).filter((d, i, all) => all.indexOf(d) === i).join(","),
+		}))()`);
+
+		page.check(
+			`${name}: OPUS-MT and NLLB-200 list a CPU copy alone (OPUS ${seq2seqCopies.opus}, NLLB ${seq2seqCopies.nllb})`,
+			seq2seqCopies.nllb === "cpu" && seq2seqCopies.opus === "cpu"
 		);
 
 		// The language model select: a model this GPU cannot bind is greyed, with why.

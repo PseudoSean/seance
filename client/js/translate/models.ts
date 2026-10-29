@@ -14,6 +14,15 @@ export interface CatalogOptions {
 	modelBase?: string;
 	llm?: {model?: string; lib?: string};
 	cpu?: {nllb?: string; opus?: Record<string, string>};
+	/**
+	 * Give OPUS-MT and NLLB-200 their GPU copies. Off in the shipped app,
+	 * and never read from a deploy's `config.json`: this build has no WebGPU
+	 * backend for them (webpack.config.ts aliases `onnxruntime-web/webgpu`
+	 * to the wasm bundle, which registers only the CPU), so a GPU copy would
+	 * download its weights and then fail to start (translation-devices.md
+	 * § Not in this build). Tests turn it on to keep the GPU logic covered.
+	 */
+	seq2seqGpu?: boolean;
 }
 
 export interface ModelCatalog {
@@ -117,7 +126,7 @@ export const CPU_LLM_REVISION = "d7f544eead698dbd1f15126ef60b45a1e1933222";
  */
 export const CPU_CONTEXT_WINDOW = 1024;
 
-function opusRef(pairKey: string, id: string): ModelRef {
+function opusRef(pairKey: string, id: string, gpu: boolean): ModelRef {
 	const [from, to] = pairKey.split("-");
 
 	return {
@@ -127,12 +136,14 @@ function opusRef(pairKey: string, id: string): ModelRef {
 		label: {kind: "opus", from, to},
 		copies: {
 			cpu: {sizeBytes: OPUS_SIZE_BYTES, source: id, dtype: "q8"},
-			gpu: {
-				sizeBytes: OPUS_GPU_SIZE_BYTES,
-				source: id,
-				dtype: "fp16",
-				largestBufferBytes: OPUS_GPU_LARGEST_BYTES,
-			},
+			...(gpu && {
+				gpu: {
+					sizeBytes: OPUS_GPU_SIZE_BYTES,
+					source: id,
+					dtype: "fp16",
+					largestBufferBytes: OPUS_GPU_LARGEST_BYTES,
+				},
+			}),
 		},
 		pair: [from, to],
 	};
@@ -583,8 +594,9 @@ const ALL_ON: EngineSwitches = {llm: true, opus: true, nllb: true};
  * it only when the user pins it there); NLLB-200 on the GPU, then the CPU,
  * where its GPU copy fits, else the CPU alone; OPUS-MT on the CPU, then the
  * GPU, on a phone (its GPU memory is kept for the language model), the GPU
- * first on a computer. What the walk does with each device -- blocked,
- * down, a declined download -- is the router's (router.ts `explainRoute`).
+ * first on a computer; a device the model has no copy for is left out.
+ * What the walk does with each device -- blocked, down, a declined
+ * download -- is the router's (router.ts `explainRoute`).
  */
 export function deviceOrder(
 	ref: ModelRef,
@@ -603,7 +615,13 @@ export function deviceOrder(
 		return modelBlock(ref, "gpu", capability, ALL_ON) === null ? ["gpu", "cpu"] : ["cpu"];
 	}
 
-	return capability?.mobile ? ["cpu", "gpu"] : ["gpu", "cpu"];
+	// Auto tries only the devices the model has a copy for: a catalog without
+	// OPUS-MT's GPU copies (CatalogOptions `seq2seqGpu`) runs it on the CPU,
+	// and its reasons are the CPU's, never the missing copy's.
+	const order: Device[] = capability?.mobile ? ["cpu", "gpu"] : ["gpu", "cpu"];
+	const copied = order.filter((device) => ref.copies[device] !== undefined);
+
+	return copied.length ? copied : order;
 }
 
 /** What the default GPU model is decided from (capability.ts `Capability`). */
@@ -797,15 +815,17 @@ export function buildCatalog(
 		llmChoices.push(deployLlmRef(llmId, lib));
 	}
 
-	// A deploy's own NLLB/OPUS ids get both copies: the same repo layout
-	// (q8 and q4f16/fp16 files side by side) is assumed.
+	// A deploy's own NLLB/OPUS ids get the same copies as the shipped ones:
+	// the same repo layout (q8 and q4f16/fp16 files side by side) is
+	// assumed. The GPU copies only with `seq2seqGpu` (CatalogOptions).
+	const seq2seqGpu = options.seq2seqGpu === true;
 	const nllbId = options.cpu?.nllb ?? DEFAULT_NLLB_ID;
 	const pairs = {...DEFAULT_OPUS_PAIRS, ...(options.cpu?.opus ?? {})};
 	const opus: Record<string, ModelRef> = {};
 
 	for (const [pairKey, id] of Object.entries(pairs)) {
 		if (/^[a-z]{2,3}-[a-z]{2,3}$/.test(pairKey)) {
-			opus[pairKey] = opusRef(pairKey, id);
+			opus[pairKey] = opusRef(pairKey, id, seq2seqGpu);
 		}
 	}
 
@@ -820,12 +840,14 @@ export function buildCatalog(
 			label: {kind: "nllb"},
 			copies: {
 				cpu: {sizeBytes: NLLB_SIZE_BYTES, source: nllbId, dtype: "q8"},
-				gpu: {
-					sizeBytes: NLLB_GPU_SIZE_BYTES,
-					source: nllbId,
-					dtype: "q4f16",
-					largestBufferBytes: NLLB_GPU_LARGEST_BYTES,
-				},
+				...(seq2seqGpu && {
+					gpu: {
+						sizeBytes: NLLB_GPU_SIZE_BYTES,
+						source: nllbId,
+						dtype: "q4f16",
+						largestBufferBytes: NLLB_GPU_LARGEST_BYTES,
+					},
+				}),
 			},
 		},
 		opus,

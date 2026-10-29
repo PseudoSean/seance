@@ -2223,6 +2223,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.why.noAdapter",
 	"translate.why.noCpuCopy",
 	"translate.why.noF16",
+	"translate.why.noGpuCopy",
 	"translate.why.noMemory64",
 	"translate.why.noWasmSimd",
 	"translate.why.noWebgpu",
