@@ -177,6 +177,11 @@ export class TranslateService {
 	private engineWaiters: {engine: EngineName; resolve: () => void}[] = [];
 	/** Engines given a model since they were last unloaded. */
 	private loadedEngines = new Set<EngineName>();
+	/**
+	 * The families the seq2seq engine has held since it was last loaded
+	 * (OPUS-MT, NLLB-200): its unload follows their own switches.
+	 */
+	private seq2seqFamilies = new Set<ModelRef["family"]>();
 	private engineTimers: Record<EngineName, unknown> = {llm: null, seq2seq: null};
 	/** Whether translation is wanted anywhere (reader.ts `translationInUse`); unset, it always is. */
 	private inUse: (() => boolean) | null = null;
@@ -559,7 +564,10 @@ export class TranslateService {
 			this.afterEngineIdle("llm");
 		}
 
-		if (before.switches.opus && !settings.switches.opus) {
+		if (
+			(before.switches.opus && !settings.switches.opus) ||
+			(before.switches.nllb && !settings.switches.nllb)
+		) {
 			this.afterEngineIdle("seq2seq");
 		}
 
@@ -885,7 +893,7 @@ export class TranslateService {
 
 				const llmId = route.ref.engine === "llm" ? route.ref.id : null;
 
-				this.engineStarted(route.ref.engine);
+				this.engineStarted(route.ref);
 
 				if (llmId) {
 					this.llmStarted(llmId);
@@ -1129,7 +1137,7 @@ export class TranslateService {
 				}
 			}
 
-			this.engineStarted(ref.engine);
+			this.engineStarted(ref);
 			engineClaimed = true;
 
 			if (ref.engine === "llm") {
@@ -1444,7 +1452,17 @@ export class TranslateService {
 		}
 	}
 
-	private engineStarted(engine: EngineName): void {
+	private engineStarted(ref: ModelRef): void {
+		const engine = ref.engine;
+
+		if (engine === "seq2seq") {
+			if (!this.loadedEngines.has("seq2seq")) {
+				this.seq2seqFamilies.clear();
+			}
+
+			this.seq2seqFamilies.add(ref.family);
+		}
+
 		this.engineRunning[engine]++;
 		// Counted as loaded from the first request on: unloading an engine
 		// whose load then failed costs nothing, missing one costs its memory.
@@ -1480,9 +1498,7 @@ export class TranslateService {
 			return;
 		}
 
-		const allowed = engine === "llm" ? this.settings.switches.llm : this.settings.switches.opus;
-
-		if (!allowed) {
+		if (!this.engineAllowed(engine)) {
 			this.unloadEngine(engine);
 			return;
 		}
@@ -1498,6 +1514,27 @@ export class TranslateService {
 			},
 			engine === "llm" ? GPU_IDLE_UNLOAD_MS : CPU_IDLE_UNLOAD_MS
 		);
+	}
+
+	/**
+	 * Whether the user's switches still want what `engine` holds: the
+	 * language model's switch, or for the seq2seq engine the switch of a
+	 * family it has loaded (NLLB-200 needs no OPUS-MT switch, nor the other
+	 * way round). The engine unloads whole, so it stays while any of its
+	 * families is still on.
+	 */
+	private engineAllowed(engine: EngineName): boolean {
+		const switches = this.settings.switches;
+
+		if (engine === "llm") {
+			return switches.llm;
+		}
+
+		if (this.seq2seqFamilies.size === 0) {
+			return switches.opus || switches.nllb;
+		}
+
+		return [...this.seq2seqFamilies].some((family) => switches[family]);
 	}
 
 	/** The engine's models out of memory; the last engine going takes the worker. */

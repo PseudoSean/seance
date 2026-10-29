@@ -1065,10 +1065,48 @@ describe("translate/service", () => {
 		expect(r.seq2seq.calls.unload).to.equal(0);
 		expect(r.workers[0].terminated).to.equal(false);
 
+		// OPUS-MT's switch is not NLLB-200's: the loaded NLLB stays.
 		r.service.setSettings({switches: {llm: false, opus: false, nllb: true}, devices: AUTO});
+		await r.clock.tickAsync(0);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: false}, devices: AUTO});
 		await r.clock.tickAsync(0);
 		// The last loaded tier going takes the worker with it.
 		expect(r.workers[0].terminated).to.equal(true);
+		r.service.dispose();
+	});
+
+	it("a loaded OPUS-MT pair unloads with OPUS-MT's switch, not NLLB-200's", async () => {
+		const r = rig("gpu", true, {en: {fr: ["opus:fr-en"]}});
+		clock = r.clock;
+		await text(r.service.translate({...base, from: "fr"}));
+
+		r.service.setSettings({switches: {llm: true, opus: true, nllb: false}, devices: AUTO});
+		await r.clock.tickAsync(0);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		r.service.setSettings({switches: {llm: true, opus: false, nllb: false}, devices: AUTO});
+		await r.clock.tickAsync(0);
+		// The only engine loaded: the worker goes with it.
+		expect(r.workers[0].terminated).to.equal(true);
+		r.service.dispose();
+	});
+
+	it("an NLLB-200 request with OPUS-MT switched off keeps NLLB-200 loaded", async () => {
+		const r = rig("gpu", true, {en: {fr: ["nllb"]}});
+		clock = r.clock;
+		r.service.setSettings({switches: {llm: true, opus: false, nllb: true}, devices: AUTO});
+
+		expect(await text(r.service.translate({...base, from: "fr"}))).to.equal("seq:Hallo");
+		await r.clock.tickAsync(0);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+		expect(await text(r.service.translate({...base, from: "fr"}))).to.equal("seq:Hallo");
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers).to.have.length(1);
 		r.service.dispose();
 	});
 
