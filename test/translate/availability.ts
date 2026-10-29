@@ -17,6 +17,7 @@ import {
 	buildCatalog,
 	modelBlock,
 	selectLlm,
+	type DeviceChoices,
 	type EngineSwitches,
 } from "../../client/js/translate/models";
 import {routesFor} from "../../client/js/translate/routes.default";
@@ -65,6 +66,8 @@ const DEVICES: Record<string, Capability> = {
 };
 
 const on: EngineSwitches = {llm: true, opus: true, nllb: true};
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
+
 const small = LLM_CHOICES.find((ref) => ref.id === QWEN3_1_7B_ID)!;
 const large = LLM_CHOICES.find((ref) => ref.id === QWEN3_4B_ID)!;
 const base = buildCatalog();
@@ -287,7 +290,7 @@ describe("translate availability", () => {
 			explainRoute(
 				table,
 				catalogFor(capability),
-				routeInput(capability, switches, {from, to, sourceLater})
+				routeInput(capability, switches, AUTO, {from, to, sourceLater})
 			);
 
 		it("agrees with resolveRoute everywhere, and gives a reason exactly when there is no route", () => {
@@ -312,55 +315,73 @@ describe("translate availability", () => {
 				[null, "fil"],
 			];
 
+			// Auto, and every model pinned to each device.
+			const deviceSets: DeviceChoices[] = [
+				AUTO,
+				{llm: "gpu", opus: "gpu", nllb: "gpu"},
+				{llm: "cpu", opus: "cpu", nllb: "cpu"},
+			];
+
 			for (const [name, capability] of Object.entries(DEVICES)) {
-				for (const switches of switchSets) {
-					for (const [from, to] of pairs) {
-						for (const sourceLater of [false, true]) {
-							const input = routeInput(capability, switches, {from, to, sourceLater});
-							const catalog = catalogFor(capability);
-							const verdict = explainRoute(table, catalog, input);
-							const label = `${name} ${JSON.stringify(
-								switches
-							)} ${from}->${to} ${sourceLater}`;
+				for (const devices of deviceSets) {
+					for (const switches of switchSets) {
+						for (const [from, to] of pairs) {
+							for (const sourceLater of [false, true]) {
+								const input = routeInput(capability, switches, devices, {
+									from,
+									to,
+									sourceLater,
+								});
+								const catalog = selectLlm(base, null, capability, devices.llm);
+								const verdict = explainRoute(table, catalog, input);
+								const label = `${name} ${JSON.stringify(devices)} ${JSON.stringify(
+									switches
+								)} ${from}->${to} ${sourceLater}`;
 
-							expect(verdict.route, label).to.deep.equal(
-								resolveRoute(table, catalog, input)
-							);
-							expect(verdict.why === null, label).to.equal(verdict.route !== null);
-							expect(verdict.polish, label).to.equal(from === to);
+								expect(verdict.route, label).to.deep.equal(
+									resolveRoute(table, catalog, input)
+								);
+								expect(verdict.why === null, label).to.equal(
+									verdict.route !== null
+								);
+								expect(verdict.polish, label).to.equal(from === to);
 
-							// A switch named as the reason is a real fix: turned on,
-							// the pair routes or a different reason takes over.
-							if (verdict.why?.kind === "off" && verdict.why.engine !== "all") {
-								const engine = verdict.why.engine;
-								// "llmOrNllb" names two ways in: each must be one.
-								const fixes =
-									engine === "llm"
-										? [{...switches, llm: true}]
-										: engine === "nllb"
-										? [{...switches, nllb: true}]
-										: engine === "llmOrNllb"
-										? [
-												{...switches, llm: true},
-												{...switches, nllb: true},
-										  ]
-										: [{...switches, opus: true}];
+								// A switch named as the reason is a real fix: turned on,
+								// the pair routes or a different reason takes over.
+								if (verdict.why?.kind === "off" && verdict.why.engine !== "all") {
+									const engine = verdict.why.engine;
+									// "llmOrNllb" names two ways in: each must be one.
+									const fixes =
+										engine === "llm"
+											? [{...switches, llm: true}]
+											: engine === "nllb"
+											? [{...switches, nllb: true}]
+											: engine === "llmOrNllb"
+											? [
+													{...switches, llm: true},
+													{...switches, nllb: true},
+											  ]
+											: [{...switches, opus: true}];
 
-								for (const fixed of fixes) {
-									const after = explainRoute(
-										table,
-										catalog,
-										routeInput(capability, fixed, {from, to, sourceLater})
-									);
+									for (const fixed of fixes) {
+										const after = explainRoute(
+											table,
+											catalog,
+											routeInput(capability, fixed, devices, {
+												from,
+												to,
+												sourceLater,
+											})
+										);
 
-									// Or it names the other switch the pair also needs (the CPU
-									// models and NLLB-200 both off: NLLB needs both on).
-									expect(
-										after.route !== null ||
-											after.why?.kind !== "off" ||
-											after.why.engine !== engine,
-										`${label} fixed by ${JSON.stringify(fixed)}`
-									).to.equal(true);
+										// Or another reason takes over.
+										expect(
+											after.route !== null ||
+												after.why?.kind !== "off" ||
+												after.why.engine !== engine,
+											`${label} fixed by ${JSON.stringify(fixed)}`
+										).to.equal(true);
+									}
 								}
 							}
 						}
@@ -400,10 +421,10 @@ describe("translate availability", () => {
 		});
 
 		it("names the switch the user can turn on over a device the GPU model cannot use", () => {
-			// CPU-only device, CPU models off: the LLM cannot run here anyway,
-			// so the fix is the CPU switch.
+			// CPU-only device, OPUS-MT and NLLB-200 off: the LLM cannot run
+			// here anyway, so the fix is OPUS-MT's switch (the pair's own).
 			expect(
-				ask(DEVICES.noWebgpu, {llm: true, opus: false, nllb: true}, "de", "en").why
+				ask(DEVICES.noWebgpu, {llm: true, opus: false, nllb: false}, "de", "en").why
 			).to.deep.equal({
 				kind: "off",
 				engine: "opus",
@@ -412,11 +433,16 @@ describe("translate availability", () => {
 
 		it("names both switches when either would serve the pair", () => {
 			expect(
-				ask(DEVICES.desktop, {llm: false, opus: false, nllb: true}, "de", "en").why
+				ask(DEVICES.desktop, {llm: false, opus: false, nllb: false}, "de", "en").why
 			).to.deep.equal({
 				kind: "off",
 				engine: "all",
 			});
+			// NLLB-200 has its own switch: on, it serves the pair alone.
+			expect(
+				ask(DEVICES.desktop, {llm: false, opus: false, nllb: true}, "de", "en").route
+					?.candidate
+			).to.equal("nllb");
 			// Only the LLM serves Filipino: its switch alone is named.
 			expect(
 				ask(DEVICES.desktop, {llm: false, opus: false, nllb: true}, "en", "fil").why
@@ -456,7 +482,7 @@ describe("translate availability", () => {
 				explainRoute(
 					shipped,
 					catalogFor(capability),
-					routeInput(capability, noNllb, {from, to})
+					routeInput(capability, noNllb, AUTO, {from, to})
 				);
 
 			it("blocks the NLLB row as switched off, and only that one", () => {
@@ -481,11 +507,10 @@ describe("translate availability", () => {
 					explainRoute(
 						shipped,
 						catalogFor(DEVICES.noWebgpu),
-						routeInput(
-							DEVICES.noWebgpu,
-							{...noNllb, nllb: true},
-							{from: "en", to: "fil"}
-						)
+						routeInput(DEVICES.noWebgpu, {...noNllb, nllb: true}, AUTO, {
+							from: "en",
+							to: "fil",
+						})
 					).route?.candidate
 				).to.equal("nllb");
 			});
@@ -506,8 +531,8 @@ describe("translate availability", () => {
 			});
 
 			it("never makes translation as a whole unavailable", () => {
-				expect(translationBlock(base, DEVICES.noWebgpu, noNllb)).to.equal(null);
-				expect(translationBlock(base, DEVICES.desktop, noNllb)).to.equal(null);
+				expect(translationBlock(base, DEVICES.noWebgpu, noNllb, AUTO)).to.equal(null);
+				expect(translationBlock(base, DEVICES.desktop, noNllb, AUTO)).to.equal(null);
 			});
 		});
 
@@ -522,41 +547,61 @@ describe("translate availability", () => {
 			});
 		});
 
-		it("skips the CPU models on a gpu-tier device without WebAssembly SIMD", () => {
+		it("skips the CPU copies on a gpu-tier device without WebAssembly SIMD", () => {
 			const gpuNoSimd = cap({reasons: ["NO_WASM_SIMD"]});
-			const cpuOnly: RouteTable = {"*": {"*": ["nllb"]}};
-			const verdict = explainRoute(
-				cpuOnly,
+			const nllbOnly: RouteTable = {"*": {"*": ["nllb"]}};
+			const pinnedCpu = explainRoute(
+				nllbOnly,
 				base,
-				routeInput(gpuNoSimd, on, {from: "de", to: "en"})
+				routeInput(gpuNoSimd, on, {...AUTO, nllb: "cpu"}, {from: "de", to: "en"})
 			);
 
-			expect(verdict.route).to.equal(null);
-			expect(verdict.why).to.deep.equal({kind: "device", reason: "NO_WASM_SIMD"});
+			expect(pinnedCpu.route).to.equal(null);
+			expect(pinnedCpu.why).to.deep.equal({kind: "device", reason: "NO_WASM_SIMD"});
+			// Under Auto its GPU copy, which needs no SIMD, serves.
+			expect(
+				explainRoute(
+					nllbOnly,
+					base,
+					routeInput(gpuNoSimd, on, AUTO, {from: "de", to: "en"})
+				).route
+			).to.deep.include({candidate: "nllb", device: "gpu"});
 		});
 
 		it("reports a candidate down for the session once nothing else serves", () => {
 			const verdict = explainRoute(
 				table,
 				base,
-				routeInput(DEVICES.desktop, on, {from: "en", to: "fil"}, new Set(["llm"]))
+				routeInput(
+					DEVICES.desktop,
+					on,
+					AUTO,
+					{from: "en", to: "fil"},
+					new Set(["llm@gpu" as const])
+				)
 			);
 
 			expect(verdict.why).to.deep.equal({kind: "down"});
 		});
 
-		it("reads the tier and WebAssembly SIMD off the probe; an unknown probe routes nothing", () => {
-			const input = routeInput(DEVICES.noSimd, on, {from: "de", to: "en"});
+		it("reads the tier off the probe and carries the probe; an unknown probe routes nothing", () => {
+			const input = routeInput(DEVICES.noSimd, on, AUTO, {from: "de", to: "en"});
 
 			expect(input.tier).to.equal("none");
-			expect(input.wasm).to.equal(false);
-			expect(routeInput(null, on, {from: "de", to: "en"}).tier).to.equal("none");
+			expect(input.capability).to.equal(DEVICES.noSimd);
+			expect(routeInput(null, on, AUTO, {from: "de", to: "en"}).tier).to.equal("none");
 		});
 	});
 
 	describe("translationBlock", () => {
 		const block = (capability: Capability | null, switches: EngineSwitches, enabled = true) =>
-			translationBlock(selectLlm(base, null, capability), capability, switches, enabled);
+			translationBlock(
+				selectLlm(base, null, capability),
+				capability,
+				switches,
+				AUTO,
+				enabled
+			);
 
 		it("is null while either engine runs", () => {
 			expect(block(DEVICES.desktop, on)).to.equal(null);

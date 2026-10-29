@@ -258,7 +258,7 @@ import {
 import {translateWhyText} from "../js/helpers/translateWhy";
 import {isLimitedLanguage} from "../js/translate/routes.default";
 import {translateService} from "../js/translate";
-import {llmChoice} from "../js/translate/models";
+import {llmChoice, normalizeDeviceChoice} from "../js/translate/models";
 import {useStore} from "../js/store";
 import {cancelOutgoing} from "../js/translate/writer";
 import {hasVirtualKeyboard} from "../js/helpers/device";
@@ -288,7 +288,8 @@ export default defineComponent({
 				llmChoice(
 					translateService().catalog,
 					store.state.settings.translateLlmModel,
-					store.state.translation.capability
+					store.state.translation.capability,
+					normalizeDeviceChoice(store.state.settings.translateLlmDevice)
 				).id
 			);
 		const name = (code: string) => languageName(code, readingLanguage());

@@ -9,13 +9,20 @@ import {expect} from "chai";
 import sinon from "ts-sinon";
 import type {Capability} from "../../client/js/translate/capability";
 import {emptyContext} from "../../client/js/translate/engine";
-import {QWEN3_1_7B_ID, buildCatalog, type CacheApi} from "../../client/js/translate/models";
+import {
+	QWEN3_1_7B_ID,
+	buildCatalog,
+	type CacheApi,
+	type DeviceChoices,
+} from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
 import type {RouteTable} from "../../client/js/translate/router";
 import {TranslateClient} from "../../client/js/translate/client";
 import {TranslateService, type ServiceDeps} from "../../client/js/translate/service";
 import {serveEngines} from "../../client/js/translate/worker";
 import {FakeEngine} from "./fakeEngine";
+
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
 
 const catalog = buildCatalog();
 
@@ -95,7 +102,7 @@ function rig(mobile: boolean) {
 			ortBase: "https://app.test/js/ort/",
 			enabled: true,
 		},
-		{llm: true, opus: true, nllb: true}
+		{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 	);
 
 	return {service, workers, log, clock, llm, seq2seq};

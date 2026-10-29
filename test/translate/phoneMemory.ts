@@ -17,9 +17,12 @@ import {
 	llmRunsOn,
 	modelBlock,
 	tooLargeForPhone,
+	type DeviceChoices,
 } from "../../client/js/translate/models";
 import {explainRoute, routeInput} from "../../client/js/translate/router";
 import {routesFor} from "../../client/js/translate/routes.default";
+
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
 
 const GiB = 1024 * 1024 * 1024;
 const MiB = 1024 * 1024;
@@ -174,7 +177,7 @@ describe("translate: a phone's page memory", () => {
 			const deploy = buildCatalog({llm: {model: QWEN3_4B_ID}});
 			const table = routesFor(QWEN3_4B_ID);
 			const verdict = explainRoute(table, deploy, {
-				...routeInput(device(), all, {from: "de", to: "en"}),
+				...routeInput(device(), all, AUTO, {from: "de", to: "en"}),
 				cached: () => true,
 			});
 
@@ -185,7 +188,7 @@ describe("translate: a phone's page memory", () => {
 			expect(verdict.route?.ref.engine).to.equal("seq2seq");
 
 			const llmOnly = explainRoute({en: {de: ["llm"]}}, deploy, {
-				...routeInput(device(), all, {from: "de", to: "en"}),
+				...routeInput(device(), all, AUTO, {from: "de", to: "en"}),
 				cached: () => true,
 			});
 

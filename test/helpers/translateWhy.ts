@@ -138,7 +138,7 @@ describe("translateErrorText", () => {
 			.replace("{size}", friendlysize(listedSize(ref)));
 
 		expect(translateErrorText(needsDownloadError(ref))).to.equal(expected);
-		expect(translateWhyText({kind: "download", ref})).to.equal(expected);
+		expect(translateWhyText({kind: "download", ref, device: "gpu"})).to.equal(expected);
 		expect(expected).to.include("Qwen3 1.7B").and.include("MiB");
 	});
 

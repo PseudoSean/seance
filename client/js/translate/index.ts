@@ -14,10 +14,10 @@ import {probeOnce} from "./capability";
 import {emptyContext, type ModelRef} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {buildCatalog, listedSize} from "./models";
+import {buildCatalog, listedSize, normalizeDeviceChoice} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
-import {ServiceDeps, TranslateService} from "./service";
+import {ServiceDeps, ServiceSettings, TranslateService} from "./service";
 import {storedConsent} from "./consent";
 import eventbus from "../eventbus";
 import storage from "../localStorage";
@@ -54,6 +54,28 @@ export function translateService(): TranslateService {
 	}
 
 	return service;
+}
+
+/**
+ * The store's engine switches and device settings, as the service and the
+ * router read them: a stored device value that is none of the three (an
+ * older backup, a hand edit) reads as Auto.
+ */
+export function serviceSettings(): ServiceSettings {
+	const settings = store.state.settings;
+
+	return {
+		switches: {
+			llm: !!settings.translateLlm,
+			opus: !!settings.translateCpu,
+			nllb: !!settings.translateNllb,
+		},
+		devices: {
+			llm: normalizeDeviceChoice(settings.translateLlmDevice),
+			opus: normalizeDeviceChoice(settings.translateOpusDevice),
+			nllb: normalizeDeviceChoice(settings.translateNllbDevice),
+		},
+	};
 }
 
 function useFake(): boolean {
@@ -148,21 +170,24 @@ function create(): TranslateService {
 			ortBase: new URL("js/ort/", document.baseURI).href,
 			enabled: branding.enabled !== false,
 		},
-		{
-			llm: store.state.settings.translateLlm,
-			opus: store.state.settings.translateCpu,
-			nllb: !!store.state.settings.translateNllb,
-		}
+		serviceSettings()
 	);
 
+	// A switch or a device setting changed: the service gets the whole set.
 	store.watch(
-		() =>
-			[
-				store.state.settings.translateLlm,
-				store.state.settings.translateCpu,
-				!!store.state.settings.translateNllb,
-			] as [boolean, boolean, boolean],
-		([llm, opus, nllb]) => created.setSettings({llm, opus, nllb})
+		() => {
+			const {switches, devices} = serviceSettings();
+
+			return [
+				switches.llm,
+				switches.opus,
+				switches.nllb,
+				devices.llm,
+				devices.opus,
+				devices.nllb,
+			];
+		},
+		() => created.setSettings(serviceSettings())
 	);
 	// A switch takes effect at once (service.ts `setLlmModel`): the old model
 	// unloads once its running requests are done, later requests route anew.

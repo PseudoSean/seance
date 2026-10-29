@@ -35,9 +35,9 @@ import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} f
 import {namesFor} from "./names";
 import {fromLocaleTag} from "./languages";
 import {needsDownloadError} from "./consent";
-import {type EngineSwitches, type ModelBlock, selectLlm} from "./models";
+import {type ModelBlock, selectLlm} from "./models";
 import {type RouteVerdict, explainRoute, routeInput, translationBlock} from "./router";
-import {setTranslationUsage, translateService} from "./index";
+import {serviceSettings, setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
@@ -168,21 +168,17 @@ export function translationAvailable(): boolean {
 	return translateService().enabled && tier !== undefined && tier !== "none";
 }
 
-/** The catalog as the service runs it: the GPU model the setting and the probe resolve to. */
+/**
+ * The catalog as the service runs it: the language model the setting, the
+ * probe and its device setting resolve to.
+ */
 function liveCatalog() {
 	return selectLlm(
 		translateService().catalog,
 		store.state.settings.translateLlmModel,
-		store.state.translation.capability
+		store.state.translation.capability,
+		serviceSettings().devices.llm
 	);
-}
-
-function switches(): EngineSwitches {
-	return {
-		llm: !!store.state.settings.translateLlm,
-		opus: !!store.state.settings.translateCpu,
-		nllb: !!store.state.settings.translateNllb,
-	};
 }
 
 /**
@@ -192,10 +188,13 @@ function switches(): EngineSwitches {
  * a component's computed follows the switches and the probe.
  */
 export function currentTranslationBlock(): ModelBlock | null {
+	const {switches, devices} = serviceSettings();
+
 	return translationBlock(
 		liveCatalog(),
 		store.state.translation.capability,
-		switches(),
+		switches,
+		devices,
 		translateService().enabled
 	);
 }
@@ -209,7 +208,12 @@ export function currentTranslationBlock(): ModelBlock | null {
 export function pairVerdict(from: string | null, to: string): RouteVerdict {
 	const service = translateService();
 	const capability = store.state.translation.capability;
-	const input = routeInput(capability, switches(), {from, to, sourceLater: from === null});
+	const {switches, devices} = serviceSettings();
+	const input = routeInput(capability, switches, devices, {
+		from,
+		to,
+		sourceLater: from === null,
+	});
 
 	if (!service.enabled || !capability) {
 		return {

@@ -7,6 +7,7 @@ import {
 	QWEN3_4B_ID,
 	buildCatalog,
 	type CacheApi,
+	type DeviceChoices,
 } from "../../client/js/translate/models";
 import {ABORTED} from "../../client/js/translate/outgoing";
 import {createPortPair} from "../../client/js/translate/protocol";
@@ -35,6 +36,8 @@ import {
 	parseNeedsDownload,
 } from "../../client/js/translate/consent";
 import {FakeEngine} from "./fakeEngine";
+
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
 
 const catalog = buildCatalog();
 
@@ -89,7 +92,7 @@ function deadWorkerRig(dies: boolean, healthyFrom = Infinity) {
 			clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
 		},
 		{catalog, selectedLlm: QWEN3_1_7B_ID, ortBase: "https://app.test/js/ort/", enabled: true},
-		{llm: true, opus: true, nllb: true}
+		{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 	);
 
 	service.onWorkerError((message) => errors.push(message));
@@ -197,7 +200,7 @@ function rig(
 			ortBase: "https://app.test/js/ort/",
 			enabled,
 		},
-		{llm: true, opus: true, nllb: true}
+		{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 	);
 
 	return {
@@ -409,6 +412,11 @@ describe("translate/service", () => {
 	it("a better class whose download fails falls to the next class, the reason kept", async () => {
 		const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
 		clock = r.clock;
+		// NLLB-200 on one device: its one copy failing takes it out.
+		r.service.setSettings({
+			switches: {llm: true, opus: true, nllb: true},
+			devices: {...AUTO, nllb: "cpu"},
+		});
 		r.seq2seq.failLoad = new Error("quota exceeded");
 
 		expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
@@ -536,7 +544,7 @@ describe("translate/service", () => {
 		expect(r.seq2seq.calls.load).to.deep.equal([]);
 		expect(r.seq2seq.calls.translate).to.deep.equal([]);
 
-		r.service.setSettings({llm: false, opus: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		message = "";
 
 		try {
@@ -596,12 +604,37 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
+	it("a copy whose load fails is down alone: Auto goes on to the model's other copy", async () => {
+		const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
+		clock = r.clock;
+		// A computer: NLLB-200's GPU copy first under Auto.
+		expect(await r.service.route("sw", "en")).to.deep.include({
+			candidate: "nllb",
+			device: "gpu",
+		});
+		r.seq2seq.failLoad = new Error("device lost");
+
+		expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("seq:Hallo");
+		expect(r.seq2seq.calls.load.map((ref) => ref.id)).to.deep.equal([
+			catalog.nllb.id,
+			catalog.nllb.id,
+		]);
+		expect(await r.service.route("sw", "en")).to.deep.include({
+			candidate: "nllb",
+			device: "cpu",
+		});
+		r.service.dispose();
+	});
+
 	it("the engine settings narrow the route", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
-		r.service.setSettings({llm: false, opus: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
-		r.service.setSettings({llm: false, opus: false, nllb: true});
+		// NLLB-200 has its own switch: OPUS-MT's off leaves it serving.
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: true}, devices: AUTO});
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("nllb");
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: false}, devices: AUTO});
 		expect(await r.service.route("de", "en")).to.equal(null);
 		r.service.dispose();
 	});
@@ -718,6 +751,26 @@ describe("translate/service", () => {
 		// A choice of the user's outranks it, and survives the probe.
 		r.service.setLlmModel(QWEN3_1_7B_ID);
 		expect(r.service.catalog.llm.id).to.equal(QWEN3_1_7B_ID);
+		r.service.dispose();
+	});
+
+	it("an unset choice resolves to a model with a CPU copy while the language model is pinned to the CPU", async () => {
+		const r = rig("gpu");
+		const on = {llm: true, opus: true, nllb: true};
+
+		clock = r.clock;
+		r.service.setLlmModel("");
+		await r.service.capabilities();
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
+		// The 4B has no CPU copy: pinned there, the unset choice is the 1.7B.
+		r.service.setSettings({switches: on, devices: {...AUTO, llm: "cpu"}});
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_1_7B_ID);
+		r.service.setSettings({switches: on, devices: AUTO});
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
+		// A chosen 4B stands: the router says it cannot run there.
+		r.service.setLlmModel(QWEN3_4B_ID);
+		r.service.setSettings({switches: on, devices: {...AUTO, llm: "cpu"}});
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
 		r.service.dispose();
 	});
 
@@ -897,7 +950,7 @@ describe("translate/service", () => {
 				ortBase: "",
 				enabled: true,
 			},
-			{llm: true, opus: true, nllb: true}
+			{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 		);
 
 		expect((await service.route("fr", "ja"))?.candidate).to.equal("llm");
@@ -1006,13 +1059,13 @@ describe("translate/service", () => {
 		await text(r.service.translate(base));
 		await text(r.service.translate({...base, from: "fr"}));
 
-		r.service.setSettings({llm: false, opus: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		await r.clock.tickAsync(0);
 		expect(r.llm.calls.unload).to.equal(1);
 		expect(r.seq2seq.calls.unload).to.equal(0);
 		expect(r.workers[0].terminated).to.equal(false);
 
-		r.service.setSettings({llm: false, opus: false, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: true}, devices: AUTO});
 		await r.clock.tickAsync(0);
 		// The last loaded tier going takes the worker with it.
 		expect(r.workers[0].terminated).to.equal(true);
@@ -1026,7 +1079,7 @@ describe("translate/service", () => {
 		const running = text(r.service.translate(base));
 
 		await r.clock.tickAsync(0);
-		r.service.setSettings({llm: false, opus: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		await r.clock.tickAsync(0);
 		// Not under the running request.
 		expect(r.llm.calls.unload).to.equal(0);
@@ -1735,7 +1788,7 @@ describe("translate/service", () => {
 
 			expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
 			// The GPU model switched off: English to French falls to the OPUS pair.
-			r.service.setSettings({llm: false, opus: true, nllb: true});
+			r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 			expect((await r.service.route("en", "fr"))?.candidate).to.equal("opus:en-fr");
 			expect(ask.asked).to.deep.equal([]);
 			r.service.dispose();
@@ -1793,7 +1846,7 @@ describe("translate/service", () => {
 			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
 			clock = r.clock;
 			// NLLB-200 off, as it ships: the walk's own last reason is that switch.
-			r.service.setSettings({llm: true, opus: true, nllb: false});
+			r.service.setSettings({switches: {llm: true, opus: true, nllb: false}, devices: AUTO});
 
 			const resolved = r.service.resolve("de", "en");
 
@@ -1932,13 +1985,13 @@ describe("translate/service", () => {
 		it("off: a pair NLLB would lead goes to the GPU model, and none goes to NLLB", async () => {
 			const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}, "*": {"*": ["nllb"]}});
 			clock = r.clock;
-			r.service.setSettings({llm: true, opus: true, nllb: false});
+			r.service.setSettings({switches: {llm: true, opus: true, nllb: false}, devices: AUTO});
 
 			expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
 			expect((await r.service.route("ja", "ko"))?.candidate ?? null).to.equal(null);
 			expect(r.seq2seq.calls.load).to.deep.equal([]);
 
-			r.service.setSettings({llm: true, opus: true, nllb: true});
+			r.service.setSettings({switches: {llm: true, opus: true, nllb: true}, devices: AUTO});
 			expect((await r.service.route("sw", "en"))?.candidate).to.equal("nllb");
 			r.service.dispose();
 		});

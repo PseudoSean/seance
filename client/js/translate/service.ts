@@ -26,6 +26,8 @@ import {
 import {ABORTED} from "./outgoing";
 import {
 	Candidate,
+	DeviceChoices,
+	EngineSwitches,
 	GpuBudget,
 	ModelCatalog,
 	buildIdFor,
@@ -33,7 +35,7 @@ import {
 	catalogModels,
 	selectLlm,
 } from "./models";
-import {Route, RouteTable, explainRoute, mergeRoutes, routeInput} from "./router";
+import {DownKey, Route, RouteTable, explainRoute, mergeRoutes, routeInput} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
 
 /** A loaded GPU model with no request for this long gives its memory back. */
@@ -93,10 +95,10 @@ export interface ServiceOptions {
 }
 
 export interface ServiceSettings {
-	llm: boolean;
-	opus: boolean;
-	/** NLLB-200 switched on: its licence is non-commercial, so it is opt-in. */
-	nllb: boolean;
+	/** The switch per model family; NLLB-200's is opt-in (its licence is non-commercial). */
+	switches: EngineSwitches;
+	/** The device setting per model family (`translate*Device`). */
+	devices: DeviceChoices;
 }
 
 export type ModelStatus = "idle" | "downloading" | "ready" | "failed";
@@ -139,7 +141,7 @@ export class TranslateService {
 	/** The probe's answer once it has one; the GPU default follows it. */
 	private probed: Capability | null = null;
 	private selectedLlm: string | null = null;
-	private down = new Set<Candidate>();
+	private down = new Set<DownKey>();
 	private idleTimer: unknown = null;
 	private inFlight = 0;
 	private nextId = 1;
@@ -204,6 +206,9 @@ export class TranslateService {
 
 		this.selectedLlm = options.selectedLlm ?? null;
 		this.table = this.buildTable();
+		// The catalog was built without the device setting: a language model
+		// pinned to the CPU resolves an unset choice differently.
+		this.applyLlmSelection();
 		this.consent = deps.askDownload
 			? new DownloadConsent((ref) => deps.askDownload!(ref), deps.consent ?? memoryConsent())
 			: null;
@@ -241,7 +246,12 @@ export class TranslateService {
 
 	/** Re-resolve the stored selection (a change, or the probe landing). */
 	private applyLlmSelection(): void {
-		const next = selectLlm(this.options.catalog, this.selectedLlm, this.probed);
+		const next = selectLlm(
+			this.options.catalog,
+			this.selectedLlm,
+			this.probed,
+			this.settings.devices.llm
+		);
 
 		if (next === this.options.catalog) {
 			return;
@@ -251,7 +261,7 @@ export class TranslateService {
 
 		this.options = {...this.options, catalog: next};
 		this.table = this.buildTable();
-		this.down.delete("llm");
+		this.forgetDown("llm");
 		this.retireLlm(previous);
 	}
 
@@ -545,13 +555,25 @@ export class TranslateService {
 
 		this.settings = settings;
 
-		if (before.llm && !settings.llm) {
+		if (before.switches.llm && !settings.switches.llm) {
 			this.afterEngineIdle("llm");
 		}
 
-		if (before.opus && !settings.opus) {
+		if (before.switches.opus && !settings.switches.opus) {
 			this.afterEngineIdle("seq2seq");
 		}
+
+		// Pinned to the CPU, an unset choice resolves to a model with a CPU
+		// copy (models.ts `llmChoice`), and back again when it is not.
+		if (before.devices.llm !== settings.devices.llm) {
+			this.applyLlmSelection();
+		}
+	}
+
+	/** Lifts the session's down-marks off every copy of `candidate`. */
+	private forgetDown(candidate: Candidate): void {
+		this.down.delete(`${candidate}@gpu`);
+		this.down.delete(`${candidate}@cpu`);
 	}
 
 	/**
@@ -629,7 +651,15 @@ export class TranslateService {
 		let cachedOnly = !!consent?.anyDeclined;
 
 		const input = (refuse: boolean) => ({
-			...routeInput(capability, this.settings, {from, to, hint}, this.down),
+			...routeInput(
+				capability,
+				this.settings.switches,
+				this.settings.devices,
+				{from, to, hint},
+				this.down
+			),
+			// Per model for now, whatever the device: per-copy cache state
+			// and device-keyed consent come with the copies' own downloads.
 			cached: (ref: ModelRef) => this.views.get(ref.id)?.cached === true,
 			refuse: refuse ? (ref: ModelRef) => this.needsConsent(ref) : undefined,
 		});
@@ -934,7 +964,7 @@ export class TranslateService {
 						(llmId === this.options.catalog.llm.id &&
 							!this.otherLlmStartedSince(llmId, llmSeq))
 					) {
-						this.down.add(route.candidate);
+						this.down.add(`${route.candidate}@${route.device}`);
 					}
 				} finally {
 					if (llmId) {
@@ -1152,7 +1182,7 @@ export class TranslateService {
 			view.cached = true;
 			// It loads again: whatever took this candidate out of the session
 			// (a download that failed, a device that was lost) is over.
-			this.down.delete(candidateOf(ref));
+			this.forgetDown(candidateOf(ref));
 		} catch (e) {
 			const message = e instanceof Error ? e.message : String(e);
 
@@ -1450,7 +1480,7 @@ export class TranslateService {
 			return;
 		}
 
-		const allowed = engine === "llm" ? this.settings.llm : this.settings.opus;
+		const allowed = engine === "llm" ? this.settings.switches.llm : this.settings.switches.opus;
 
 		if (!allowed) {
 			this.unloadEngine(engine);

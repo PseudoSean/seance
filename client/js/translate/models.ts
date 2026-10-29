@@ -544,6 +544,38 @@ export function nativeDevice(ref: ModelRef): Device {
 	return ref.engine === "llm" ? "gpu" : "cpu";
 }
 
+const ALL_ON: EngineSwitches = {llm: true, opus: true, nllb: true};
+
+/**
+ * The devices to try `ref` on, best first (spec translation-devices.md
+ * § Auto). A pinned choice is that device alone. Auto, a placeholder until
+ * measured on real GPUs: the language model on the GPU alone (the CPU runs
+ * it only when the user pins it there); NLLB-200 on the GPU, then the CPU,
+ * where its GPU copy fits, else the CPU alone; OPUS-MT on the CPU, then the
+ * GPU, on a phone (its GPU memory is kept for the language model), the GPU
+ * first on a computer. What the walk does with each device -- blocked,
+ * down, a declined download -- is the router's (router.ts `explainRoute`).
+ */
+export function deviceOrder(
+	ref: ModelRef,
+	choice: DeviceChoice,
+	capability: Capability | null
+): Device[] {
+	if (choice !== "auto") {
+		return [choice];
+	}
+
+	if (ref.family === "llm") {
+		return ["gpu"];
+	}
+
+	if (ref.family === "nllb") {
+		return modelBlock(ref, "gpu", capability, ALL_ON) === null ? ["gpu", "cpu"] : ["cpu"];
+	}
+
+	return capability?.mobile ? ["cpu", "gpu"] : ["gpu", "cpu"];
+}
+
 /** What the default GPU model is decided from (capability.ts `Capability`). */
 export interface AdapterMemory {
 	maxBufferBytes: number;
@@ -632,15 +664,40 @@ function deployLlmRef(id: string, lib: string | undefined): ModelRef {
  * catalog default. `memory` is the device probe (store `translationCapability`),
  * null while it is still running — the catalog default serves until it lands
  * and this answers anew once it has.
+ *
+ * `llmDevice` is the language model's device setting (`translateLlmDevice`).
+ * Pinned to the CPU, a choice stands as made — a chosen 4B, which has no
+ * CPU copy, is the router's to block (`noCopy`), never quietly swapped —
+ * and an unresolved one lands on a model that has a CPU copy (the 1.7B,
+ * where the adapter would have picked the 4B).
  */
 export function llmChoice(
 	catalog: ModelCatalog,
 	selected: string | null | undefined,
-	memory?: AdapterMemory | null
+	memory?: AdapterMemory | null,
+	llmDevice: DeviceChoice = "auto"
 ): ModelRef {
+	const chosen = catalog.llmChoices.find((ref) => ref.id === selected);
+
+	if (llmDevice === "cpu") {
+		if (chosen) {
+			return chosen;
+		}
+
+		const onCpu = (ref: ModelRef | undefined): ref is ModelRef => !!ref?.copies.cpu;
+		const deployed = catalog.llmChoices.find((ref) => ref.id === catalog.llmDeploy);
+		const fallback = llmChoice(catalog, selected, memory);
+
+		return (
+			[deployed, fallback].find(onCpu) ??
+			catalog.llmChoices.find((ref) => ref.id === catalog.llmDefault && onCpu(ref)) ??
+			catalog.llmChoices.find(onCpu) ??
+			fallback
+		);
+	}
+
 	// A probe that found no GPU names no GPU model (see AdapterMemory.tier).
 	const device = memory && (memory.tier ?? "gpu") === "gpu" ? memory : null;
-	const chosen = catalog.llmChoices.find((ref) => ref.id === selected);
 
 	// A choice this GPU cannot bind (llmFits), or a phone cannot hold
 	// (tooLargeForPhone), runs the default instead, so a gpu tier always
@@ -673,9 +730,10 @@ export function llmChoice(
 export function selectLlm(
 	catalog: ModelCatalog,
 	selected: string | null | undefined,
-	memory?: AdapterMemory | null
+	memory?: AdapterMemory | null,
+	llmDevice: DeviceChoice = "auto"
 ): ModelCatalog {
-	const llm = llmChoice(catalog, selected, memory);
+	const llm = llmChoice(catalog, selected, memory, llmDevice);
 
 	return llm === catalog.llm ? catalog : {...catalog, llm};
 }

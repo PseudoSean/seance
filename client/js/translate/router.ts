@@ -4,28 +4,39 @@
 // class with a candidate the device tier allows (an `llm` candidate is
 // skipped, never failed, below the gpu tier), the user's engine settings
 // allow, the catalog has a model for, and that is not marked down for the
-// session. Inside that class a candidate whose model is already downloaded
+// session. Each candidate is tried on its devices in turn (models.ts
+// `deviceOrder`: a pinned device alone, Auto's order otherwise): a copy
+// whose device cannot run it (`modelBlock`), marked down (`DownKey`), or
+// whose download the caller refuses is passed over for the next device,
+// and the candidate's route is its first device left. A downloaded copy
+// never reorders a candidate's devices -- the better device's copy is
+// asked for, and only a declined download falls back to the copy already
+// there. Inside a class a candidate whose route is already downloaded
 // wins over the class's own order; a better class is never skipped for a
 // downloaded model in a worse one: its model is downloaded on demand
 // instead (service.ts), once the user has agreed to that download
-// (consent.ts): a candidate the caller refuses to download (`refuse`) is
-// passed over like any other block. NLLB-200 runs only once the user has
-// switched it on (`allowNllb`; its licence is non-commercial), so the
-// OPUS-MT pairs and the GPU model serve without it. A seq2seq candidate
-// needs a source language: the request's `from`, or failing that its
-// source hint.
+// (consent.ts). NLLB-200 runs only once the user has switched it on
+// (`switches.nllb`; its licence is non-commercial), so the OPUS-MT pairs
+// and the language model serve without it. A seq2seq candidate needs a
+// source language: the request's `from`, or failing that its source hint.
 
 import {Capability, Tier} from "./capability";
-import {ModelRef} from "./engine";
+import {Device, ModelRef} from "./engine";
 import {
 	Candidate,
+	DeviceChoices,
 	EngineSwitches,
 	ModelBlock,
 	ModelCatalog,
+	candidateOf,
+	choiceFor,
+	deviceOrder,
 	modelBlock,
-	nativeDevice,
 	refFor,
 } from "./models";
+
+/** One copy of a candidate: what the session marks down after it fails (service.ts). */
+export type DownKey = `${Candidate}@${Device}`;
 
 /**
  * One table entry: its elements are quality classes, best first. A bare
@@ -52,29 +63,26 @@ export interface RouteInput {
 	 */
 	hint: string | null;
 	to: string;
+	/** The probe's tier: `none` routes nothing (translation is hidden there). */
 	tier: Tier;
-	allowLlm: boolean;
-	allowCpu: boolean;
-	/** NLLB-200 switched on (`translateNllb`): off, the `nllb` candidate is passed over. */
-	allowNllb: boolean;
-	down: ReadonlySet<Candidate>;
+	/** The user's switch per model family (`translateLlm`, `translateCpu`, `translateNllb`). */
+	switches: EngineSwitches;
+	/** The user's device setting per model family (`translate*Device`). */
+	devices: DeviceChoices;
+	down: ReadonlySet<DownKey>;
 	/**
-	 * Is this model already downloaded? Optional: without it every candidate
+	 * Is this copy already downloaded? Optional: without it every candidate
 	 * counts as unknown and each class's order is the table's own.
 	 */
-	cached?: (ref: ModelRef) => boolean;
+	cached?: (ref: ModelRef, device: Device) => boolean;
 	/**
-	 * A model this request must not download: the user said "not now" to an
+	 * A copy this request must not download: the user said "not now" to an
 	 * implicit download this session (service.ts `resolve`, consent.ts). Such
-	 * a candidate is blocked as `download`, naming the model, and the walk
-	 * goes on to one that needs no download. Absent, nothing is refused.
+	 * a copy is blocked as `download`, naming the model and the device, and
+	 * the walk goes on to one that needs no download. Absent, nothing is
+	 * refused.
 	 */
-	refuse?: (ref: ModelRef) => boolean;
-	/**
-	 * Whether WebAssembly SIMD is there for the CPU models. A gpu-tier device
-	 * can lack it (the tier only says the GPU is fine); absent means yes.
-	 */
-	wasm?: boolean;
+	refuse?: (ref: ModelRef, device: Device) => boolean;
 	/**
 	 * The source will be named before any request goes out: a question asked
 	 * ahead of time ("could this pair run?") for a line whose language the
@@ -83,15 +91,18 @@ export interface RouteInput {
 	 */
 	sourceLater?: boolean;
 	/**
-	 * The probe, for the explanation's words only (`explainRoute`): which
-	 * device code, which buffer numbers. Routing reads `tier` and the flags.
+	 * The probe: what every copy is judged against (`modelBlock`) and what
+	 * Auto's device order reads (`deviceOrder`). Null while it runs, when
+	 * nothing routes.
 	 */
-	capability?: Capability | null;
+	capability: Capability | null;
 }
 
 export interface Route {
 	candidate: Candidate;
 	ref: ModelRef;
+	/** The device the route's copy runs on. */
+	device: Device;
 }
 
 /**
@@ -105,8 +116,8 @@ export type RouteBlock =
 	| {kind: "down"}
 	| {kind: "source"}
 	| {kind: "unserved"}
-	/** The route's model is not on the device and its download was declined (consent.ts). */
-	| {kind: "download"; ref: ModelRef};
+	/** The route's copy is not on the device and its download was declined (consent.ts). */
+	| {kind: "download"; ref: ModelRef; device: Device};
 
 /**
  * The router's answer with its reason: a route, or why there is none.
@@ -118,27 +129,25 @@ export type RouteVerdict =
 	| {route: null; why: RouteBlock; polish: boolean};
 
 /**
- * The input `resolveRoute` takes, from the probe and the user's switches:
- * the one place the tier, the flags and WebAssembly SIMD are read off a
- * `Capability`, for the service's requests and the UI's questions alike. A
- * capability still unknown routes nothing.
+ * The input `resolveRoute` takes, from the probe and the user's switches
+ * and device settings, for the service's requests and the UI's questions
+ * alike. A capability still unknown routes nothing.
  */
 export function routeInput(
 	capability: Capability | null,
 	switches: EngineSwitches,
+	devices: DeviceChoices,
 	pair: {from: string | null; to: string; hint?: string | null; sourceLater?: boolean},
-	down: ReadonlySet<Candidate> = new Set()
+	down: ReadonlySet<DownKey> = new Set()
 ): RouteInput {
 	return {
 		from: pair.from,
 		hint: pair.hint ?? null,
 		to: pair.to,
 		tier: capability?.tier ?? "none",
-		allowLlm: switches.llm,
-		allowCpu: switches.opus,
-		allowNllb: switches.nllb,
+		switches,
+		devices,
 		down,
-		wasm: capability ? !capability.reasons.includes("NO_WASM_SIMD") : false,
 		sourceLater: pair.sourceLater,
 		capability,
 	};
@@ -169,82 +178,83 @@ export function candidatesFor(table: RouteTable, from: string | null, to: string
 	return classesOf(entry);
 }
 
+/** A device code: nothing the user can change in Settings. */
+const DEVICE_KINDS: ReadonlySet<RouteBlock["kind"]> = new Set(["device", "buffer", "memory"]);
+/** What the user can act on: a switch, a download, the 4B's "choose 1.7B". */
+const ACTIONABLE_KINDS: ReadonlySet<RouteBlock["kind"]> = new Set(["off", "download", "noCopy"]);
+
 /**
- * What keeps one candidate from taking the request, or null when it can.
+ * Of the blocks a model's devices gave, in its device order, the one to tell
+ * the user (spec translation-devices.md § explainRoute): the first device's
+ * -- a pinned device's own -- unless it is a device code and the next
+ * device's is one the user can act on.
+ */
+function deviceReason(blocks: RouteBlock[]): RouteBlock {
+	const [first, next] = blocks;
+
+	return next && DEVICE_KINDS.has(first.kind) && ACTIONABLE_KINDS.has(next.kind) ? next : first;
+}
+
+/**
+ * One model walked over its devices (`deviceOrder`): the first device whose
+ * copy can take the request -- not blocked (`modelBlock`), not marked down,
+ * its download not refused -- or, when none can, the reason.
+ */
+function walkDevices(
+	candidate: Candidate,
+	ref: ModelRef,
+	input: RouteInput
+): {device: Device; why: null} | {device: null; why: RouteBlock} {
+	const blocks: RouteBlock[] = [];
+
+	for (const device of deviceOrder(ref, choiceFor(ref, input.devices), input.capability)) {
+		const block: RouteBlock | null =
+			modelBlock(ref, device, input.capability, input.switches) ??
+			(input.down.has(`${candidate}@${device}`)
+				? {kind: "down"}
+				: input.refuse?.(ref, device)
+				? {kind: "download", ref, device}
+				: null);
+
+		if (!block) {
+			return {device, why: null};
+		}
+
+		blocks.push(block);
+	}
+
+	return {device: null, why: deviceReason(blocks)};
+}
+
+/**
+ * What keeps one candidate from taking the request, or the route it takes.
  * The routing and the explanation are the same test: `resolveRoute` takes
  * the first candidate this passes, `explainRoute` reports what it said.
  */
-function candidateBlock(
+function candidateRoute(
 	candidate: Candidate,
 	ref: ModelRef | null,
 	input: RouteInput,
 	source: string | null
-): RouteBlock | null {
+): {route: Route; why: null} | {route: null; why: RouteBlock} {
 	if (!ref) {
-		return {kind: "unserved"};
+		return {route: null, why: {kind: "unserved"}};
 	}
 
-	const switches = {llm: true, opus: true, nllb: true};
+	if (candidate !== "llm" && source === null && !input.sourceLater) {
+		// The source is the request's, whatever the device: what blocks every
+		// copy (a device code, a switch) outranks it, since naming a language
+		// would not make the pair run; a down or declined copy does not.
+		const walked = walkDevices(candidate, ref, {...input, down: new Set(), refuse: undefined});
 
-	if (candidate === "llm") {
-		if (input.tier !== "gpu") {
-			// The words: which code, or the buffer numbers. A caller that
-			// passed no probe (tests, a bare tier) gets the generic one.
-			return (
-				(input.capability
-					? modelBlock(ref, nativeDevice(ref), input.capability, switches)
-					: null) ?? {
-					kind: "device",
-					reason: "NO_WEBGPU",
-				}
-			);
-		}
-
-		// A phone's page cannot hold this model (models.ts `tooLargeForPhone`).
-		// The service never routes it there — its selection resolves to a
-		// model the device runs (`llmChoice`) — but a caller holding another
-		// catalog (Settings' questions, a test) hears the same reason.
-		const memory = input.capability
-			? modelBlock(ref, nativeDevice(ref), input.capability, switches)
-			: null;
-
-		if (memory?.kind === "memory") {
-			return memory;
-		}
-
-		if (!input.allowLlm) {
-			return {kind: "off", engine: "llm"};
-		}
-	} else {
-		if (input.wasm === false) {
-			return (
-				(input.capability
-					? modelBlock(ref, nativeDevice(ref), input.capability, switches)
-					: null) ?? {
-					kind: "device",
-					reason: "NO_WASM_SIMD",
-				}
-			);
-		}
-
-		if (!input.allowCpu) {
-			return {kind: "off", engine: "opus"};
-		}
-
-		if (candidate === "nllb" && !input.allowNllb) {
-			return {kind: "off", engine: "nllb"};
-		}
-
-		if (source === null && !input.sourceLater) {
-			return {kind: "source"};
-		}
+		return {route: null, why: walked.why ?? {kind: "source"}};
 	}
 
-	if (input.down.has(candidate)) {
-		return {kind: "down"};
-	}
+	const walked = walkDevices(candidate, ref, input);
 
-	return input.refuse?.(ref) ? {kind: "download", ref} : null;
+	return walked.why
+		? {route: null, why: walked.why}
+		: {route: {candidate, ref, device: walked.device}, why: null};
 }
 
 /**
@@ -263,8 +273,9 @@ function pickReason(blocks: RouteBlock[]): RouteBlock {
 		return {kind: "off", engine: "all"};
 	}
 
-	// The GPU model or NLLB-200 would serve (English -> Japanese has no
-	// OPUS-MT pair): naming the GPU switch alone hid the other way in.
+	// The language model or NLLB-200 would serve (English -> Japanese has no
+	// OPUS-MT pair): naming the language model's switch alone hid the other
+	// way in.
 	if (off("llm") && off("nllb")) {
 		return {kind: "off", engine: "llmOrNllb"};
 	}
@@ -290,15 +301,17 @@ export function explainRoute(
 ): RouteVerdict {
 	const source = input.from ?? input.hint;
 	// A request in one language (purpose "polish": the composer's cleanup
-	// pass) is prose work only a language model can do: the LLM where it
-	// may run, else no route -- a seq2seq model asked to translate English
-	// into English would mangle the line.
+	// pass) is prose work only a language model can do: the language model
+	// on its device where it may run, else no route -- a seq2seq model asked
+	// to translate English into English would mangle the line.
 	const polish = source !== null && source === input.to;
 
+	// Nothing runs here (translation is hidden): the CPU's code, which every
+	// device that translates at all gets past.
 	if (input.tier === "none") {
 		const why =
 			(input.capability
-				? modelBlock(catalog.nllb, nativeDevice(catalog.nllb), input.capability, {
+				? modelBlock(catalog.nllb, "cpu", input.capability, {
 						llm: true,
 						opus: true,
 						nllb: true,
@@ -309,12 +322,11 @@ export function explainRoute(
 	}
 
 	if (polish) {
-		const ref = refFor(catalog, "llm");
-		const why = candidateBlock("llm", ref, input, source);
+		const answer = candidateRoute("llm", refFor(catalog, "llm"), input, source);
 
-		return why || !ref
-			? {route: null, why: why ?? {kind: "unserved"}, polish}
-			: {route: {candidate: "llm", ref}, why: null, polish};
+		return answer.route
+			? {route: answer.route, why: null, polish}
+			: {route: null, why: answer.why, polish};
 	}
 
 	const blocks: RouteBlock[] = [];
@@ -323,21 +335,22 @@ export function explainRoute(
 		let first: Route | null = null;
 
 		for (const candidate of group) {
-			const ref = refFor(catalog, candidate);
-			const block = candidateBlock(candidate, ref, input, source);
+			const answer = candidateRoute(candidate, refFor(catalog, candidate), input, source);
 
-			if (block || !ref) {
-				blocks.push(block ?? {kind: "unserved"});
+			if (!answer.route) {
+				blocks.push(answer.why);
 				continue;
 			}
 
-			// Preference inside the class only: an equivalent model already on
-			// the device answers at once instead of waiting for a download.
-			if (input.cached?.(ref)) {
-				return {route: {candidate, ref}, why: null, polish};
+			// Preference inside the class only: an equivalent model whose copy
+			// is already on the device answers at once instead of waiting for
+			// a download. Only the candidate's own route counts: a copy on a
+			// device further down its order does not outrank the better device.
+			if (input.cached?.(answer.route.ref, answer.route.device)) {
+				return {route: answer.route, why: null, polish};
 			}
 
-			first = first ?? {candidate, ref};
+			first = first ?? answer.route;
 		}
 
 		if (first) {
@@ -357,35 +370,55 @@ export function resolveRoute(
 }
 
 /**
- * Whether anything can translate here at all, and if not why: the GPU model
- * in use and the CPU models, each by `modelBlock`. Null once either runs.
- * The CPU models count with NLLB-200 switched off: the OPUS-MT pairs still
- * run on the CPU switch alone, so NLLB's opt-in never makes translation as
- * a whole unavailable (a pair only NLLB serves says so in `explainRoute`).
- * Of two blocks, a switch the user turned off is the one named (turning it
- * on is the fix; both off is `engine: "all"`), else the CPU models' (they
- * are the floor every device that translates at all can reach).
+ * Whether anything can translate here at all, and if not why: the language
+ * model in use and OPUS-MT, each walked over its devices as the router walks
+ * them (`deviceOrder`, `modelBlock`). Null once either runs. NLLB-200 never
+ * counts: its opt-in never makes translation as a whole unavailable (a pair
+ * only NLLB serves says so in `explainRoute`). Of two blocks, a switch the
+ * user turned off is the one named (turning it on is the fix; both off is
+ * `engine: "all"`), else OPUS-MT's (it is the floor every device that
+ * translates at all can reach).
  */
 export function translationBlock(
 	catalog: ModelCatalog,
 	capability: Capability | null,
 	switches: EngineSwitches,
+	devices: DeviceChoices,
 	enabled = true
 ): ModelBlock | null {
-	const llm = modelBlock(catalog.llm, nativeDevice(catalog.llm), capability, switches, enabled);
-	// Interim (until the router walks devices): "the CPU models" are still
-	// OPUS-MT's one switch, and NLLB-200's own no longer stands in for it.
-	let cpu = modelBlock(
-		catalog.nllb,
-		nativeDevice(catalog.nllb),
-		capability,
-		{...switches, nllb: true},
-		enabled
-	);
-
-	if (!cpu && !switches.opus) {
-		cpu = {kind: "off", engine: "opus"};
+	if (!enabled) {
+		return {kind: "disabled"};
 	}
+
+	// Nothing runs here (translation is hidden): the CPU's code, as
+	// `explainRoute` gives it.
+	if (capability?.tier === "none") {
+		return modelBlock(catalog.nllb, "cpu", capability, {llm: true, opus: true, nllb: true});
+	}
+
+	// The walk knows no session state here (nothing down, nothing refused),
+	// so the reason it gives is a model's own block.
+	const walk = (ref: ModelRef) =>
+		walkDevices(candidateOf(ref), ref, {
+			from: null,
+			hint: null,
+			to: "",
+			tier: capability?.tier ?? "none",
+			switches,
+			devices,
+			down: new Set(),
+			capability,
+		}).why as ModelBlock | null;
+	const llm = walk(catalog.llm);
+	// Every OPUS-MT pair shares its copies' needs and its switch: one stands
+	// for them all. A catalog without any leaves the language model alone.
+	const opus = Object.values(catalog.opus)[0];
+
+	if (!opus) {
+		return llm;
+	}
+
+	const cpu = walk(opus);
 
 	if (!llm || !cpu) {
 		return null;

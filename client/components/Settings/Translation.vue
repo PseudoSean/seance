@@ -454,6 +454,7 @@ import {
 	llmName,
 	modelBlock,
 	nativeDevice,
+	normalizeDeviceChoice,
 	smallBufferBuildFor,
 } from "../../js/translate/models";
 import {GPU_TEST_LIMIT_KEY} from "../../js/translate/gpuTestLimit";
@@ -499,7 +500,8 @@ export default defineComponent({
 			llmChoice(
 				service.catalog,
 				store.state.settings.translateLlmModel,
-				store.state.translation.capability
+				store.state.translation.capability,
+				normalizeDeviceChoice(store.state.settings.translateLlmDevice)
 			)
 		);
 		const limited = (code: string | null) => isLimitedLanguage(code, selectedLlm.value.id);
