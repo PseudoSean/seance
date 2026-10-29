@@ -541,6 +541,12 @@ function cpuBlock(
 		return {kind: "device", reason: "NO_WASM_SIMD"};
 	}
 
+	// The language model's CPU library is a Memory64 module (wllama's
+	// standard build); OPUS-MT and NLLB-200 run on ONNX Runtime's 32-bit one.
+	if (ref.family === "llm" && capability.reasons.includes("NO_MEMORY64")) {
+		return {kind: "device", reason: "NO_MEMORY64"};
+	}
+
 	if (!ref.copies.cpu) {
 		return {kind: "noCopy", device: "cpu"};
 	}

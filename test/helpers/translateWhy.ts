@@ -53,6 +53,8 @@ describe("translateWhyText", () => {
 			GPU_LIMITS: "translate.why.gpuLimits",
 			NO_WASM_SIMD: "translate.why.noWasmSimd",
 			PROBE_FAILED: "translate.why.probeFailed",
+			// Interim (Task 9 words it): the nearest sentence, WebAssembly's.
+			NO_MEMORY64: "translate.why.noWasmSimd",
 		};
 
 		for (const [reason, key] of Object.entries(reasons)) {
@@ -62,7 +64,8 @@ describe("translateWhyText", () => {
 			).to.equal(en[key]);
 		}
 
-		// Seven reasons, seven sentences: none falls to another's.
+		// Seven reasons, seven sentences: none falls to another's (NO_MEMORY64
+		// borrows NO_WASM_SIMD's until Task 9).
 		expect(new Set(Object.values(reasons).map((key) => en[key])).size).to.equal(7);
 	});
 

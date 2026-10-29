@@ -60,6 +60,9 @@ export function translateWhyText(block: RouteBlock): string {
 					return t("translate.why.gpuLimits");
 				case "NO_WASM_SIMD":
 					return t("translate.why.noWasmSimd");
+				// Task 9 words this: interim, the nearest sentence (WebAssembly).
+				case "NO_MEMORY64":
+					return t("translate.why.noWasmSimd");
 				case "PROBE_FAILED":
 					return t("translate.why.probeFailed");
 				default:

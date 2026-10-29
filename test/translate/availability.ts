@@ -191,6 +191,24 @@ describe("translate availability", () => {
 			const opus = base.opus["de-en"];
 			const all = {llm: true, opus: true, nllb: true};
 
+			it("the language model on the CPU needs Memory64", () => {
+				const noMemory64 = cap({reasons: ["NO_MEMORY64"]});
+
+				expect(modelBlock(small, "cpu", noMemory64, all)).to.deep.equal({
+					kind: "device",
+					reason: "NO_MEMORY64",
+				});
+				// The seq2seq models do not, on either device; nor does the GPU.
+				expect(modelBlock(opus, "cpu", noMemory64, all)).to.equal(null);
+				expect(modelBlock(nllb, "cpu", noMemory64, all)).to.equal(null);
+				expect(modelBlock(opus, "gpu", noMemory64, all)).to.equal(null);
+				expect(modelBlock(small, "gpu", noMemory64, all)).to.equal(null);
+				// No SIMD is still said first.
+				expect(
+					modelBlock(small, "cpu", cap({reasons: ["NO_WASM_SIMD", "NO_MEMORY64"]}), all)
+				).to.deep.equal({kind: "device", reason: "NO_WASM_SIMD"});
+			});
+
 			it("gives the 4B no CPU copy on any device", () => {
 				for (const device of Object.values(DEVICES)) {
 					if (

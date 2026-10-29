@@ -548,6 +548,9 @@ export default defineComponent({
 					});
 				case "NO_WASM_SIMD":
 					return t("translate.capability.reason.noWasmSimd");
+				// Task 9 words this: interim, the nearest phrase (WebAssembly).
+				case "NO_MEMORY64":
+					return t("translate.capability.reason.noWasmSimd");
 				case "PROBE_FAILED":
 					return t("translate.capability.reason.probeFailed");
 

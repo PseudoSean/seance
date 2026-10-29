@@ -138,7 +138,9 @@ one device, using the rules that exist today, now keyed by device:
   need against `capability.maxBufferBytes` (the small-buffer build counts,
   as today), then a phone's memory (`tooLargeForPhone`, the 4B), then the
   switch.
-- **CPU**: `PROBE_FAILED`, then no WebAssembly SIMD, then "no CPU copy"
+- **CPU**: `PROBE_FAILED`, then no WebAssembly SIMD, then no WebAssembly
+  Memory64 for the language model (`NO_MEMORY64`: wllama's standard
+  build; desktop Safari), then "no CPU copy"
   (the 4B: a new block, `{kind: "noCopy", device: "cpu"}`, worded "Qwen3 4B
   can't run on the CPU; choose 1.7B to run it there"), then the phone's
   memory, then the switch. Phones may run the CPU copy (goal 4); an

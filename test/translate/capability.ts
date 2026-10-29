@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {
 	GPU_MIN_BUFFER_BYTES,
+	hasMemory64,
 	isAppleMobile,
 	probe,
 	probeOnce,
@@ -26,6 +27,7 @@ function env(overrides: Partial<ProbeEnv> = {}): ProbeEnv {
 		deviceMemory: 8,
 		storage: {estimate: () => Promise.resolve({quota: 50 * 1024 * 1024 * 1024})},
 		wasmSimd: true,
+		memory64: true,
 		...overrides,
 	};
 }
@@ -227,6 +229,40 @@ describe("translate/capability", () => {
 
 		expect(cap.tier).to.equal("none");
 		expect(cap.reasons).to.deep.equal(["NO_WEBGPU", "NO_WASM_SIMD"]);
+	});
+
+	it("names a missing WebAssembly Memory64, and the tier does not change", async () => {
+		const cap = await probe(env({memory64: false}));
+
+		expect(cap.tier).to.equal("gpu");
+		expect(cap.reasons).to.deep.equal(["NO_MEMORY64"]);
+		expect((await probe(env({memory64: true}))).reasons).to.deep.equal([]);
+		expect((await probe(env({gpu: null, memory64: false}))).tier).to.equal("cpu");
+	});
+
+	it("probes Memory64 by making a 64-bit memory, and no WebAssembly is no", () => {
+		const seen: unknown[] = [];
+
+		class Memory64 {
+			constructor(descriptor: unknown) {
+				seen.push(descriptor);
+			}
+		}
+
+		class Memory32 {
+			constructor(descriptor: {initial: unknown}) {
+				// An engine without Memory64 reads `initial` as a number.
+				if (typeof descriptor.initial === "bigint") {
+					throw new TypeError("Cannot convert a BigInt value to a number");
+				}
+			}
+		}
+
+		expect(hasMemory64({Memory: Memory64})).to.equal(true);
+		expect(seen).to.deep.equal([{address: "i64", initial: BigInt(1)}]);
+		expect(hasMemory64({Memory: Memory32})).to.equal(false);
+		expect(hasMemory64({})).to.equal(false);
+		expect(hasMemory64(undefined)).to.equal(false);
 	});
 
 	it("survives a throwing adapter request and missing optional APIs", async () => {
