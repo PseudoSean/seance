@@ -228,7 +228,8 @@ const defaultConfig = {
 	 * The OPUS-MT pairs and the language model serve without it. */
 	translateNllb: {
 		default: false,
-	} /** Which device each model runs on: auto | gpu | cpu (translate/models.ts `DeviceChoices`). */,
+	},
+	/** Which device each model runs on: auto | gpu | cpu (translate/models.ts `DeviceChoices`). */
 	translateLlmDevice: {
 		default: "auto",
 	},
@@ -238,7 +239,6 @@ const defaultConfig = {
 	translateNllbDevice: {
 		default: "auto",
 	},
-
 	/** Which GPU model (translate/models.ts LLM_CHOICES, or the deploy's own) the
 	 * LLM candidate runs. "" until the user picks one, and a stored id that is no
 	 * longer a choice counts as unset: both resolve at read time (models.ts

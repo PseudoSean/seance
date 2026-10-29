@@ -447,9 +447,9 @@ import {modelLabel} from "../../js/helpers/modelLabel";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
-import {listedSize} from "../../js/translate/models";
 import {
 	LLM_MIN_BUFFER_BYTES,
+	listedSize,
 	llmChoice,
 	llmName,
 	modelBlock,
