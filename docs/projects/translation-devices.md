@@ -93,12 +93,12 @@ CPU models"). This design separates the model from the device.
 
 ## The facts the design rests on (2026-10-29, Hugging Face listings)
 
-| Model | GPU copy | CPU copy |
-| --- | --- | --- |
-| Qwen3-1.7B | MLC q4f16_1, ~0.98 GB (as today) | `onnx-community/Qwen3-1.7B-ONNX` `model_quantized.onnx` (int8, one file) **1.66 GB**; or a GGUF Q4_K_M (~1.1 GB) through llama.cpp — the spike decides |
-| Qwen3-4B | MLC q4f16_1, ~2.3 GB | **none usable**: the ONNX repo has only fp16 and q4f16 (2.6 GB+, fp16 kernels the WASM backend lacks); a GGUF is ~2.5 GB, past a phone and slow anywhere. The 4B is GPU-only. |
-| NLLB-200 600M | `Xenova/nllb-200-distilled-600M` fp16 encoder 791 MiB + merged decoder 888 MiB, or q4f16 584 + 612 MiB. Its shared embedding (256,206 × 1024 in fp16) is ~500 MiB in one tensor, so it needs a binding of at least that: never on a 128 MiB phone | q8, ~0.9 GB (as today) |
-| OPUS-MT pair | fp16 encoder ~93 MiB + merged decoder ~106 MiB; largest tensor (the shared embedding, ~58k × 512 fp16) ~57 MiB | q8, ~0.11 GB (as today) |
+| Model         | GPU copy                                                                                                                                                                                                                                          | CPU copy                                                                                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Qwen3-1.7B    | MLC q4f16_1, ~0.98 GB (as today)                                                                                                                                                                                                                  | `onnx-community/Qwen3-1.7B-ONNX` `model_quantized.onnx` (int8, one file) **1.66 GB**; or a GGUF Q4_K_M (~1.1 GB) through llama.cpp — the spike decides                        |
+| Qwen3-4B      | MLC q4f16_1, ~2.3 GB                                                                                                                                                                                                                              | **none usable**: the ONNX repo has only fp16 and q4f16 (2.6 GB+, fp16 kernels the WASM backend lacks); a GGUF is ~2.5 GB, past a phone and slow anywhere. The 4B is GPU-only. |
+| NLLB-200 600M | `Xenova/nllb-200-distilled-600M` fp16 encoder 791 MiB + merged decoder 888 MiB, or q4f16 584 + 612 MiB. Its shared embedding (256,206 × 1024 in fp16) is ~500 MiB in one tensor, so it needs a binding of at least that: never on a 128 MiB phone | q8, ~0.9 GB (as today)                                                                                                                                                        |
+| OPUS-MT pair  | fp16 encoder ~93 MiB + merged decoder ~106 MiB; largest tensor (the shared embedding, ~58k × 512 fp16) ~57 MiB                                                                                                                                    | q8, ~0.11 GB (as today)                                                                                                                                                       |
 
 The fp16 weights need WebGPU's `shader-f16`; a GPU without it runs these
 models on the CPU (below).
@@ -223,8 +223,7 @@ on one device; asking for the other device unloads the first.
   window, the same greedy polish and temperature, streaming its output.
   Its library is the spike's winner.
 - Seq2seq: `Seq2seqEngine` takes the device from the request and loads the
-  pipeline with `device: "wasm", dtype: "q8"` (as today) or `device:
-  "webgpu"` and the GPU copy's dtype; a loaded pipeline is keyed by model
+  pipeline with `device: "wasm", dtype: "q8"` (as today) or `device: "webgpu"` and the GPU copy's dtype; a loaded pipeline is keyed by model
   and device.
 - `TranslateRequest` carries the device; the protocol's `has`/`delete`
   take a model and a device; the cache API answers per copy. The idle
@@ -303,8 +302,7 @@ GitHub Pages cannot. So the app's own service worker supplies the headers.
   The app never reloads itself for it; Settings says when a reload would
   bring threads ("Reload the app to use 4 CPU threads").
 - **Threads:** the CPU language model runs wllama's multithreaded build
-  when the worker is isolated, with `cpuThreads(hardwareConcurrency,
-  mobile)` threads: on a phone at most 4 (its little cores hold the big
+  when the worker is isolated, with `cpuThreads(hardwareConcurrency, mobile)` threads: on a phone at most 4 (its little cores hold the big
   ones back), on a computer a cap measured on this host (1, 2, 4, 8
   threads timed; the cap is the count past which the gain is under 15 %),
   never more than `hardwareConcurrency - 1`. The seq2seq models take
