@@ -1,7 +1,7 @@
 // The router (spec § router.ts): a table keyed by target language, then
 // source, each entry the candidates in **quality classes**, best class
 // first. `resolveRoute` walks the classes in order and takes the first
-// class with a candidate the device tier allows (an `llm` candidate is
+// class with a candidate the device allows (an `llm` candidate on Auto is
 // skipped, never failed, below the gpu tier), the user's engine settings
 // allow, the catalog has a model for, and that is not marked down for the
 // session. Each candidate is tried on its devices in turn (models.ts
@@ -371,12 +371,13 @@ export function resolveRoute(
 
 /**
  * Whether anything can translate here at all, and if not why: the language
- * model in use and OPUS-MT, each walked over its devices as the router walks
- * them (`deviceOrder`, `modelBlock`). Null once either runs. NLLB-200 never
- * counts: its opt-in never makes translation as a whole unavailable (a pair
- * only NLLB serves says so in `explainRoute`). Of two blocks, a switch the
- * user turned off is the one named (turning it on is the fix; both off is
- * `engine: "all"`), else OPUS-MT's (it is the floor every device that
+ * model in use, OPUS-MT and NLLB-200, each walked over its devices as the
+ * router walks them (`deviceOrder`, `modelBlock`). Null once any runs.
+ * NLLB-200 counts only while switched on: its opt-in never makes translation
+ * as a whole unavailable (a pair only NLLB serves says so in
+ * `explainRoute`). Of the language model's and OPUS-MT's blocks, a switch
+ * the user turned off is the one named (turning it on is the fix; both off
+ * is `engine: "all"`), else OPUS-MT's (it is the floor every device that
  * translates at all can reach).
  */
 export function translationBlock(
@@ -410,6 +411,13 @@ export function translationBlock(
 			capability,
 		}).why as ModelBlock | null;
 	const llm = walk(catalog.llm);
+
+	// NLLB-200 switched on and able to run is a way in of its own (it needs
+	// no other switch); switched off it is never the reason.
+	if (switches.nllb && walk(catalog.nllb) === null) {
+		return null;
+	}
+
 	// Every OPUS-MT pair shares its copies' needs and its switch: one stands
 	// for them all. A catalog without any leaves the language model alone.
 	const opus = Object.values(catalog.opus)[0];

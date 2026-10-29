@@ -341,6 +341,15 @@ describe("translate availability", () => {
 								expect(verdict.route, label).to.deep.equal(
 									resolveRoute(table, catalog, input)
 								);
+
+								// A pair that routes means translation is there at all.
+								if (verdict.route) {
+									expect(
+										translationBlock(catalog, capability, switches, devices),
+										label
+									).to.equal(null);
+								}
+
 								expect(verdict.why === null, label).to.equal(
 									verdict.route !== null
 								);
@@ -611,23 +620,30 @@ describe("translate availability", () => {
 		});
 
 		it("says both switches are off as one reason", () => {
-			expect(block(DEVICES.desktop, {llm: false, opus: false, nllb: true})).to.deep.equal({
+			expect(block(DEVICES.desktop, {llm: false, opus: false, nllb: false})).to.deep.equal({
 				kind: "off",
 				engine: "all",
 			});
 		});
 
+		it("counts NLLB-200 as a way in while it is switched on", () => {
+			// It needs no other switch: on, translation is there.
+			expect(block(DEVICES.desktop, {llm: false, opus: false, nllb: true})).to.equal(null);
+			expect(block(DEVICES.noWebgpu, {llm: true, opus: false, nllb: true})).to.equal(null);
+			expect(block(DEVICES.binds64, {llm: false, opus: false, nllb: true})).to.equal(null);
+		});
+
 		it("names the switch that would fix it on a device without the GPU model", () => {
-			expect(block(DEVICES.noWebgpu, {llm: true, opus: false, nllb: true})).to.deep.equal({
+			expect(block(DEVICES.noWebgpu, {llm: true, opus: false, nllb: false})).to.deep.equal({
 				kind: "off",
 				engine: "opus",
 			});
-			expect(block(DEVICES.binds64, {llm: false, opus: false, nllb: true})).to.deep.equal({
+			expect(block(DEVICES.binds64, {llm: false, opus: false, nllb: false})).to.deep.equal({
 				kind: "off",
 				engine: "opus",
 			});
 			// A phone runs the 1.7B's small-buffer build: either switch would serve.
-			expect(block(DEVICES.binds128, {llm: false, opus: false, nllb: true})).to.deep.equal({
+			expect(block(DEVICES.binds128, {llm: false, opus: false, nllb: false})).to.deep.equal({
 				kind: "off",
 				engine: "all",
 			});

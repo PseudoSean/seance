@@ -5,6 +5,7 @@ import {
 	QWEN3_1_7B_ID,
 	QWEN3_4B_ID,
 	buildCatalog,
+	type Candidate,
 	selectLlm,
 	type DeviceChoices,
 	type EngineSwitches,
@@ -83,7 +84,8 @@ function input(overrides: Overrides = {}): RouteInput {
 }
 
 /** Both copies of a candidate marked down. */
-const downBoth = (candidate: string) => new Set([`${candidate}@gpu`, `${candidate}@cpu`] as const);
+const downBoth = (candidate: Candidate) =>
+	new Set([`${candidate}@gpu`, `${candidate}@cpu`] as const);
 
 const isCached = (id: string, device?: Device) => (ref: ModelRef, on: Device) =>
 	ref.id === id && (device === undefined || on === device);
