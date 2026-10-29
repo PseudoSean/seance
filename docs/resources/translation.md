@@ -7,7 +7,15 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 
 ## Two engines, one router
 
-- **GPU: WebLLM.** An instruction LLM on WebGPU, prompted to translate with
+> Since 2026-10-29 the engine is no longer the device: every model runs on the
+> GPU or the CPU (§ Devices). Read "GPU" and "CPU" below as the device a
+> model ran on **before** that: the language model on the GPU through WebLLM,
+> OPUS-MT and NLLB-200 on the CPU through transformers.js. The language model
+> now also has a CPU copy (wllama), OPUS-MT and NLLB-200 now also have GPU
+> copies (transformers.js on WebGPU), and the switches are one per model:
+> `translateLlm`, `translateCpu` (= OPUS-MT) and `translateNllb`.
+
+- **The language model on the GPU: WebLLM.** An instruction LLM on WebGPU, prompted to translate with
   the channel's context. Greedy at temperature 0.1, thinking off, one line
   of output. Needs an adapter with `shader-f16` and a storage binding
   (`capability.ts`: `min(maxBufferSize, maxStorageBufferBindingSize)`)
@@ -139,7 +147,7 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   the canned answers stay shared in `prompt.ts`. The offline runner takes
   `--profile <model id>` (default 1.7B) to choose the wording apart from
   the weights it loads.
-- **CPU: transformers.js on ONNX Runtime WASM.** Purpose-built translation
+- **OPUS-MT and NLLB-200 on the CPU: transformers.js on ONNX Runtime WASM.** Purpose-built translation
   models: NLLB-200 distilled 600M (any pair, FLORES codes) and OPUS-MT pair
   models (30-80 MB each). Two stay loaded, least recently used evicted.
   Several times faster with WASM threads, which need the cross-origin
@@ -500,6 +508,102 @@ an iPad asking for desktop sites, which reads as a Mac with
   into an `ArrayBuffer` before uploading it, so the page briefly holds a
   shard twice. Only a run on an iPhone shows whether 2048 and the other
   rules bring the load under the limit.
+
+## Devices
+
+Design `docs/projects/translation-devices.md`; measurements
+`tools/translate-eval/results/2026-10-29-cpu-llm.md`. Every model has up to
+two **copies**, one per device, in the catalog (`models.ts` `ModelRef.copies`:
+`gpu?` and `cpu?`, each a `DeviceCopy` with its download size, source, dtype
+and, for a GPU copy, what it binds). Settings → Translation has one block per
+model with a switch, **Run on** (Auto / GPU / CPU, default Auto: the settings
+`translateLlmDevice`, `translateOpusDevice`, `translateNllbDevice`; a restored
+backup's unknown value reads as Auto, `normalizeDeviceChoice`) and a line per
+copy with its own Download and Remove. A pinned device is that device alone; a
+copy that cannot run there says why and the model never falls to the other
+device behind the user's back.
+
+| Model                       | GPU copy                                                                             | CPU copy                                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Language model (Qwen3 1.7B) | WebLLM q4f16, ~984 MB (a small-buffer build for a 128 MiB binding)                   | wllama 3.8.1, `unsloth/Qwen3-1.7B-GGUF` Q4_K_M, 1,107,409,472 bytes (pinned commit `CPU_LLM_REVISION`)         |
+| Language model (Qwen3 4B)   | WebLLM, ~2.3 GB                                                                      | none: pinning the CPU blocks it with `noCopy`; an unset choice resolves to the 1.7B when the CPU is the device |
+| OPUS-MT pair                | transformers.js on WebGPU, fp16, ~210 MB (encoder ~93 MiB, merged decoder ~106 MiB)  | transformers.js on WASM, q8, ~113 MB                                                                           |
+| NLLB-200 600M               | transformers.js on WebGPU, q4f16, ~1.26 GB (encoder 584 MiB, merged decoder 612 MiB) | transformers.js on WASM, q8, ~912 MB                                                                           |
+
+What each copy needs (`models.ts` `modelBlock`, per device):
+
+- **A GPU copy**: WebGPU (no `NO_WEBGPU`, `INSECURE_ORIGIN`, `NO_ADAPTER` or
+  `PROBE_FAILED`), `shader-f16`, and a storage binding that holds its largest
+  tensor (`largestBufferBytes`: NLLB-200 524,709,888, OPUS-MT's shared
+  embedding 59,495,424, which is the en-de figure used for every pair).
+  The language model's own rule (`LLM_MIN_BUFFER_BYTES`, the 4B's 185 MiB)
+  is unchanged; `GPU_LIMITS` does not apply to a seq2seq GPU copy.
+- **Every copy, GPU seq2seq ones included**: WASM SIMD (`capability.cpu`), the
+  runtimes are WebAssembly.
+- **The CPU language model**: WebAssembly Memory64 too (wllama 3.8.1 is a
+  64-bit build).
+- **iPhone and iPad**: the CPU language model's peak (`CPU_LLM_PEAK_BYTES`,
+  2,921,910,272, the whole browser tree measured by the spike) is over the
+  page budget WebKit allows there (`APPLE_PAGE_BUDGET_BYTES`), so it is a
+  `memory` block; the 4B has no CPU copy at all.
+
+**Auto's device order is a placeholder until measured on real GPUs**
+(`router.ts` `deviceOrder`): the language model, GPU only (a single-threaded
+language model reading a channel waits tens of seconds per batch; it runs on
+the CPU only when the user pins it); NLLB-200, GPU then CPU where its GPU copy
+fits (never a phone), else CPU; OPUS-MT, CPU then GPU on a phone (the models
+are small and the GPU's memory is kept for the language model), GPU then CPU
+on a computer. The router walks candidate x device in that order, passing over
+a copy that is blocked, marked down or whose download the user declined, so
+under Auto a declined download falls back to the other device's downloaded
+copy for OPUS-MT and NLLB-200 and never for the language model. A GPU loss
+(`GPU_LOST`) marks down that model's GPU copy alone, for the session
+(`DownKey` is `<candidate>@<device>`). A device switch lets the running request
+finish; the next one loads on the new device and the old device's model is
+unloaded. Deleting a copy that is loaded unloads it first and leaves the other
+device's copy untouched. `OnDevice` (`engines/onDevice.ts`) is the seq2seq
+slot's holder of one loaded model on one device at a time.
+
+**The CPU language model's numbers** (`models.ts`): a context window of 1024
+tokens (`CPU_CONTEXT_WINDOW`: it holds the 700-token context budget, the
+prompt and a 160-token answer; the prompt costs what it costs on the CPU
+whatever the window, so a smaller one would cut context and not time), reading
+batches of 2 lines (`CPU_BATCH_MAX_LINES`) and a request deadline of 6 minutes
+(`CPU_REQUEST_TIMEOUT_MS`). The spike measured about 1.2 tokens a second on one
+thread, a composer translation with context at 107 s and a 2-line batch at
+101 s; the deadline is 6 minutes because 3x the batch (303 s) is less. These
+are the floor a page without isolation needs. The 15 s target of the design
+could not be met on the sandbox's core at any window; other devices are not
+measured. The model is `wllama`'s, with the same prompt profiles, think-block
+handling and `fitToWindow` as the GPU engine (`engines/cpuLlm.ts`; the library
+import is only in `cpuLlm.real.ts`). A deploy can mirror the file at
+`translation.modelBase` (`{modelBase}/unsloth/Qwen3-1.7B-GGUF/Qwen3-1.7B-Q4_K_M.gguf`).
+
+**Threads and isolation.** Multithreaded WebAssembly needs a cross-origin
+isolated page. The root service worker (`client/service-worker.js`, `isolate`)
+adds `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: credentialless` to the app's navigations and
+its own worker scripts, from the network and the shell cache alike, so a page
+is isolated from the load after the worker served it (always, in an installed
+app). `credentialless` rather than `require-corp` so link previews, media, the
+uploader and a model mirror load without headers of their own. WebKit has no
+`credentialless`: Safari and every iOS browser stay single-threaded. The app
+never reloads itself for it; `threads.ts` `isolationState` answers `isolated`,
+`reload` (the worker did not serve this load) or `unsupported`, and Settings
+says when a reload would bring threads. The CPU language model takes
+`cpuThreads(hardwareConcurrency, mobile)`: one core left to the page, at most 4
+on a phone (`PHONE_THREAD_CAP`) and 8 on a computer (`DESKTOP_THREAD_CAP`; the
+measured series was 186.0 s, 95.2 s, 48.4 s and 31.4 s for 1, 2, 4 and 8
+threads, and counts past 8 were not measured). The seq2seq models take
+onnxruntime-web's own thread default, which follows isolation.
+
+**A download asks per copy.** Consent is kept per copy (`consent.ts`
+`consentId`): the copy a model ran on before devices existed (the language
+model's GPU copy, OPUS-MT's and NLLB-200's CPU copy) keeps the id its yes
+always had, so earlier consents and Settings' Downloads still stand; the other
+device's copy is `<id>@<device>`, a download of its own that a yes to the
+first never covers. The protocol's `has` and `delete` and the cache API answer
+per copy, and `TranslateRequest` carries the device.
 
 ## Reading a channel
 

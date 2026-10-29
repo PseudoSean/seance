@@ -19,6 +19,11 @@ pull against each other on a client device, so the engine is two engines
 behind one interface and a router that picks per language pair, and the
 quality claim is measured by a script rather than assumed.
 
+> **Update 2026-10-29:** "GPU tier" and "CPU tier" below describe the first
+> build, where the device was the engine. Every model now runs on either
+> device, chosen per model in Settings; see `docs/projects/translation-devices.md`
+> and `docs/resources/translation.md` § Devices.
+
 ## Decisions (from the design session)
 
 | Question        | Decision                                                                                                                         |

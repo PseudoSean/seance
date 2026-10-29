@@ -1,8 +1,8 @@
 # Translation devices: every model on the GPU or the CPU
 
-Status: design, 2026-10-29. Approved in conversation from the mockup
-(Settings → Translation → Models on a phone and on a desktop); built on the
-`wild-international` branch.
+Status: built 2026-10-29 on wild-international (671090ac..DOCSHA). Approved in
+conversation from the mockup (Settings → Translation → Models on a phone and
+on a desktop).
 
 ## Why
 
