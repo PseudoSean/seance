@@ -29,6 +29,7 @@ import {fitToWindow} from "../budget";
 import {takeDeviceLoss} from "./gpuLimits";
 import {
 	BATCH_REFUSED,
+	Device,
 	CONTEXT_OVERFLOW,
 	gpuLost,
 	Engine,
@@ -438,7 +439,11 @@ export class WebLlmEngine implements Engine {
 	// while a translation waits for it — and a reload takes minutes: the second
 	// caller waits on the first instead of unloading the engine the first one is
 	// still reloading.
-	async load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void> {
+	async load(
+		ref: ModelRef,
+		_device: Device,
+		onProgress: (p: LoadProgress) => void
+	): Promise<void> {
 		const inFlight = this.loading.get(ref.id);
 
 		if (inFlight) {
@@ -551,8 +556,8 @@ export class WebLlmEngine implements Engine {
 		return this.model ? [this.model] : [];
 	}
 
-	isLoaded(id: string): boolean {
-		return this.model === id;
+	isLoaded(id: string, device?: Device): boolean {
+		return (device === undefined || device === "gpu") && this.model === id;
 	}
 
 	capabilities(): EngineCapabilities {

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
+import {EngineError, emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
 import {
 	SEQ2SEQ_MAX_LOADED,
 	Seq2seqEngine,
@@ -16,14 +16,20 @@ const catalog = buildCatalog();
 function deps() {
 	const calls = {
 		pipeline: [] as string[],
+		devices: [] as string[],
+		copies: [] as unknown[],
 		disposed: [] as string[],
 		run: [] as [string, string, unknown][],
 	};
 	const failDispose = new Set<string>();
 	const pending = new Map<string, Promise<void>>();
 	const d: Seq2seqDeps = {
-		pipeline(modelId, onProgress) {
+		pipeline(copy, device, onProgress) {
+			const modelId = copy.source;
+
 			calls.pipeline.push(modelId);
+			calls.devices.push(device);
+			calls.copies.push(copy);
 			onProgress({file: "encoder.onnx", loaded: 50, total: 100});
 			onProgress({file: "decoder.onnx", loaded: 0, total: 100});
 			onProgress({file: "encoder.onnx", loaded: 100, total: 100});
@@ -108,8 +114,8 @@ describe("translate/engines/seq2seq", () => {
 		const engine = new Seq2seqEngine(d.deps);
 		const progress: number[] = [];
 
-		await engine.load(catalog.nllb, (p) => progress.push(p.fraction));
-		await engine.load(catalog.nllb, (p) => progress.push(p.fraction));
+		await engine.load(catalog.nllb, "cpu", (p) => progress.push(p.fraction));
+		await engine.load(catalog.nllb, "cpu", (p) => progress.push(p.fraction));
 
 		expect(d.calls.pipeline).to.deep.equal([catalog.nllb.id]);
 		expect(progress).to.deep.equal([0.5, 0.25, 0.5, 1]);
@@ -117,10 +123,97 @@ describe("translate/engines/seq2seq", () => {
 		expect(engine.isLoaded(catalog.nllb.id)).to.equal(true);
 	});
 
+	it("the pipeline dep gets the copy's source and dtype and the device", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		const gpuCopy = catalog.nllb.copies.gpu;
+		const cpuCopy = catalog.nllb.copies.cpu;
+
+		await engine.load(catalog.nllb, "gpu", () => {});
+		expect(d.calls.devices).to.deep.equal(["gpu"]);
+		expect(d.calls.copies[0]).to.equal(gpuCopy);
+		expect(engine.isLoaded(catalog.nllb.id, "gpu")).to.equal(true);
+		expect(engine.isLoaded(catalog.nllb.id, "cpu")).to.equal(false);
+
+		const cpu = new Seq2seqEngine(d.deps);
+
+		await cpu.load(catalog.nllb, "cpu", () => {});
+		expect(d.calls.copies[1]).to.equal(cpuCopy);
+		expect((d.calls.copies[1] as {dtype: string}).dtype).to.equal("q8");
+	});
+
+	it("a device with no copy is a load failure", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		const noGpu = {...catalog.nllb, copies: {cpu: catalog.nllb.copies.cpu}};
+		let error: unknown = null;
+
+		try {
+			await engine.load(noGpu, "gpu", () => {});
+		} catch (e) {
+			error = e;
+		}
+
+		expect(error).to.be.instanceOf(EngineError);
+		expect((error as EngineError).cause).to.equal("load");
+	});
+
+	it("a seq2seq GPU failure after a device loss says the GPU stopped", async () => {
+		const d = deps();
+		let lost: {reason: string; message: string} | null = null;
+		const gpuDeps: Seq2seqDeps = {
+			...d.deps,
+			takeDeviceLoss() {
+				const taken = lost;
+
+				lost = null;
+				return taken;
+			},
+			async pipeline(copy, device, onProgress) {
+				const pipe = await d.deps.pipeline(copy, device, onProgress);
+				const failing = (() => {
+					lost = {reason: "unknown", message: "the device was removed"};
+					return Promise.reject(new Error("Failed to execute"));
+				}) as unknown as PipelineLike;
+
+				failing.dispose = () => pipe.dispose();
+				return failing;
+			},
+		};
+		const engine = new Seq2seqEngine(gpuDeps);
+
+		await engine.load(catalog.nllb, "gpu", () => {});
+
+		let message = "";
+
+		try {
+			for await (const _c of engine.translate(
+				{
+					id: 1,
+					model: catalog.nllb.id,
+					text: "hi",
+					from: "en",
+					to: "de",
+					purpose: "read",
+					context: emptyContext(),
+				},
+				new AbortController().signal
+			)) {
+				// consume
+			}
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal(
+			"the GPU device was lost: the device was removed\nFailed to execute"
+		);
+	});
+
 	it("translate yields once, done, with the pipeline's text", async () => {
 		const d = deps();
 		const engine = new Seq2seqEngine(d.deps);
-		await engine.load(catalog.nllb, () => {});
+		await engine.load(catalog.nllb, "cpu", () => {});
 		const chunks: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -192,7 +285,7 @@ describe("translate/engines/seq2seq", () => {
 	it("NLLB translates sentence by sentence and streams the text so far", async () => {
 		const d = deps();
 		const engine = new Seq2seqEngine(d.deps);
-		await engine.load(catalog.nllb, () => {});
+		await engine.load(catalog.nllb, "cpu", () => {});
 		const chunks: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(
@@ -217,7 +310,7 @@ describe("translate/engines/seq2seq", () => {
 		const d = deps();
 		const engine = new Seq2seqEngine(d.deps);
 		const opus = catalog.opus["de-en"];
-		await engine.load(opus, () => {});
+		await engine.load(opus, "cpu", () => {});
 		const chunks: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(
@@ -234,7 +327,7 @@ describe("translate/engines/seq2seq", () => {
 	it("a cancel between two sentences stops before the next one", async () => {
 		const d = deps();
 		const engine = new Seq2seqEngine(d.deps);
-		await engine.load(catalog.nllb, () => {});
+		await engine.load(catalog.nllb, "cpu", () => {});
 		const controller = new AbortController();
 		const chunks: string[] = [];
 
@@ -258,8 +351,8 @@ describe("translate/engines/seq2seq", () => {
 		const c = catalog.opus["es-en"];
 
 		expect(SEQ2SEQ_MAX_LOADED).to.equal(2);
-		await engine.load(a, () => {});
-		await engine.load(b, () => {});
+		await engine.load(a, "cpu", () => {});
+		await engine.load(b, "cpu", () => {});
 
 		// use a, so b is the least recently used
 		for await (const _chunk of engine.translate(
@@ -269,7 +362,7 @@ describe("translate/engines/seq2seq", () => {
 			// consume
 		}
 
-		await engine.load(c, () => {});
+		await engine.load(c, "cpu", () => {});
 		expect(d.calls.disposed).to.deep.equal([b.id]);
 		expect(engine.loadedModels()).to.deep.equal([a.id, c.id]);
 	});
@@ -277,7 +370,7 @@ describe("translate/engines/seq2seq", () => {
 	it("refuses batched requests and unknown models", async () => {
 		const d = deps();
 		const engine = new Seq2seqEngine(d.deps);
-		await engine.load(catalog.nllb, () => {});
+		await engine.load(catalog.nllb, "cpu", () => {});
 		const messages: string[] = [];
 
 		for (const req of [request({lines: ["a", "b"]}), request({model: "nope"})]) {
@@ -296,14 +389,14 @@ describe("translate/engines/seq2seq", () => {
 	it("unload disposes everything; a failed load keeps the others", async () => {
 		const d = deps();
 		const engine = new Seq2seqEngine(d.deps);
-		await engine.load(catalog.nllb, () => {});
+		await engine.load(catalog.nllb, "cpu", () => {});
 
 		d.deps.pipeline = () => Promise.reject(new Error("404"));
 
 		let message = "";
 
 		try {
-			await engine.load(catalog.opus["de-en"], () => {});
+			await engine.load(catalog.opus["de-en"], "cpu", () => {});
 		} catch (e) {
 			message = (e as Error).message;
 		}
@@ -326,8 +419,8 @@ describe("translate/engines/seq2seq", () => {
 		const engine = new Seq2seqEngine(d.deps);
 
 		await Promise.all([
-			engine.load(catalog.nllb, () => {}),
-			engine.load(catalog.nllb, () => {}),
+			engine.load(catalog.nllb, "cpu", () => {}),
+			engine.load(catalog.nllb, "cpu", () => {}),
 		]);
 
 		expect(d.calls.pipeline).to.deep.equal([catalog.nllb.id]);
@@ -342,8 +435,8 @@ describe("translate/engines/seq2seq", () => {
 		const c = catalog.opus["es-en"];
 		const e = catalog.opus["it-en"];
 
-		await engine.load(a, () => {});
-		await engine.load(b, () => {});
+		await engine.load(a, "cpu", () => {});
+		await engine.load(b, "cpu", () => {});
 
 		const release = d.gate(a.id);
 		const consumed = (async () => {
@@ -362,7 +455,7 @@ describe("translate/engines/seq2seq", () => {
 		// a is mid-translate (blocked on the gate): loading a third model must
 		// evict b, the least recently used pipeline that is not in use, and
 		// must not touch a.
-		await engine.load(c, () => {});
+		await engine.load(c, "cpu", () => {});
 		expect(d.calls.disposed).to.deep.equal([b.id]);
 		expect(engine.loadedModels()).to.deep.equal([a.id, c.id]);
 
@@ -377,7 +470,7 @@ describe("translate/engines/seq2seq", () => {
 
 		// Now that a is free, it is the least recently used pipeline and a
 		// fourth model finally evicts it.
-		await engine.load(e, () => {});
+		await engine.load(e, "cpu", () => {});
 		expect(d.calls.disposed).to.deep.equal([b.id, a.id]);
 		expect(engine.loadedModels()).to.deep.equal([c.id, e.id]);
 	});
@@ -388,8 +481,8 @@ describe("translate/engines/seq2seq", () => {
 		const a = catalog.opus["de-en"];
 		const b = catalog.opus["fr-en"];
 
-		await engine.load(a, () => {});
-		await engine.load(b, () => {});
+		await engine.load(a, "cpu", () => {});
+		await engine.load(b, "cpu", () => {});
 		d.failDispose.add(a.id);
 
 		await engine.unload();
@@ -406,11 +499,11 @@ describe("translate/engines/seq2seq", () => {
 		const b = catalog.opus["fr-en"];
 		const c = catalog.opus["es-en"];
 
-		await engine.load(a, () => {});
-		await engine.load(b, () => {});
+		await engine.load(a, "cpu", () => {});
+		await engine.load(b, "cpu", () => {});
 		d.failDispose.add(a.id);
 
-		await engine.load(c, () => {});
+		await engine.load(c, "cpu", () => {});
 
 		expect(d.calls.disposed).to.deep.equal([a.id]);
 		expect(engine.status()).to.equal("ready");

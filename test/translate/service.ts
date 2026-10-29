@@ -274,14 +274,14 @@ function gateLlmLoad(
 	const original = r.llm.load.bind(r.llm);
 	const asked: string[] = [];
 
-	r.llm.load = async (ref, onProgress) => {
+	r.llm.load = async (ref, device, onProgress) => {
 		asked.push(ref.id);
 
 		if (ref.id === id) {
 			await gate;
 		}
 
-		return original(ref, onProgress);
+		return original(ref, device, onProgress);
 	};
 
 	return {release: () => release(), asked};
@@ -1490,7 +1490,7 @@ describe("translate/service", () => {
 
 		// A load that reports progress and then hangs: the view is
 		// "downloading" when the abort arrives.
-		r.llm.load = async (ref, onProgress) => {
+		r.llm.load = async (ref, device, onProgress) => {
 			onProgress({fraction: 0.4, text: "part 1"});
 			await gate;
 		};

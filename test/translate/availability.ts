@@ -117,6 +117,15 @@ describe("translate availability", () => {
 			});
 		});
 
+		it("a GPU copy of OPUS-MT needs WebAssembly SIMD", () => {
+			const opus = base.opus["de-en"];
+
+			expect(modelBlock(opus, "gpu", cap({reasons: ["NO_WASM_SIMD"]}), on)).to.deep.equal({
+				kind: "device",
+				reason: "NO_WASM_SIMD",
+			});
+		});
+
 		it("gives each GPU model its own buffer numbers, on a cpu-tier device too", () => {
 			// 64 MiB: the tier is cpu (SMALL_BUFFER), and both rows still say
 			// what they need: the 1.7B its small-buffer build's need.
@@ -567,14 +576,14 @@ describe("translate availability", () => {
 
 			expect(pinnedCpu.route).to.equal(null);
 			expect(pinnedCpu.why).to.deep.equal({kind: "device", reason: "NO_WASM_SIMD"});
-			// Under Auto its GPU copy, which needs no SIMD, serves.
-			expect(
-				explainRoute(
-					nllbOnly,
-					base,
-					routeInput(gpuNoSimd, on, AUTO, {from: "de", to: "en"})
-				).route
-			).to.deep.include({candidate: "nllb", device: "gpu"});
+			// Its GPU copy runs inside onnxruntime-web's SIMD build, so Auto has nothing either.
+			const auto = explainRoute(
+				nllbOnly,
+				base,
+				routeInput(gpuNoSimd, on, AUTO, {from: "de", to: "en"})
+			);
+
+			expect(auto.route).to.equal(null);
 		});
 
 		it("reports a candidate down for the session once nothing else serves", () => {

@@ -13,8 +13,12 @@
 
 import {
 	BATCH_REFUSED,
+	Device,
+	DeviceCopy,
 	Engine,
 	EngineCapabilities,
+	EngineError,
+	gpuLost,
 	EngineStatus,
 	LoadProgress,
 	ModelRef,
@@ -35,8 +39,18 @@ export interface PipelineProgress {
 }
 
 export interface Seq2seqDeps {
-	pipeline(modelId: string, onProgress: (p: PipelineProgress) => void): Promise<PipelineLike>;
+	pipeline(
+		copy: DeviceCopy,
+		device: Device,
+		onProgress: (p: PipelineProgress) => void
+	): Promise<PipelineLike>;
 	threads(): boolean;
+	/**
+	 * The GPU instance's: the last device loss recorded (gpuLimits.ts
+	 * `takeDeviceLoss`), so a GPU failure can say the GPU stopped. The CPU
+	 * instance passes none.
+	 */
+	takeDeviceLoss?: () => {reason: string; message: string} | null;
 }
 
 export const SEQ2SEQ_MAX_LOADED = 2;
@@ -161,6 +175,8 @@ export class Seq2seqEngine implements Engine {
 	private loading = new Map<string, Promise<PipelineLike>>();
 	/** How many `translate()` calls are currently mid-`await pipe(...)` for a model. */
 	private inUse = new Map<string, number>();
+	/** The device each loaded model's pipeline runs on. */
+	private devices = new Map<string, Device>();
 	private state: EngineStatus = "cold";
 	private deps: Seq2seqDeps;
 
@@ -168,7 +184,17 @@ export class Seq2seqEngine implements Engine {
 		this.deps = deps;
 	}
 
-	async load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void> {
+	async load(
+		ref: ModelRef,
+		device: Device,
+		onProgress: (p: LoadProgress) => void
+	): Promise<void> {
+		const copy = ref.copies[device];
+
+		if (!copy) {
+			throw new EngineError(`no ${device} copy of ${ref.id}`, "load");
+		}
+
 		if (this.loaded.has(ref.id)) {
 			this.touch(ref.id);
 			return;
@@ -184,7 +210,7 @@ export class Seq2seqEngine implements Engine {
 		this.state = "loading";
 
 		const files = new Map<string, PipelineProgress>();
-		const promise = this.deps.pipeline(ref.id, (p) => {
+		const promise = this.deps.pipeline(copy, device, (p) => {
 			files.set(p.file, p);
 			let loaded = 0;
 			let total = 0;
@@ -211,6 +237,7 @@ export class Seq2seqEngine implements Engine {
 		}
 
 		this.loaded.set(ref.id, pipe);
+		this.devices.set(ref.id, device);
 		this.state = "ready";
 		await this.evict();
 	}
@@ -218,6 +245,7 @@ export class Seq2seqEngine implements Engine {
 	async unload(): Promise<void> {
 		await Promise.allSettled([...this.loaded.values()].map((pipe) => pipe.dispose()));
 		this.loaded.clear();
+		this.devices.clear();
 		this.inUse.clear();
 		this.state = "cold";
 	}
@@ -230,8 +258,8 @@ export class Seq2seqEngine implements Engine {
 		return [...this.loaded.keys()];
 	}
 
-	isLoaded(id: string): boolean {
-		return this.loaded.has(id);
+	isLoaded(id: string, device?: Device): boolean {
+		return this.loaded.has(id) && (device === undefined || this.devices.get(id) === device);
 	}
 
 	capabilities(): EngineCapabilities {
@@ -269,7 +297,7 @@ export class Seq2seqEngine implements Engine {
 				if (parts.length > 1 && !/\p{L}/u.test(parts[n])) {
 					done.push(parts[n].trim());
 				} else {
-					const result = await pipe(parts[n], options);
+					const result = await this.run(pipe, parts[n], options, req.model);
 
 					done.push((result[0]?.translation_text ?? "").trim());
 				}
@@ -303,6 +331,36 @@ export class Seq2seqEngine implements Engine {
 		yield {id: req.id, text: done.join(" "), done: true};
 	}
 
+	/** One pipeline call; a GPU failure says why the GPU went away when it did (as webllm.ts). */
+	private async run(
+		pipe: PipelineLike,
+		text: string,
+		options: Record<string, string>,
+		model: string
+	): Promise<{translation_text: string}[]> {
+		try {
+			return await pipe(text, options);
+		} catch (e) {
+			const take = this.deps.takeDeviceLoss;
+
+			if (this.devices.get(model) !== "gpu" || !take) {
+				throw e;
+			}
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			const loss = take();
+
+			if (!loss) {
+				throw e;
+			}
+
+			throw new EngineError(
+				gpuLost(loss.message || loss.reason, e instanceof Error ? e.message : String(e)),
+				"request"
+			);
+		}
+	}
+
 	private touch(id: string): void {
 		const pipe = this.loaded.get(id);
 
@@ -325,6 +383,7 @@ export class Seq2seqEngine implements Engine {
 			const pipe = this.loaded.get(id) as PipelineLike;
 
 			this.loaded.delete(id);
+			this.devices.delete(id);
 			await pipe.dispose().catch(() => {});
 		}
 	}

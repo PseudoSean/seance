@@ -223,11 +223,13 @@ export interface EngineCapabilities {
 
 export interface Engine {
 	readonly name: EngineName;
-	load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void>;
+	/** Load `ref`'s copy for `device`; an engine that serves one device only checks it is its own. */
+	load(ref: ModelRef, device: Device, onProgress: (p: LoadProgress) => void): Promise<void>;
 	unload(): Promise<void>;
 	status(): EngineStatus;
 	loadedModels(): string[];
-	isLoaded(id: string): boolean;
+	/** Whether `id` is loaded, on `device` when one is named. */
+	isLoaded(id: string, device?: Device): boolean;
 	capabilities(): EngineCapabilities;
 	translate(req: TranslateRequest, signal: AbortSignal): AsyncIterable<TranslateChunk>;
 }

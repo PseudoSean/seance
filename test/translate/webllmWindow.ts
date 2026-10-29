@@ -132,7 +132,7 @@ describe("translate/engines/webllm: the context window", () => {
 	it("reloads with MOBILE_CONTEXT_WINDOW on a phone", async () => {
 		const r = rig(phone);
 
-		await r.engine.load(catalog.llm, () => {});
+		await r.engine.load(catalog.llm, "gpu", () => {});
 		expect(r.calls.reload).to.deep.equal([
 			[catalog.llm.id, {context_window_size: MOBILE_CONTEXT_WINDOW}, 1],
 		]);
@@ -143,7 +143,7 @@ describe("translate/engines/webllm: the context window", () => {
 		for (const gpu of [computer, null]) {
 			const r = rig(gpu);
 
-			await r.engine.load(catalog.llm, () => {});
+			await r.engine.load(catalog.llm, "gpu", () => {});
 			// No second argument at all: WebLLM's own record decides.
 			expect(r.calls.reload).to.deep.equal([[catalog.llm.id, undefined, 0]]);
 			expect(r.engine.contextWindow).to.equal(DEFAULT_CONTEXT_WINDOW);
@@ -154,8 +154,8 @@ describe("translate/engines/webllm: the context window", () => {
 		const small = rig(phone);
 		const large = rig(computer);
 
-		await small.engine.load(catalog.llm, () => {});
-		await large.engine.load(catalog.llm, () => {});
+		await small.engine.load(catalog.llm, "gpu", () => {});
+		await large.engine.load(catalog.llm, "gpu", () => {});
 
 		expect(await run(small.engine, request())).to.equal("hallo");
 		expect(await run(large.engine, request())).to.equal("hallo");
@@ -172,7 +172,7 @@ describe("translate/engines/webllm: the context window", () => {
 	it("refuses a batch that does not fit even bare, so its lines go one at a time", async () => {
 		const r = rig(phone);
 
-		await r.engine.load(catalog.llm, () => {});
+		await r.engine.load(catalog.llm, "gpu", () => {});
 
 		const lines = Array.from({length: 6}, (_, i) => `line ${i} ${"word ".repeat(300)}`);
 		const error = await run(r.engine, request({text: "", lines})).catch((e: unknown) => e);
@@ -188,7 +188,7 @@ describe("translate/engines/webllm: the context window", () => {
 	it("says a single line too long for the window is too long, as the request's failure", async () => {
 		const r = rig(phone);
 
-		await r.engine.load(catalog.llm, () => {});
+		await r.engine.load(catalog.llm, "gpu", () => {});
 
 		const error = await run(r.engine, request({text: "word ".repeat(3000)})).catch(
 			(e: unknown) => e
@@ -203,7 +203,7 @@ describe("translate/engines/webllm: the context window", () => {
 		let failing = true;
 		const r = rig(phone, () => (failing ? overflowError() : null));
 
-		await r.engine.load(catalog.llm, () => {});
+		await r.engine.load(catalog.llm, "gpu", () => {});
 
 		// Twice in a row: a lost device would be "load" the second time.
 		for (let i = 0; i < 2; i++) {
@@ -225,7 +225,7 @@ describe("translate/engines/webllm: the context window", () => {
 	it("still treats any other generation failure as a device that may be gone", async () => {
 		const r = rig(phone, () => new Error("GPU device lost"));
 
-		await r.engine.load(catalog.llm, () => {});
+		await r.engine.load(catalog.llm, "gpu", () => {});
 
 		const error = await run(r.engine, request()).catch((e: unknown) => e);
 

@@ -484,6 +484,11 @@ function gpuBlock(
 		}
 	}
 
+	// onnxruntime-web's WebGPU execution provider runs inside its SIMD wasm build.
+	if (capability.reasons.includes("NO_WASM_SIMD")) {
+		return {kind: "device", reason: "NO_WASM_SIMD"};
+	}
+
 	if (!capability.f16) {
 		return {kind: "device", reason: "NO_F16"};
 	}

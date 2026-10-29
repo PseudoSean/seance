@@ -1,4 +1,5 @@
 import type {
+	Device,
 	Engine,
 	EngineName,
 	EngineStatus,
@@ -27,7 +28,11 @@ export class FakeEngine implements Engine {
 		this.name = name;
 	}
 
-	async load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void> {
+	async load(
+		ref: ModelRef,
+		_device: Device,
+		onProgress: (p: LoadProgress) => void
+	): Promise<void> {
 		this.calls.load.push(ref);
 		this.state = "loading";
 
@@ -67,7 +72,7 @@ export class FakeEngine implements Engine {
 		return [...this.loaded];
 	}
 
-	isLoaded(id: string): boolean {
+	isLoaded(id: string, _device?: Device): boolean {
 		return this.loaded.includes(id);
 	}
 

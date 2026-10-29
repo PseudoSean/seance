@@ -11,6 +11,7 @@
 // `public/js/*.js` for `__seanceTranslateFake` to check).
 
 import {
+	Device,
 	Engine,
 	EngineCapabilities,
 	EngineName,
@@ -143,7 +144,11 @@ class ScriptedEngine implements Engine {
 		this.stepMs = stepMs;
 	}
 
-	async load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void> {
+	async load(
+		ref: ModelRef,
+		_device: Device,
+		onProgress: (p: LoadProgress) => void
+	): Promise<void> {
 		this.state = "loading";
 
 		for (let i = 1; i <= 10; i++) {
@@ -172,7 +177,7 @@ class ScriptedEngine implements Engine {
 		return [...this.loaded];
 	}
 
-	isLoaded(id: string): boolean {
+	isLoaded(id: string, _device?: Device): boolean {
 		return this.loaded.includes(id);
 	}
 

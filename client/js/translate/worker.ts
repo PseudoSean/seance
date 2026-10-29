@@ -6,7 +6,7 @@
 // engines, tests and fakePort.ts hand in scripted ones.
 
 import {Engine, EngineError, EngineName, ModelRef} from "./engine";
-import {CacheApi, GpuBudget, ModelCatalog, cacheStates} from "./models";
+import {CacheApi, GpuBudget, ModelCatalog, cacheStates, nativeDevice} from "./models";
 import {EngineSnapshot, MainToWorker, WorkerPort, errorMessage} from "./protocol";
 
 export interface EngineSet {
@@ -38,7 +38,9 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 		}
 
 		const promise = engines[ref.engine]
-			.load(ref, (progress) => port.postMessage({type: "progress", ref, progress}))
+			.load(ref, nativeDevice(ref), (progress) =>
+				port.postMessage({type: "progress", ref, progress})
+			)
 			.finally(() => loading.delete(ref.id));
 
 		loading.set(ref.id, promise);
@@ -105,7 +107,7 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 				controllers.set(message.req.id, controller);
 
 				try {
-					if (!engine.isLoaded(message.ref.id)) {
+					if (!engine.isLoaded(message.ref.id, nativeDevice(message.ref))) {
 						try {
 							await load(message.ref);
 						} catch (e) {

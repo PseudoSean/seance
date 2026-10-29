@@ -55,9 +55,9 @@ function rig(mobile: boolean) {
 		const unload = engine.unload.bind(engine);
 		const translate = engine.translate.bind(engine);
 
-		engine.load = (ref, onProgress) => {
+		engine.load = (ref, device, onProgress) => {
 			log.push(`w${workers.length - 1} load ${engine.name}`);
-			return load(ref, onProgress);
+			return load(ref, device, onProgress);
 		};
 
 		engine.unload = () => {
