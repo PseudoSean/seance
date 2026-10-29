@@ -865,8 +865,18 @@ export default defineComponent({
 			return order.find((device) => !blocks[device] || blocks[device]!.kind === "off");
 		};
 
-		// What Auto picks here, else why nothing runs, in the first device's
-		// words; only while Auto is chosen, and nothing while the probe runs.
+		// The small-buffer build this device runs in the model's place, when
+		// it does: on a GPU tier that binds too little for the model itself.
+		const smallBuild = (modelRef: ModelRef) =>
+			capability.value?.tier === "gpu"
+				? smallBufferBuildFor(modelRef, capability.value.maxBufferBytes)
+				: null;
+
+		// What Auto picks here and why, one whole sentence per case, else
+		// why nothing runs, in the first device's words; only while Auto is
+		// chosen, and nothing while the probe runs. The GPU's own reason is
+		// beside its struck-through choice already, so a CPU picked because
+		// the GPU cannot run the model says only that.
 		const autoLine = (family: Family) => {
 			if (family.devices.choice !== "auto" || !capability.value) {
 				return "";
@@ -874,10 +884,22 @@ export default defineComponent({
 
 			const pick = runsOn(family);
 
-			if (pick) {
-				return pick === "gpu"
-					? t("translate.settings.autoPicksGpu")
-					: t("translate.settings.autoPicksCpu");
+			if (pick === "gpu") {
+				return family.id === "llm" && smallBuild(family.ref)
+					? t("translate.settings.autoPicksGpuSmallBuild")
+					: t("translate.settings.autoPicksGpu");
+			}
+
+			if (pick === "cpu") {
+				if (!blockWhy(family.devices.blocks.gpu, family.ref)) {
+					// The GPU could run it: the CPU comes first by choice
+					// (OPUS-MT on a phone, models.ts deviceOrder).
+					return t("translate.settings.autoPicksCpu");
+				}
+
+				return family.id === "nllb"
+					? t("translate.settings.autoPicksCpuNoGpuNllb")
+					: t("translate.settings.autoPicksCpuNoGpuOpus");
 			}
 
 			const first = family.devices.blocks[family.devices.order[0]];
@@ -1056,13 +1078,6 @@ export default defineComponent({
 		};
 
 		const unfitLlms = computed(() => llmChoices.filter((choice) => !!llmUnfit(choice)));
-
-		// The small-buffer build this device runs in the model's place, when
-		// it does: on a GPU tier that binds too little for the model itself.
-		const smallBuild = (modelRef: ModelRef) =>
-			capability.value?.tier === "gpu"
-				? smallBufferBuildFor(modelRef, capability.value.maxBufferBytes)
-				: null;
 
 		// The ref comes off a reactive row (store.state.translation.models);
 		// the worker protocol structured-clones every message, which rejects a

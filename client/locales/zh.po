@@ -13402,17 +13402,35 @@ msgctxt "translate.retry"
 msgid "Retry the translation"
 msgstr "重试翻译"
 
-#. Settings → Translation, the line under "Run on" while Auto is chosen: on this device the app runs this translation model on the main processor (CPU). "Auto" is the choice of that name; "here" means on this device.
+#. Settings → Translation, the line under "Run on" for OPUS-MT on a phone while Auto is chosen: the graphics processor (GPU) could run it, but the app runs it on the main processor (CPU) so that the GPU's memory stays free for the language model (the large AI model, e.g. Qwen3). "Auto" is the choice of that name; "here" means on this device. One sentence.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.autoPicksCpu"
-msgid "Auto picks the CPU here."
-msgstr "在此设备上，“自动”选择 CPU。"
+msgid "Auto picks the CPU here, to keep the GPU's memory for the language model."
+msgstr "在此设备上，“自动”选择 CPU，以便把 GPU 内存留给语言模型。"
 
-#. Settings → Translation, the line under "Run on" while Auto is chosen: on this device the app runs this translation model on the graphics processor (GPU). "Auto" is the choice of that name; "here" means on this device.
+#. Settings → Translation, the line under "Run on" for NLLB-200 while Auto is chosen: the app runs it on the main processor (CPU) because this device's graphics processor (GPU) cannot run it; the GPU's reason is shown just above, next to the struck-through GPU choice. NLLB-200 is a product name, never translated. One sentence.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.autoPicksCpuNoGpuNllb"
+msgid "Auto picks the CPU here, since the GPU can't run NLLB-200."
+msgstr "在此设备上，“自动”选择 CPU，因为 GPU 无法运行 NLLB-200。"
+
+#. Settings → Translation, the line under "Run on" for OPUS-MT while Auto is chosen: the app runs it on the main processor (CPU) because this device's graphics processor (GPU) cannot run it; the GPU's reason is shown just above, next to the struck-through GPU choice. OPUS-MT is a product name, never translated. One sentence.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.autoPicksCpuNoGpuOpus"
+msgid "Auto picks the CPU here, since the GPU can't run OPUS-MT."
+msgstr "在此设备上，“自动”选择 CPU，因为 GPU 无法运行 OPUS-MT。"
+
+#. Settings → Translation, the line under "Run on" while Auto is chosen: on this device the app runs this translation model on the graphics processor (GPU), because it is the faster of the two processors. "Auto" is the choice of that name; "here" means on this device. One sentence.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.autoPicksGpu"
-msgid "Auto picks the GPU here."
-msgstr "在此设备上，“自动”选择 GPU。"
+msgid "Auto picks the GPU here, the faster device."
+msgstr "在此设备上，“自动”选择 GPU，因为它更快。"
+
+#. Settings → Translation, the line under "Run on" for the language model while Auto is chosen: on this device the app runs it on the graphics processor (GPU), using a special build of the same model whose pieces fit a GPU that can only hold small blocks of memory ("buffers", most phones). "Auto" is the choice of that name; "here" means on this device. One sentence.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.autoPicksGpuSmallBuild"
+msgid "Auto picks the GPU here, with the build for small GPU buffers."
+msgstr "在此设备上，“自动”选择 GPU，并使用适合小 GPU 缓冲区的版本。"
 
 #. Settings → Translation, the first of three choices after "Run on": let the app pick the best processor (GPU or CPU) for this translation model on this device. One short word, like a button in a segmented control.
 #: client/components/Settings/Translation.vue

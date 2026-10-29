@@ -512,15 +512,29 @@ export default async function run(page) {
 					: ["gpu", "cpu"];
 			const pick = order.find((d) => verdicts[d] === null);
 
+			if (pick === "gpu") {
+				// The 1.7B on a 128 MiB binding runs its small-buffer build.
+				return EN[
+					family === "llm" && name === "binds128"
+						? "translate.settings.autoPicksGpuSmallBuild"
+						: "translate.settings.autoPicksGpu"
+				];
+			}
+
+			if (pick === "cpu") {
+				// The GPU could run it (OPUS-MT on a phone), or it cannot.
+				return EN[
+					verdicts.gpu === null
+						? "translate.settings.autoPicksCpu"
+						: family === "nllb"
+						? "translate.settings.autoPicksCpuNoGpuNllb"
+						: "translate.settings.autoPicksCpuNoGpuOpus"
+				];
+			}
+
 			// Nothing runs: the first device's reason, said once (the disabled
 			// choice is described by this line, not by a second copy of it).
-			return pick
-				? EN[
-						pick === "gpu"
-							? "translate.settings.autoPicksGpu"
-							: "translate.settings.autoPicksCpu"
-				  ]
-				: verdicts[order[0]];
+			return verdicts[order[0]];
 		};
 		const families = {
 			llm: {gpu: device.runs[SMALL] ? null : device.why(SMALL), cpu: null},
@@ -867,7 +881,7 @@ export default async function run(page) {
 
 			page.check(
 				`noWebgpu, NLLB on: Auto runs it on the CPU, its Download open (${row.auto})`,
-				row.auto === EN["translate.settings.autoPicksCpu"] && row.open
+				row.auto === EN["translate.settings.autoPicksCpuNoGpuNllb"] && row.open
 			);
 			await closeSettings();
 			await openPicker();
