@@ -32,7 +32,7 @@ const modelBase = () => catalog?.modelBase;
 const cpuCopyFor = (id: string) =>
 	catalog?.llmChoices.find((ref) => ref.id === id)?.copies.cpu ?? null;
 
-const cpuBackend = wllamaBackend(modelBase);
+const cpuBackend = wllamaBackend(modelBase, () => gpu?.mobile === true);
 
 const webllmGpu = new WebLlmEngine({...realWebLlmDeps, takeDeviceLoss}, languageName);
 const webllmCpu = new WebLlmEngine(

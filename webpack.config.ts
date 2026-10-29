@@ -627,8 +627,11 @@ const translateConfig: webpack.Configuration = {
 					to: "js/ort/[name][ext]",
 				},
 				// The CPU language model's library (engines/cpuLlm.real.ts):
-				// wllama's single-thread build, next to the worker, which
-				// resolves it against its own location.
+				// wllama's wasm, next to the worker, which resolves it against
+				// its own location. Since 3.x it is one build for one thread
+				// and for many (the library starts pthreads from a blob worker
+				// when the worker is cross-origin isolated and asked for more
+				// than one thread), so there is no multi-thread file to copy.
 				{
 					from: "wllama.wasm",
 					context: path.resolve(__dirname, "node_modules/@wllama/wllama/esm/wasm"),

@@ -424,6 +424,8 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 		clearTimeout,
 		MessageChannel,
 		TextEncoder,
+		Response,
+		Headers,
 		btoa: (s: string) => Buffer.from(s, "binary").toString("base64"),
 		navigator: {
 			userAgent: options.userAgent ?? "Mozilla/5.0 (X11; Linux x86_64)",
@@ -2470,6 +2472,176 @@ describe("service worker shell cache", function () {
 		expect(await cached(sw, `${SCOPE}models/Xenova/nllb/onnx/x.onnx`, "1024")).to.deep.equal(
 			[]
 		);
+	});
+});
+
+describe("service worker cross-origin isolation headers", function () {
+	// docs/projects/translation-devices.md § Multithreading: the root worker
+	// makes the app's documents and its own worker scripts cross-origin
+	// isolated (multithreaded WebAssembly for the CPU models), from the
+	// network and from the shell cache alike.
+	const COOP = "cross-origin-opener-policy";
+	const COEP = "cross-origin-embedder-policy";
+
+	interface Served {
+		/** What the worker answered with; undefined when it never called respondWith. */
+		response: Response | undefined;
+		/** What it stored in the shell cache. */
+		put: Response[];
+	}
+
+	/**
+	 * Drive one `fetch` event through the worker. `network` is what the
+	 * network answers (a function, so each call gets a fresh body), or
+	 * "offline" for a fetch that rejects; `cached` is the shell cache's copy.
+	 */
+	async function serveFetch(
+		sw: SWHarness,
+		request: {url: string; mode: string; destination: string},
+		network: (() => Response) | "offline",
+		cached?: () => Response
+	): Promise<Served> {
+		const put: Response[] = [];
+		const waited: Promise<unknown>[] = [];
+		let responded: Promise<Response> | undefined;
+
+		sw.sandbox.fetch = (): Promise<Response> =>
+			network === "offline"
+				? Promise.reject(new TypeError("Failed to fetch"))
+				: Promise.resolve(network());
+		sw.sandbox.caches.open = (): Promise<any> =>
+			Promise.resolve({
+				match: (): Promise<Response | undefined> => Promise.resolve(cached?.()),
+				put(_request: unknown, response: Response): Promise<void> {
+					put.push(response);
+					return Promise.resolve();
+				},
+			});
+
+		for (const handler of sw.handlers.fetch ?? []) {
+			handler({
+				request: {method: "GET", ...request},
+				clientId: "",
+				respondWith(p: Promise<Response>) {
+					responded = p;
+				},
+				waitUntil: (p: Promise<unknown>) => waited.push(p),
+			});
+		}
+
+		const response = responded ? await responded : undefined;
+		await Promise.all(waited);
+		return {response, put};
+	}
+
+	const page =
+		(headers: Record<string, string> = {}) =>
+		() =>
+			new Response("<!doctype html><title>app</title>", {
+				status: 200,
+				headers: {"content-type": "text/html", ...headers},
+			});
+	const script = () => () =>
+		new Response("self.onmessage = () => {};", {
+			status: 200,
+			headers: {"content-type": "text/javascript"},
+		});
+	const navigation = {url: SCOPE, mode: "navigate", destination: "document"};
+
+	it("isolates a navigation served from the network", async function () {
+		const {response, put} = await serveFetch(makeSW(), navigation, page());
+
+		expect(response?.status).to.equal(200);
+		expect(response?.headers.get(COOP)).to.equal("same-origin");
+		expect(response?.headers.get(COEP)).to.equal("credentialless");
+		expect(response?.headers.get("content-type")).to.equal("text/html");
+		expect(await response?.text()).to.equal("<!doctype html><title>app</title>");
+		// The shell cache still gets a copy.
+		expect(put).to.have.length(1);
+	});
+
+	it("isolates a navigation served from the shell cache", async function () {
+		// A copy stored by an older worker carries no headers of its own.
+		const {response} = await serveFetch(makeSW(), navigation, "offline", page());
+
+		expect(response?.headers.get(COOP)).to.equal("same-origin");
+		expect(response?.headers.get(COEP)).to.equal("credentialless");
+		expect(await response?.text()).to.equal("<!doctype html><title>app</title>");
+	});
+
+	it("isolates the app's own worker script", async function () {
+		const {response} = await serveFetch(
+			makeSW(),
+			{
+				url: `${SCOPE}js/translate-worker.js?v=abc`,
+				mode: "same-origin",
+				destination: "worker",
+			},
+			script()
+		);
+
+		expect(response?.headers.get(COOP)).to.equal("same-origin");
+		expect(response?.headers.get(COEP)).to.equal("credentialless");
+		expect(await response?.text()).to.equal("self.onmessage = () => {};");
+	});
+
+	it("isolates the app's own worker script from the shell cache", async function () {
+		const {response} = await serveFetch(
+			makeSW(),
+			{
+				url: `${SCOPE}js/translate-worker.js?v=abc`,
+				mode: "same-origin",
+				destination: "worker",
+			},
+			"offline",
+			script()
+		);
+
+		expect(response?.headers.get(COEP)).to.equal("credentialless");
+	});
+
+	it("leaves an ordinary script's headers alone", async function () {
+		const {response} = await serveFetch(
+			makeSW(),
+			{url: `${SCOPE}js/bundle.js?v=abc`, mode: "no-cors", destination: "script"},
+			script()
+		);
+
+		expect(response?.headers.get(COOP)).to.equal(null);
+		expect(response?.headers.get(COEP)).to.equal(null);
+	});
+
+	it("keeps the deploy's own policy where it sent one", async function () {
+		// branding.md § Threads: a deploy may choose `require-corp`.
+		const {response} = await serveFetch(
+			makeSW(),
+			navigation,
+			page({"Cross-Origin-Embedder-Policy": "require-corp"})
+		);
+
+		expect(response?.headers.get(COEP)).to.equal("require-corp");
+		expect(response?.headers.get(COOP)).to.equal("same-origin");
+	});
+
+	it("never touches a cross-origin request", async function () {
+		const {response} = await serveFetch(
+			makeSW(),
+			{url: "https://cdn.example/preview.png", mode: "no-cors", destination: "image"},
+			page()
+		);
+
+		expect(response).to.equal(undefined);
+	});
+
+	it("adds nothing on a push-only worker", async function () {
+		const sw = makeSW({scope: `${SCOPE}push/net-1/`});
+		const {response} = await serveFetch(
+			sw,
+			{url: `${SCOPE}push/net-1/`, mode: "navigate", destination: "document"},
+			page()
+		);
+
+		expect(response).to.equal(undefined);
 	});
 });
 

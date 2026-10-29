@@ -2,10 +2,16 @@
 // library the spike chose (tools/translate-eval/results/2026-10-29-cpu-llm.md).
 // Loaded by worker-entry.ts, never by a test or the page.
 //
-// Single-threaded: `n_threads: 1`, the single-thread build of the library's
-// wasm, which the build copies to js/wllama.wasm next to this worker. The
-// model file is kept in the library's own cache (OPFS, keyed by its URL), so
-// the 1.1 GB file is downloaded once; the cache API asks that same cache.
+// Threads: the library's one wasm (js/wllama.wasm, copied next to this
+// worker by the build) runs llama.cpp single-threaded or on pthreads, chosen
+// at load: more than one `n_threads` and a SharedArrayBuffer (a
+// cross-origin-isolated worker: the service worker's headers, threads.ts)
+// start the thread pool. Not isolated, it is one thread, as measured
+// (tools/translate-eval/results/2026-10-29-cpu-llm.md § Threads).
+//
+// The model file is kept in the library's own cache (OPFS, keyed by its
+// URL), so the 1.1 GB file is downloaded once; the cache API asks that same
+// cache.
 //
 // Never the library's "compat" build: it comes from a CDN (jsdelivr), and a
 // deploy keeps its readers off third-party hosts other than the model's own
@@ -14,6 +20,7 @@
 
 import {CacheManager, LogLevel, ModelManager, Wllama} from "@wllama/wllama/esm/index.js";
 import {CacheApi} from "../models";
+import {cpuThreads} from "../threads";
 import {CpuLlmBackend, cpuLlmCacheApi, cpuLlmUrl} from "./cpuLlm";
 
 /** The library's wasm, beside this worker (webpack.config.ts copies it). */
@@ -23,11 +30,24 @@ const WASM_URL = new URL("wllama.wasm", self.location.href).href;
 const logger = {...console, debug() {}, log() {}};
 
 /**
+ * The threads a load asks for: one where the worker is not cross-origin
+ * isolated (no SharedArrayBuffer, no thread pool), else `cpuThreads`.
+ */
+function threadsHere(mobile: boolean): number {
+	return self.crossOriginIsolated ? cpuThreads(navigator.hardwareConcurrency, mobile) : 1;
+}
+
+/**
  * wllama behind `CpuLlmBackend`: a fresh instance per load (the library
  * refuses a second model on one), `exit()` on unload. `getModelBase` is the
- * deploy's mirror as the worker was last configured with it.
+ * deploy's mirror as the worker was last configured with it, `isMobile`
+ * whether the page's probe said phone or tablet (`GpuBudget.mobile`), read
+ * at each load: the budget arrives after the worker starts.
  */
-export function wllamaBackend(getModelBase: () => string | undefined): CpuLlmBackend {
+export function wllamaBackend(
+	getModelBase: () => string | undefined,
+	isMobile: () => boolean
+): CpuLlmBackend {
 	let instance: Wllama | null = null;
 
 	const unload = async () => {
@@ -52,7 +72,7 @@ export function wllamaBackend(getModelBase: () => string | undefined): CpuLlmBac
 			try {
 				await wllama.loadModelFromUrl(cpuLlmUrl(copy, getModelBase()), {
 					n_ctx: window,
-					n_threads: 1,
+					n_threads: threadsHere(isMobile()),
 					n_gpu_layers: 0,
 					log_level: LogLevel.WARN,
 					progressCallback({loaded, total}) {
