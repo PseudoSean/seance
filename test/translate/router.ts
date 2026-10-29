@@ -204,6 +204,38 @@ describe("translate/router", () => {
 		).to.deep.equal({kind: "off", engine: "all"});
 	});
 
+	it("names both ways in when the GPU model and NLLB-200 are both off", () => {
+		// English -> Japanese has no OPUS-MT pair: the GPU model or NLLB-200.
+		const enJa = {from: "en", to: "ja"};
+
+		expect(
+			explainRoute(table, catalog, input({...enJa, allowLlm: false, allowNllb: false})).why
+		).to.deep.equal({kind: "off", engine: "llmOrNllb"});
+		// Either switch alone is a way in.
+		expect(resolveRoute(table, catalog, input({...enJa, allowLlm: false}))?.candidate).to.equal(
+			"nllb"
+		);
+		expect(
+			resolveRoute(table, catalog, input({...enJa, allowNllb: false}))?.candidate
+		).to.equal("llm");
+		// With the CPU models off as well, every switch is named.
+		expect(
+			explainRoute(
+				table,
+				catalog,
+				input({...enJa, allowLlm: false, allowNllb: false, allowCpu: false})
+			).why
+		).to.deep.equal({kind: "off", engine: "all"});
+		// A pair OPUS-MT serves never needs either.
+		expect(
+			resolveRoute(
+				table,
+				catalog,
+				input({from: "de", to: "en", allowLlm: false, allowNllb: false})
+			)?.candidate
+		).to.match(/^opus:/);
+	});
+
 	it("passes over NLLB-200 until it is switched on", () => {
 		expect(
 			resolveRoute(table, catalog, input({from: "sw", allowNllb: false}))?.candidate

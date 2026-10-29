@@ -13620,6 +13620,12 @@ msgctxt "translate.why.llmOff"
 msgid "The GPU model is switched off in Settings → Translation."
 msgstr "Mô hình GPU đang tắt trong Cài đặt → Dịch."
 
+#. Reason a translation cannot run: this language pair can be served by the GPU model or by NLLB-200 (no smaller CPU model covers it), and the user has switched both off — turning either one on in Settings → Translation would make it work. NLLB-200 is a model's name; GPU is the usual abbreviation for the graphics processor. Shown wherever a translation action is unavailable (Settings → Translation, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.llmOrNllbOff"
+msgid "This needs the GPU model or NLLB-200, and both are switched off in Settings → Translation."
+msgstr "Cần mô hình GPU hoặc NLLB-200, nhưng cả hai đang tắt trong Cài đặt → Dịch."
+
 #. Reason a translation did not run: the user answered 'Not now' when asked to download the model it needs, and it is not on this device yet. Shown under a translated line that failed (cut at about 120 characters there, so keep it short), in the composer's translation strip and in the translation controls. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)'; {size} its download size with its unit, e.g. '938.4 MiB'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.needsDownload"

@@ -34,6 +34,7 @@ describe("translateWhyText", () => {
 		[{kind: "down"}, "translate.why.down"],
 		[{kind: "unserved"}, "translate.why.unserved"],
 		[{kind: "off", engine: "nllb"}, "translate.why.nllbOff"],
+		[{kind: "off", engine: "llmOrNllb"}, "translate.why.llmOrNllbOff"],
 		[{kind: "source"}, "translate.why.unserved"],
 	];
 

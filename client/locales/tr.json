@@ -2355,6 +2355,7 @@
   "translate.why.gpuLimits": "Bu GPU'nun shader sınırları GPU modelleri için çok düşük.",
   "translate.why.insecureOrigin": "WebGPU, uygulamanın HTTPS üzerinden (ya da localhost'tan) sunulmasını gerektirir; bu yüzden GPU modelleri burada çalışamaz.",
   "translate.why.llmOff": "GPU modeli Ayarlar → Çeviri bölümünde kapalı.",
+  "translate.why.llmOrNllbOff": "Bunun için GPU modeli ya da NLLB-200 gerekiyor; ikisi de Ayarlar → Çeviri bölümünde kapalı.",
   "translate.why.needsDownload": "{model} gerekiyor ({size} indirme): Ayarlar → Çeviri bölümünden indir.",
   "translate.why.nllbOff": "Bunun için NLLB-200 gerekiyor; Ayarlar → Çeviri bölümünde kapalı.",
   "translate.why.noAdapter": "Bu tarayıcıda WebGPU var ama kullanabileceği bir GPU bulamadı.",

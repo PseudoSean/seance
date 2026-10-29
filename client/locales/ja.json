@@ -2306,6 +2306,7 @@
   "translate.why.gpuLimits": "このGPUのシェーダー制限は、GPUモデルには低すぎます。",
   "translate.why.insecureOrigin": "WebGPUはアプリがHTTPS（またはlocalhost）で配信されている必要があるため、ここではGPUモデルを実行できません。",
   "translate.why.llmOff": "GPUモデルは 設定 → 翻訳 でオフになっています。",
+  "translate.why.llmOrNllbOff": "GPUモデルか NLLB-200 が必要ですが、どちらも 設定 → 翻訳 でオフになっています。",
   "translate.why.needsDownload": "{model}（ダウンロードサイズ {size}）が必要です：設定 → 翻訳 でダウンロードしてください。",
   "translate.why.nllbOff": "NLLB-200 が必要ですが、設定 → 翻訳 でオフになっています。",
   "translate.why.noAdapter": "このブラウザにはWebGPUがありますが、使用できるGPUが見つかりませんでした。",

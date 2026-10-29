@@ -2355,6 +2355,7 @@
   "translate.why.gpuLimits": "Ennek a GPU-nak a shaderkorlátai túl alacsonyak a GPU-modellekhez.",
   "translate.why.insecureOrigin": "A WebGPU-hoz az alkalmazást HTTPS-en (vagy localhostról) kell kiszolgálni, ezért a GPU-modellek itt nem futhatnak.",
   "translate.why.llmOff": "A GPU-modell ki van kapcsolva itt: Beállítások → Fordítás.",
+  "translate.why.llmOrNllbOff": "Ehhez a GPU-modell vagy az NLLB-200 szükséges, és mindkettő ki van kapcsolva itt: Beállítások → Fordítás.",
   "translate.why.needsDownload": "Ehhez kell: {model}, {size} letöltés – töltsd le itt: Beállítások → Fordítás.",
   "translate.why.nllbOff": "Ehhez az NLLB-200 szükséges, amely ki van kapcsolva itt: Beállítások → Fordítás.",
   "translate.why.noAdapter": "Ebben a böngészőben van WebGPU, de nem talált használható GPU-t.",

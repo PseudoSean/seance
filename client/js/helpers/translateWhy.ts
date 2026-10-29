@@ -84,6 +84,8 @@ export function translateWhyText(block: RouteBlock): string {
 					return t("translate.why.cpuOff");
 				case "nllb":
 					return t("translate.why.nllbOff");
+				case "llmOrNllb":
+					return t("translate.why.llmOrNllbOff");
 				default:
 					return t("translate.why.allOff");
 			}

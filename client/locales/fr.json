@@ -2255,6 +2255,7 @@
   "translate.why.gpuLimits": "Les limites des shaders de ce GPU sont trop basses pour les modèles GPU.",
   "translate.why.insecureOrigin": "WebGPU exige que l'application soit servie en HTTPS (ou depuis localhost) : les modèles GPU ne peuvent donc pas fonctionner ici.",
   "translate.why.llmOff": "Le modèle GPU est désactivé dans Paramètres → Traduction.",
+  "translate.why.llmOrNllbOff": "Il faut le modèle GPU ou NLLB-200, et les deux sont désactivés dans Paramètres → Traduction.",
   "translate.why.needsDownload": "Nécessite {model}, un téléchargement de {size} : à télécharger dans Paramètres → Traduction.",
   "translate.why.nllbOff": "Il faut NLLB-200, qui est désactivé dans Paramètres → Traduction.",
   "translate.why.noAdapter": "Ce navigateur a WebGPU mais n'a trouvé aucun GPU utilisable.",

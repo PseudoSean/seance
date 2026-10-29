@@ -2302,6 +2302,7 @@
   "translate.why.gpuLimits": "이 GPU의 셰이더 한도가 GPU 모델에 비해 너무 낮습니다.",
   "translate.why.insecureOrigin": "WebGPU는 앱이 HTTPS(또는 localhost)로 제공되어야 하므로 여기서는 GPU 모델을 실행할 수 없습니다.",
   "translate.why.llmOff": "GPU 모델이 설정 → 번역에서 꺼져 있습니다.",
+  "translate.why.llmOrNllbOff": "GPU 모델이나 NLLB-200이 필요하지만 둘 다 설정 → 번역에서 꺼져 있습니다.",
   "translate.why.needsDownload": "{model}이(가) 필요합니다({size} 다운로드): 설정 → 번역에서 다운로드하세요.",
   "translate.why.nllbOff": "NLLB-200이 필요하지만 설정 → 번역에서 꺼져 있습니다.",
   "translate.why.noAdapter": "이 브라우저에는 WebGPU가 있지만 사용할 수 있는 GPU를 찾지 못했습니다.",

@@ -2307,6 +2307,7 @@
   "translate.why.gpuLimits": "此 GPU 的着色器限制过低，无法运行 GPU 模型。",
   "translate.why.insecureOrigin": "WebGPU 要求应用通过 HTTPS（或从 localhost）提供，因此 GPU 模型无法在此运行。",
   "translate.why.llmOff": "GPU 模型已在 设置 → 翻译 中关闭。",
+  "translate.why.llmOrNllbOff": "需要 GPU 模型或 NLLB-200，但两者都已在 设置 → 翻译 中关闭。",
   "translate.why.needsDownload": "需要 {model}（下载大小 {size}）：请在 设置 → 翻译 中下载。",
   "translate.why.nllbOff": "需要 NLLB-200，它已在 设置 → 翻译 中关闭。",
   "translate.why.noAdapter": "此浏览器支持 WebGPU，但没有找到可用的 GPU。",

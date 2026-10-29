@@ -2363,6 +2363,7 @@
   "translate.why.gpuLimits": "Limitele shaderelor acestui GPU sunt prea mici pentru modelele GPU.",
   "translate.why.insecureOrigin": "WebGPU cere ca aplicația să fie servită prin HTTPS (sau de pe localhost), așa că modelele GPU nu pot rula aici.",
   "translate.why.llmOff": "Modelul GPU este oprit în Setări → Traducere.",
+  "translate.why.llmOrNllbOff": "Este nevoie de modelul GPU sau de NLLB-200, iar amândouă sunt oprite în Setări → Traducere.",
   "translate.why.needsDownload": "Necesită {model}, o descărcare de {size}: descarcă-l din Setări → Traducere.",
   "translate.why.nllbOff": "Este nevoie de NLLB-200, care este oprit în Setări → Traducere.",
   "translate.why.noAdapter": "Acest browser are WebGPU, dar nu a găsit niciun GPU pe care să-l poată folosi.",
