@@ -2623,6 +2623,32 @@ describe("service worker cross-origin isolation headers", function () {
 		expect(response?.headers.get(COOP)).to.equal("same-origin");
 	});
 
+	it("isolates under Chromium's user agent", async function () {
+		const sw = makeSW({
+			userAgent:
+				"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+		});
+		const {response} = await serveFetch(sw, navigation, page());
+
+		expect(response?.headers.get(COEP)).to.equal("credentialless");
+	});
+
+	it("adds nothing under WebKit, which has no credentialless", async function () {
+		// Spec § Multithreading: Safari and every iOS browser stay as they
+		// were, COOP included.
+		for (const userAgent of [
+			"Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+			"Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/129.0.6668.69 Mobile/15E148 Safari/604.1",
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+		]) {
+			const {response} = await serveFetch(makeSW({userAgent}), navigation, page());
+
+			expect(response?.status, userAgent).to.equal(200);
+			expect(response?.headers.get(COOP), userAgent).to.equal(null);
+			expect(response?.headers.get(COEP), userAgent).to.equal(null);
+		}
+	});
+
 	it("never touches a cross-origin request", async function () {
 		const {response} = await serveFetch(
 			makeSW(),

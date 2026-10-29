@@ -215,17 +215,18 @@ function isNavigation(request) {
 // shell cache alike. `credentialless`, not `require-corp`: a cross-origin
 // image, video or upload host keeps loading without a header of its own,
 // fetched without cookies. A deploy that sends its own policy keeps it.
-// The page is isolated from the load after the worker took control of it;
-// WebKit has no `credentialless` and stays as it was. Only requests inside
-// the scope reach this (the fetch handler), so a worker script here is
-// always the app's own.
+// The page is isolated from the load after the worker took control of it.
+// WebKit (Safari, every iOS browser: `strictUserVisible` below) has no
+// `credentialless`, so it gets neither header and stays exactly as it was.
+// Only requests inside the scope reach this (the fetch handler), so a
+// worker script here is always the app's own.
 const ISOLATION_HEADERS = [
 	["Cross-Origin-Opener-Policy", "same-origin"],
 	["Cross-Origin-Embedder-Policy", "credentialless"],
 ];
 
 function wantsIsolation(request) {
-	return isNavigation(request) || request.destination === "worker";
+	return (isNavigation(request) || request.destination === "worker") && !strictUserVisible();
 }
 
 function isolate(response) {
