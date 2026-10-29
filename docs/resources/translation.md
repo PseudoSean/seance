@@ -1865,11 +1865,14 @@ after any such bump.
 
 The code the build ships: `@huggingface/transformers` 4.2.0 and
 `@mlc-ai/web-llm` 0.2.85 are Apache-2.0, `onnxruntime-web` (and the
-`js/ort/` wasm it loads) MIT, `franc` and its three helpers (the `js/franc.js`
-chunk) MIT -- all compatible with Seance's MIT. Neither Apache-2.0 package
-carries a NOTICE file; their builds carry no notice either, so
-`webpack.config.ts` (`chunkNotices`) writes one into
-`js/translate-worker.js.LICENSE.txt`, as it does for the markdown chunks.
+`js/ort/` wasm it loads) MIT, `@wllama/wllama` 3.8.1 MIT (Copyright (c) 2024
+Xuan Son NGUYEN) and llama.cpp/ggml, which it compiles into `js/wllama.wasm`,
+MIT (Copyright (c) 2023-2024 The ggml authors), `franc` and its three helpers
+(the `js/franc.js` chunk) MIT -- all compatible with Seance's MIT. Neither
+Apache-2.0 package carries a NOTICE file; their builds carry no notice
+either, nor do wllama's, so `webpack.config.ts` (`chunkNotices`) writes one
+per library into `js/translate-worker.js.LICENSE.txt`, each licence named
+beside the packages it covers, as it does for the markdown chunks.
 
 The weights are fetched at run time from Hugging Face (or the deploy's
 `translation.modelBase` mirror), never bundled, and come under their own

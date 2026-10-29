@@ -172,7 +172,8 @@ function brandManifest(content: string): string {
 // flourite's build carries nothing at all — so state both, in a `/*!` banner
 // that ends up in the chunk's `.LICENSE.txt`. The markdown chunks are MIT (see
 // docs/projects/markdown-messages.md); so is franc, and the translation worker
-// is Apache-2.0 (docs/resources/translation.md § Licences).
+// carries two Apache-2.0 libraries and three MIT ones (docs/resources/
+// translation.md § Licences).
 const chunkNotices: Record<string, string> = {
 	"js/highlighter.js":
 		"/*! prismjs 1.30.0 (and the js/prism-*.js grammar chunks) | MIT | " +
@@ -189,15 +190,26 @@ const chunkNotices: Record<string, string> = {
 	// The translation worker (third configuration). ONNX Runtime Web's own
 	// `/*!` notice survives by itself; the two Apache-2.0 libraries ship
 	// their builds without one, and Apache-2.0 § 4 asks a redistribution to
-	// carry the licence.
+	// carry the licence. wllama (MIT) neither, nor llama.cpp/ggml (MIT),
+	// which it compiles into js/wllama.wasm, a file that can carry no
+	// comment: the MIT notice asks for the copyright line in every copy.
+	// One `/*!` block per licence, the packages it covers inside it: terser
+	// sorts the extracted comments, so separate ones would not stay together.
 	"js/translate-worker.js":
-		"/*! @huggingface/transformers 4.2.0 | Apache-2.0 | Copyright Hugging Face | " +
-		"https://github.com/huggingface/transformers.js */\n" +
-		"/*! @mlc-ai/web-llm 0.2.85 | Apache-2.0 | https://github.com/mlc-ai/web-llm */\n" +
-		"/*! @wllama/wllama 3.8.1 | MIT | Copyright (c) Xuan Son NGUYEN | " +
-		"https://github.com/ngxson/wllama */\n" +
-		"/*! Licensed under the Apache License, Version 2.0: " +
-		"https://www.apache.org/licenses/LICENSE-2.0 */\n",
+		"/*!\n" +
+		" * @huggingface/transformers 4.2.0 | Copyright Hugging Face | " +
+		"https://github.com/huggingface/transformers.js\n" +
+		" * @mlc-ai/web-llm 0.2.85 | https://github.com/mlc-ai/web-llm\n" +
+		" * Both licensed under the Apache License, Version 2.0: " +
+		"https://www.apache.org/licenses/LICENSE-2.0\n" +
+		" */\n" +
+		"/*!\n" +
+		" * @wllama/wllama 3.8.1 | Copyright (c) 2024 Xuan Son NGUYEN | " +
+		"https://github.com/ngxson/wllama\n" +
+		" * llama.cpp and ggml, compiled into js/wllama.wasm | " +
+		"Copyright (c) 2023-2024 The ggml authors | https://github.com/ggml-org/llama.cpp\n" +
+		" * Both licensed under the MIT License: https://opensource.org/licenses/MIT\n" +
+		" */\n",
 };
 
 const noticePlugin = new webpack.BannerPlugin({
