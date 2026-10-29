@@ -1288,12 +1288,13 @@ export class TranslateService {
 
 			await this.client().deleteModel(ref, device);
 
-			// Deleted on purpose: downloading it again is a new question. The
-			// worker deletes every build of a GPU copy, so every build's yes
-			// goes; a CPU copy's yes is its own.
-			if (device === "cpu") {
-				this.consent?.revoke(this.consentId(ref, "cpu"));
-			} else {
+			// Deleted on purpose: downloading this copy again is a new
+			// question; the other copy's yes is its own. The worker deletes
+			// every build of the language model's GPU copy, so every build's
+			// yes goes.
+			this.consent?.revoke(this.consentId(ref, device));
+
+			if (ref.engine === "llm" && device === "gpu") {
 				this.consent?.revoke(ref.id);
 
 				if (ref.smallBuffer) {

@@ -45,11 +45,16 @@ describe("translate/consent", () => {
 		expect(need?.id).to.equal(catalog.llm.id);
 	});
 
-	it("keys a GPU copy's yes as before and a CPU copy's under <id>@cpu", () => {
+	it("keeps the old id for the copy the model ran on before, the other is <id>@<device>", () => {
 		const MiB = 1024 * 1024;
 
-		expect(consentId(catalog.nllb, "gpu", 2147483644)).to.equal(catalog.nllb.id);
-		expect(consentId(catalog.nllb, "cpu", 2147483644)).to.equal(`${catalog.nllb.id}@cpu`);
+		// OPUS-MT and NLLB-200 ran on the CPU: a yes given then was a yes to that copy.
+		expect(consentId(catalog.nllb, "cpu", 2147483644)).to.equal(catalog.nllb.id);
+		expect(consentId(catalog.nllb, "gpu", 2147483644)).to.equal(`${catalog.nllb.id}@gpu`);
+		expect(consentId(catalog.opus["de-en"], "gpu", 2147483644)).to.equal(
+			`${catalog.opus["de-en"].id}@gpu`
+		);
+		// The language model ran on the GPU.
 		// The GPU copy's build follows the binding; the CPU copy has one build.
 		expect(consentId(catalog.llm, "gpu", 128 * MiB)).to.equal(QWEN3_1_7B_SPLIT_ID);
 		expect(consentId(catalog.llm, "cpu", 128 * MiB)).to.equal(`${catalog.llm.id}@cpu`);

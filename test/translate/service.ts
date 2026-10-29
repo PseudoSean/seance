@@ -1865,7 +1865,10 @@ describe("translate/service", () => {
 
 			expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
 			// The GPU model switched off: English to French falls to the OPUS pair.
-			r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
+			r.service.setSettings({
+				switches: {llm: false, opus: true, nllb: true},
+				devices: {...AUTO, opus: "cpu"},
+			});
 			expect((await r.service.route("en", "fr"))?.candidate).to.equal("opus:en-fr");
 			expect(ask.asked).to.deep.equal([]);
 			r.service.dispose();
@@ -2042,9 +2045,10 @@ describe("translate/service", () => {
 			await again;
 
 			// Settings' Download: agreed to, downloaded, and the decline is over.
-			await r.service.download(catalog.nllb, "gpu");
+			await r.service.download(catalog.nllb, "cpu");
 			expect(store.has(catalog.nllb.id)).to.equal(true);
-			await r.service.remove(catalog.nllb, "gpu");
+			expect(store.has(`${catalog.nllb.id}@gpu`)).to.equal(false);
+			await r.service.remove(catalog.nllb, "cpu");
 			expect(store.has(catalog.nllb.id)).to.equal(false);
 			r.service.dispose();
 		});
@@ -2084,6 +2088,39 @@ describe("translate/service", () => {
 			await r.service.remove(catalog.llm, "cpu");
 			expect(store.has(`${catalog.llm.id}@cpu`)).to.equal(false);
 			expect(store.has(catalog.llm.id)).to.equal(true);
+			r.service.dispose();
+		});
+
+		it("a yes given before devices covers the seq2seq copy it was for, not the GPU copy", async () => {
+			const ask = dialog();
+			const store = memoryConsent();
+
+			// NLLB-200 downloaded (and agreed to) when it ran on the CPU alone.
+			store.grant(catalog.nllb.id);
+
+			const r = rig(
+				"gpu",
+				true,
+				{en: {sw: ["nllb", "llm"]}},
+				{
+					askDownload: ask.askDownload,
+					consent: store,
+				}
+			);
+			clock = r.clock;
+			r.cached.add(`${catalog.nllb.id}@cpu`);
+			const routed = r.service.route("sw", "en");
+
+			await r.clock.tickAsync(10);
+			// Auto on a computer wants the GPU copy first: a new download, asked about.
+			expect(ask.asked).to.deep.equal([`${catalog.nllb.id}@gpu`]);
+			expect(ask.devices).to.deep.equal(["gpu"]);
+			ask.answer(false);
+			// Not now: the CPU copy on the device serves.
+			expect(await routed).to.deep.include({candidate: "nllb", device: "cpu"});
+
+			await r.service.remove(catalog.nllb, "cpu");
+			expect(store.has(catalog.nllb.id)).to.equal(false);
 			r.service.dispose();
 		});
 

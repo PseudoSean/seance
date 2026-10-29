@@ -19,20 +19,29 @@ import type {Device, ModelRef} from "./engine";
 export const CONSENT_KEY = "thelounge.state.translateConsent";
 
 /**
- * The id a copy's yes is kept under. A GPU copy keeps the id a yes always
- * had -- the build that would be downloaded here (models.ts `buildIdFor`):
- * a yes to the model on a desktop is not a yes to its small-buffer build,
- * another download of the same size, once the test switch makes that the
- * build -- so the consents given before models ran on either device stand.
- * A CPU copy, a download of its own with one build, is `<id>@cpu`: a yes to
- * one device's copy never covers the other's.
+ * The id a copy's yes is kept under. The copy of the device the model ran
+ * on before it could run on either -- the language model's GPU copy,
+ * OPUS-MT's and NLLB-200's CPU copy -- keeps the id its yes always had, so
+ * the consents (and Settings' Downloads) given then stand for the download
+ * they were given for: the language model's is the build that would be
+ * downloaded here (models.ts `buildIdFor`), since a yes to the model on a
+ * desktop is not a yes to its small-buffer build, another download of the
+ * same size, once the test switch makes that the build. The other device's
+ * copy is a download of its own, `<id>@<device>`: a yes to one device's
+ * copy never covers the other's.
  */
 export function consentId(
 	ref: ModelRef,
 	device: Device,
 	maxBufferBytes: number | null | undefined
 ): string {
-	return device === "cpu" ? `${ref.id}@cpu` : buildIdFor(ref, maxBufferBytes);
+	const before: Device = ref.engine === "llm" ? "gpu" : "cpu";
+
+	if (device !== before) {
+		return `${ref.id}@${device}`;
+	}
+
+	return device === "gpu" ? buildIdFor(ref, maxBufferBytes) : ref.id;
 }
 
 /**
