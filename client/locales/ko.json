@@ -2175,6 +2175,7 @@
   "translate.consent.text": "이 번역에는 {model}이(가) 필요하며 다운로드 크기는 {size}입니다. 이 기기에 보관되므로 한 번만 다운로드합니다.",
   "translate.consent.title": "{model}을(를) 다운로드할까요?",
   "translate.error.aborted": "중단",
+  "translate.error.gpuLost": "GPU가 작동을 멈췄습니다({reason}): {detail}",
   "translate.error.timedOut": "시간 초과",
   "translate.error.tooLong": "이 기기에는 너무 깁니다",
   "translate.error.unavailable": "번역 엔진이 이 요청을 처리할 수 없습니다",

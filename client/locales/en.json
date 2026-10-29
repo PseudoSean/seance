@@ -2251,6 +2251,7 @@
   "translate.consent.text": "Translating this needs {model}, a {size} download. It is kept on this device, so it is downloaded only once.",
   "translate.consent.title": "Download {model}?",
   "translate.error.aborted": "aborted",
+  "translate.error.gpuLost": "the GPU stopped ({reason}): {detail}",
   "translate.error.timedOut": "timed out",
   "translate.error.tooLong": "too long for this device",
   "translate.error.unavailable": "no translation engine can take this request",

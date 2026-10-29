@@ -2177,6 +2177,7 @@
   "translate.consent.text": "Bản dịch này cần {model}, dung lượng tải xuống {size}. Mô hình được giữ trên thiết bị này nên chỉ tải xuống một lần.",
   "translate.consent.title": "Tải xuống {model}?",
   "translate.error.aborted": "đã bị hủy",
+  "translate.error.gpuLost": "GPU đã ngừng hoạt động ({reason}): {detail}",
   "translate.error.timedOut": "hết thời gian chờ",
   "translate.error.tooLong": "quá dài đối với thiết bị này",
   "translate.error.unavailable": "không có công cụ dịch nào nhận được yêu cầu này",

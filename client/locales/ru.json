@@ -2353,6 +2353,7 @@
   "translate.consent.text": "Для этого перевода нужна модель {model}, скачивание {size}. Она останется на этом устройстве, поэтому скачивается только один раз.",
   "translate.consent.title": "Скачать {model}?",
   "translate.error.aborted": "прервано",
+  "translate.error.gpuLost": "графический процессор перестал работать ({reason}): {detail}",
   "translate.error.timedOut": "истекло время ожидания",
   "translate.error.tooLong": "слишком длинное для этого устройства",
   "translate.error.unavailable": "ни один движок перевода не может выполнить этот запрос",

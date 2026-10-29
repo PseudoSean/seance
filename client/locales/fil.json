@@ -2149,6 +2149,7 @@
   "translate.consent.text": "Kailangan ng pagsasaling ito ang {model}, isang download na {size}. Mananatili ito sa device na ito, kaya isang beses lang itong ida-download.",
   "translate.consent.title": "I-download ang {model}?",
   "translate.error.aborted": "kinansela",
+  "translate.error.gpuLost": "huminto ang GPU ({reason}): {detail}",
   "translate.error.timedOut": "nag-time out",
   "translate.error.tooLong": "masyadong mahaba para sa device na ito",
   "translate.error.unavailable": "walang translation engine na kayang tumanggap ng kahilingang ito",

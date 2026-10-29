@@ -2147,6 +2147,7 @@
   "translate.consent.text": "Esta traducción necesita {model}, una descarga de {size}. Se guarda en este dispositivo, así que solo se descarga una vez.",
   "translate.consent.title": "¿Descargar {model}?",
   "translate.error.aborted": "cancelado",
+  "translate.error.gpuLost": "la GPU dejó de funcionar ({reason}): {detail}",
   "translate.error.timedOut": "tiempo agotado",
   "translate.error.tooLong": "demasiado largo para este dispositivo",
   "translate.error.unavailable": "ningún motor de traducción puede atender esta solicitud",

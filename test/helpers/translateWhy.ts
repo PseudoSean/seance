@@ -10,7 +10,7 @@ import {TRANSLATION_UNAVAILABLE} from "../../client/js/translate/service";
 import {needsDownloadError} from "../../client/js/translate/consent";
 import friendlysize from "../../client/js/helpers/friendlysize";
 import {ABORTED, TIMED_OUT} from "../../client/js/translate/outgoing";
-import {CONTEXT_OVERFLOW} from "../../client/js/translate/engine";
+import {CONTEXT_OVERFLOW, gpuLost, parseGpuLost} from "../../client/js/translate/engine";
 
 // The rule reports codes (models.ts modelBlock, router.ts explainRoute and
 // translationBlock); these two helpers turn them into the sentences every
@@ -90,6 +90,22 @@ describe("translateErrorText", () => {
 
 	it("says a request too long for the model's window is too long", () => {
 		expect(translateErrorText(CONTEXT_OVERFLOW)).to.equal(en["translate.error.tooLong"]);
+	});
+
+	it("says the GPU stopped, with the browser's reason and the call that failed", () => {
+		const mapAsync =
+			"Failed to execute 'mapAsync' on 'GPUBuffer': Buffer was unmapped before mapping was resolved.";
+		const code = gpuLost("GPU process\nterminated", mapAsync);
+		expect(parseGpuLost(code)).to.deep.equal({
+			reason: "GPU process terminated",
+			detail: mapAsync,
+		});
+		expect(parseGpuLost(mapAsync)).to.equal(null);
+		expect(translateErrorText(code)).to.equal(
+			en["translate.error.gpuLost"]
+				.replace("{reason}", "GPU process terminated")
+				.replace("{detail}", mapAsync)
+		);
 	});
 
 	it("says why nothing could take the request when the caller knows", () => {

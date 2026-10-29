@@ -2179,6 +2179,7 @@
   "translate.consent.text": "此翻译需要 {model}，下载大小为 {size}。它会保存在此设备上，因此只需下载一次。",
   "translate.consent.title": "要下载 {model} 吗？",
   "translate.error.aborted": "已中止",
+  "translate.error.gpuLost": "GPU 已停止工作（{reason}）：{detail}",
   "translate.error.timedOut": "超时",
   "translate.error.tooLong": "对此设备来说太长",
   "translate.error.unavailable": "没有翻译引擎能处理此请求",

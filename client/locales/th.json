@@ -2177,6 +2177,7 @@
   "translate.consent.text": "การแปลนี้ต้องใช้ {model} ซึ่งต้องดาวน์โหลด {size} โมเดลจะเก็บไว้บนอุปกรณ์นี้ จึงดาวน์โหลดเพียงครั้งเดียว",
   "translate.consent.title": "ดาวน์โหลด {model} ไหม",
   "translate.error.aborted": "ถูกยกเลิก",
+  "translate.error.gpuLost": "GPU หยุดทำงาน ({reason}): {detail}",
   "translate.error.timedOut": "หมดเวลา",
   "translate.error.tooLong": "ยาวเกินไปสำหรับอุปกรณ์นี้",
   "translate.error.unavailable": "ไม่มีเอนจินแปลใดรับคำขอนี้ได้",

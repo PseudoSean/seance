@@ -2228,6 +2228,7 @@
   "translate.consent.text": "Ehhez a fordításhoz szükség van erre: {model}, ami {size} letöltés. Ezen az eszközön marad, így csak egyszer kell letölteni.",
   "translate.consent.title": "Letöltöd ezt: {model}?",
   "translate.error.aborted": "megszakítva",
+  "translate.error.gpuLost": "a GPU leállt ({reason}): {detail}",
   "translate.error.timedOut": "időtúllépés",
   "translate.error.tooLong": "túl hosszú ehhez az eszközhöz",
   "translate.error.unavailable": "egyik fordítómotor sem tudja fogadni ezt a kérést",

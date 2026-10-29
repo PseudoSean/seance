@@ -2178,6 +2178,7 @@
   "translate.consent.text": "Den här översättningen behöver {model}, en nedladdning på {size}. Den sparas på den här enheten och laddas bara ner en gång.",
   "translate.consent.title": "Ladda ner {model}?",
   "translate.error.aborted": "avbröts",
+  "translate.error.gpuLost": "GPU:n slutade fungera ({reason}): {detail}",
   "translate.error.timedOut": "tidsgränsen överskreds",
   "translate.error.tooLong": "för långt för den här enheten",
   "translate.error.unavailable": "ingen översättningsmotor kan ta emot den här begäran",

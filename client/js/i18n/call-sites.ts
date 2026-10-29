@@ -2070,6 +2070,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.consent.text",
 	"translate.consent.title",
 	"translate.error.aborted",
+	"translate.error.gpuLost",
 	"translate.error.timedOut",
 	"translate.error.tooLong",
 	"translate.error.unavailable",

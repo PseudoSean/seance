@@ -26,9 +26,11 @@
 // requests' `model` name the 1.7B whichever build runs.
 
 import {fitToWindow} from "../budget";
+import {takeDeviceLoss} from "./gpuLimits";
 import {
 	BATCH_REFUSED,
 	CONTEXT_OVERFLOW,
+	gpuLost,
 	Engine,
 	EngineCapabilities,
 	EngineError,
@@ -725,8 +727,16 @@ export class WebLlmEngine implements Engine {
 			this.model = null;
 			this.state = "failed";
 			await engine.unload().catch(() => {});
+
+			// A lost device settles its `lost` promise a moment after the
+			// call that failed on it: wait one turn of the event loop, then
+			// say why the GPU went away beside what failed (gpuLimits.ts).
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			const loss = takeDeviceLoss();
+			const failed = e instanceof Error ? e.message : String(e);
+
 			throw new EngineError(
-				e instanceof Error ? e.message : String(e),
+				loss ? gpuLost(loss.message || loss.reason, failed) : failed,
 				this.failures >= 2 ? "load" : "request"
 			);
 		} finally {

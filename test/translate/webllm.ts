@@ -1,7 +1,9 @@
 import {expect} from "chai";
+import {noteDeviceLoss, takeDeviceLoss} from "../../client/js/translate/engines/gpuLimits";
 import {
 	EngineError,
 	emptyContext,
+	parseGpuLost,
 	type ModelRef,
 	type TranslateRequest,
 } from "../../client/js/translate/engine";
@@ -983,6 +985,44 @@ describe("translate/engines/webllm", () => {
 		expect(engine.isLoaded(catalog.llm.id)).to.equal(false);
 		expect(engine.status()).to.equal("failed");
 		expect(original.unload).to.be.greaterThan(0);
+	});
+
+	it("a generation failure on a lost GPU says why the GPU stopped", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		const mlc = d.deps.create({model_list: []}, () => {});
+		const mapAsync =
+			"Failed to execute 'mapAsync' on 'GPUBuffer': Buffer was unmapped before mapping was resolved.";
+
+		mlc.chat.completions.create = () => {
+			// WebKit settles the device's `lost` a moment after the call fails.
+			setTimeout(
+				() => noteDeviceLoss({reason: "unknown", message: "GPU process terminated"}),
+				5
+			);
+			return Promise.reject(new Error(mapAsync));
+		};
+
+		d.deps.create = () => mlc;
+		takeDeviceLoss();
+		await engine.load(catalog.llm, () => {});
+		let error: Error | null = null;
+
+		try {
+			for await (const _c of engine.translate(request(), new AbortController().signal)) {
+				// consume
+			}
+		} catch (e) {
+			error = e as Error;
+		}
+
+		expect(error).to.be.instanceOf(EngineError);
+		expect(parseGpuLost(error!.message)).to.deep.equal({
+			reason: "GPU process terminated",
+			detail: mapAsync,
+		});
+		expect(takeDeviceLoss(), "the loss is spent").to.equal(null);
 	});
 
 	it("the second generation failure in a row is a load-class failure", async () => {

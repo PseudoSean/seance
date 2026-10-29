@@ -3,8 +3,10 @@ import {
 	capBufferLimits,
 	getBufferCap,
 	installBufferLimits,
+	noteDeviceLoss,
 	raiseBufferLimits,
 	setBufferCap,
+	takeDeviceLoss,
 	WEBLLM_FULL_REQUEST,
 } from "../../client/js/translate/engines/gpuLimits";
 
@@ -202,6 +204,39 @@ describe("gpuLimits", () => {
 			} finally {
 				setBufferCap(null);
 			}
+		});
+
+		it("records why a device it handed out was lost, once", async () => {
+			let lose: (info: {reason: string; message: string}) => void = () => {};
+
+			class LosingAdapter {
+				limits = {maxBufferSize: 512 * MiB, maxStorageBufferBindingSize: 512 * MiB};
+
+				requestDevice() {
+					return Promise.resolve({lost: new Promise((resolve) => (lose = resolve))});
+				}
+			}
+
+			installBufferLimits(LosingAdapter.prototype);
+			takeDeviceLoss();
+			await new LosingAdapter().requestDevice();
+			expect(takeDeviceLoss()).to.equal(null);
+			lose({reason: "unknown", message: "GPU process terminated"});
+			await Promise.resolve();
+			await Promise.resolve();
+			expect(takeDeviceLoss()).to.deep.equal({
+				reason: "unknown",
+				message: "GPU process terminated",
+			});
+			expect(takeDeviceLoss(), "taken once").to.equal(null);
+		});
+
+		it("does not count a device destroyed on purpose as lost", () => {
+			takeDeviceLoss();
+			noteDeviceLoss({reason: "destroyed", message: "Device was destroyed."});
+			expect(takeDeviceLoss()).to.equal(null);
+			noteDeviceLoss(undefined);
+			expect(takeDeviceLoss()).to.deep.equal({reason: "unknown", message: ""});
 		});
 
 		it("does nothing without WebGPU", () => {

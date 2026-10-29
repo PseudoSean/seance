@@ -114,6 +114,50 @@ interface AdapterPrototype {
 	requestDevice: (this: {limits: Limits}, request?: DeviceRequest) => Promise<unknown>;
 }
 
+/**
+ * Why the GPU went away. A generation on a lost device fails with whatever
+ * WebGPU call it was in ("Failed to execute 'mapAsync' on 'GPUBuffer':
+ * Buffer was unmapped before mapping was resolved", on the user's iPhone),
+ * which says nothing of why; the device's `lost` promise does (WebKit: a
+ * Metal command buffer that failed, memory, work from the background). A
+ * device destroyed on purpose is no loss.
+ */
+export interface DeviceLoss {
+	reason: string;
+	message: string;
+}
+
+let lastLoss: DeviceLoss | null = null;
+
+/** Records a lost device's reason (the shim's watch, and tests). */
+export function noteDeviceLoss(
+	info: {reason?: unknown; message?: unknown} | null | undefined
+): void {
+	const reason = String(info?.reason ?? "unknown");
+
+	if (reason === "destroyed") {
+		return;
+	}
+
+	lastLoss = {reason, message: String(info?.message ?? "").trim()};
+}
+
+/** The last loss recorded, once: the next failure does not inherit it. */
+export function takeDeviceLoss(): DeviceLoss | null {
+	const loss = lastLoss;
+
+	lastLoss = null;
+	return loss;
+}
+
+function watchDeviceLoss(device: unknown): void {
+	const lost = (device as {lost?: Promise<{reason?: unknown; message?: unknown}>} | null)?.lost;
+
+	if (lost && typeof lost.then === "function") {
+		lost.then(noteDeviceLoss, () => {});
+	}
+}
+
 const INSTALLED = Symbol.for("seance.gpuLimits");
 
 /** Two requests that ask the same buffer limits: a cap that only lowered leaves nothing to fall back to. */
@@ -157,16 +201,20 @@ export function installBufferLimits(proto: AdapterPrototype | undefined | null):
 		const cap = bufferCap;
 		const raised = raiseBufferLimits(request, this.limits, cap);
 		const fallback = capBufferLimits(request, cap);
+		let device: unknown;
 
 		if (raised === fallback || sameBufferLimits(raised, fallback)) {
-			return original.call(this, fallback);
+			device = await original.call(this, fallback);
+		} else {
+			try {
+				device = await original.call(this, raised);
+			} catch {
+				device = await original.call(this, fallback);
+			}
 		}
 
-		try {
-			return await original.call(this, raised);
-		} catch {
-			return original.call(this, fallback);
-		}
+		watchDeviceLoss(device);
+		return device;
 	};
 
 	marked[INSTALLED] = true;

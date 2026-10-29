@@ -2127,6 +2127,7 @@
   "translate.consent.text": "Cette traduction nécessite {model}, un téléchargement de {size}. Il reste sur cet appareil et n'est téléchargé qu'une fois.",
   "translate.consent.title": "Télécharger {model} ?",
   "translate.error.aborted": "annulé",
+  "translate.error.gpuLost": "le GPU s'est arrêté ({reason}) : {detail}",
   "translate.error.timedOut": "délai dépassé",
   "translate.error.tooLong": "trop long pour cet appareil",
   "translate.error.unavailable": "aucun moteur de traduction ne peut traiter cette demande",
