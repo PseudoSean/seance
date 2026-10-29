@@ -85,17 +85,24 @@ export const REQUEST_TIMEOUT_MS = 2 * 60 * 1000;
 /**
  * The language model on the CPU (wllama, one thread): about 94 s for a cold
  * request and 16 s warm, so a batch is two lines, not six, and the deadline
- * is six minutes (translation-devices.md § The CPU context window).
+ * is six minutes (translation-devices.md § The CPU context window). OPUS-MT
+ * and NLLB-200 on the CPU are as quick as they always were: theirs stays
+ * REQUEST_TIMEOUT_MS.
  */
 export const CPU_BATCH_MAX_LINES = 2;
 export const CPU_REQUEST_TIMEOUT_MS = 6 * 60 * 1000;
 
-function batchCapFor(device: Device): number {
-	return device === "cpu" ? CPU_BATCH_MAX_LINES : BATCH_MAX_LINES;
+/** The language model on the CPU: the one route the longer figures are for. */
+function slowLlm(engine: EngineName, device: Device): boolean {
+	return engine === "llm" && device === "cpu";
 }
 
-function timeoutFor(device: Device): number {
-	return device === "cpu" ? CPU_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+function batchCapFor(engine: EngineName, device: Device): number {
+	return slowLlm(engine, device) ? CPU_BATCH_MAX_LINES : BATCH_MAX_LINES;
+}
+
+function timeoutFor(engine: EngineName, device: Device): number {
+	return slowLlm(engine, device) ? CPU_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
 }
 
 export const NO_ROUTE = "no translation engine can take this request";
@@ -527,7 +534,7 @@ export class TranslateQueue {
 		const batch = [head];
 
 		for (const q of [...this.waiting]) {
-			if (batch.length >= batchCapFor(head.device)) {
+			if (batch.length >= batchCapFor(engine, head.device)) {
 				break;
 			}
 
@@ -627,7 +634,7 @@ export class TranslateQueue {
 			this.deps.onUpdate(q.item.id, {status: "pending", text: "", engine});
 		}
 
-		const timer = armDeadline(this.timers(), timeoutFor(head.device), () => {
+		const timer = armDeadline(this.timers(), timeoutFor(head.engine, head.device), () => {
 			timedOut = true;
 			running.abort();
 		});
@@ -773,7 +780,7 @@ export class TranslateQueue {
 		this.inFlight.set(engine, running);
 		this.deps.onUpdate(item.id, {status: "pending", text: "", engine});
 
-		const timer = armDeadline(this.timers(), timeoutFor(queued.device), () => {
+		const timer = armDeadline(this.timers(), timeoutFor(queued.engine, queued.device), () => {
 			timedOut = true;
 			running.abort();
 		});
@@ -792,6 +799,7 @@ export class TranslateQueue {
 					batches: engine === "llm",
 					markers: info.markers,
 					device: queued.device,
+					engine,
 				},
 				controller.signal,
 				(partial) => {

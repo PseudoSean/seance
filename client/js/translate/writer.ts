@@ -405,6 +405,7 @@ export async function translateOutgoing(
 			context,
 			batches: route?.candidate === "llm",
 			device: route?.device,
+			engine: engineFor(route),
 			markers: markersFor(route?.candidate),
 			nicks,
 		};
@@ -662,6 +663,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			context,
 			batches: route?.candidate === "llm",
 			device: route?.device,
+			engine: engineFor(route),
 			markers: markersFor(route?.candidate),
 			nicks,
 		};

@@ -399,18 +399,23 @@ describe("translate/queue", () => {
 		expect(r.requests.every((q) => !q.lines)).to.equal(true);
 	});
 
-	it("a CPU request's deadline is CPU_REQUEST_TIMEOUT_MS, a GPU one's REQUEST_TIMEOUT_MS", async () => {
-		const run = async (device: "gpu" | "cpu") => {
+	describe("the deadline", () => {
+		const run = async (
+			engine: "llm" | "seq2seq",
+			device: "gpu" | "cpu",
+			text = "eins zwei drei"
+		) => {
 			const r = rig();
 			const c = r.clock;
 
+			r.setEngine(() => engine);
 			r.setDevice(() => device);
 			r.deps.translate = (_req, _signal) =>
 				(async function* () {
 					await new Promise<void>(() => {});
 					yield {id: 0, text: "never", done: true};
 				})();
-			r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+			r.queue.enqueue(item(1, text, {single: true}));
 			await settle(c, 3);
 			await c.tickAsync(REQUEST_TIMEOUT_MS + 1);
 			await settle(c);
@@ -425,11 +430,26 @@ describe("translate/queue", () => {
 			return {after, end};
 		};
 
-		expect((await run("gpu")).after).to.deep.equal(["pending", "failed"]);
-		const cpu = await run("cpu");
+		it("is CPU_REQUEST_TIMEOUT_MS for the language model on the CPU, REQUEST_TIMEOUT_MS on the GPU", async () => {
+			expect((await run("llm", "gpu")).after).to.deep.equal(["pending", "failed"]);
+			const cpu = await run("llm", "cpu");
 
-		expect(cpu.after).to.deep.equal(["pending"]);
-		expect(cpu.end).to.deep.equal(["pending", "failed"]);
+			expect(cpu.after).to.deep.equal(["pending"]);
+			expect(cpu.end).to.deep.equal(["pending", "failed"]);
+		});
+
+		it("stays REQUEST_TIMEOUT_MS for OPUS-MT or NLLB-200 on the CPU", async () => {
+			expect((await run("seq2seq", "cpu")).after).to.deep.equal(["pending", "failed"]);
+			// A multi-line message goes through translateDraft: the same rule.
+			expect((await run("seq2seq", "cpu", "zeile eins\nzeile zwei")).after).to.deep.equal([
+				"pending",
+				"failed",
+			]);
+			const llm = await run("llm", "cpu", "zeile eins\nzeile zwei");
+
+			expect(llm.after).to.deep.equal(["pending"]);
+			expect(llm.end).to.deep.equal(["pending", "failed"]);
+		});
 	});
 
 	it("a batch whose numbering does not match is redone one line at a time", async () => {

@@ -946,24 +946,25 @@ describe("translate/outgoing", () => {
 			expect(r.signals[0].aborted).to.equal(true);
 		});
 
-		it("a CPU route's deadline is CPU_WRITE_TIMEOUT_MS", async () => {
-			const r = rig(() => ["never"]);
-			const never: OutgoingDeps = {
-				...r.deps,
-				translate(_req, signal) {
-					r.signals.push(signal);
+		const neverOn = (r: ReturnType<typeof rig>): OutgoingDeps => ({
+			...r.deps,
+			translate(_req, signal) {
+				r.signals.push(signal);
 
-					// eslint-disable-next-line require-yield -- ends only by abort or timeout, never yields
-					return (async function* (): AsyncIterable<TranslateChunk> {
-						await new Promise<void>((resolve) =>
-							signal.addEventListener("abort", () => resolve())
-						);
-					})();
-				},
-			};
+				// eslint-disable-next-line require-yield -- ends only by abort or timeout, never yields
+				return (async function* (): AsyncIterable<TranslateChunk> {
+					await new Promise<void>((resolve) =>
+						signal.addEventListener("abort", () => resolve())
+					);
+				})();
+			},
+		});
+
+		it("the language model on the CPU has CPU_WRITE_TIMEOUT_MS", async () => {
+			const r = rig(() => ["never"]);
 			const promise = translateDraft(
-				never,
-				{...request(), device: "cpu"},
+				neverOn(r),
+				{...request(), device: "cpu", engine: "llm"},
 				new AbortController().signal,
 				() => {}
 			);
@@ -972,6 +973,20 @@ describe("translate/outgoing", () => {
 			await r.clock.tickAsync(WRITE_TIMEOUT_MS + 1);
 			expect(r.signals[0].aborted).to.equal(false);
 			await r.clock.tickAsync(CPU_WRITE_TIMEOUT_MS - WRITE_TIMEOUT_MS);
+			expect(await failed).to.equal(TIMED_OUT);
+		});
+
+		it("OPUS-MT or NLLB-200 on the CPU keeps WRITE_TIMEOUT_MS", async () => {
+			const r = rig(() => ["never"]);
+			const promise = translateDraft(
+				neverOn(r),
+				{...request(), device: "cpu", engine: "seq2seq"},
+				new AbortController().signal,
+				() => {}
+			);
+			const failed = promise.catch((e: Error) => e.message);
+
+			await r.clock.tickAsync(WRITE_TIMEOUT_MS + 1);
 			expect(await failed).to.equal(TIMED_OUT);
 		});
 
