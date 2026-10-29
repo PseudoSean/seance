@@ -158,7 +158,7 @@
 						{{
 							t("translate.settings.modelOption", {
 								name: llmName(choice),
-								size: size(choice.sizeBytes),
+								size: size(listedSize(choice)),
 							})
 						}}
 					</option>
@@ -198,7 +198,7 @@
 							>{{ t("translate.settings.inUse") }}</span
 						></span
 					>
-					<span class="translate-model-size">{{ size(view.ref.sizeBytes) }}</span>
+					<span class="translate-model-size">{{ size(listedSize(view.ref)) }}</span>
 					<span class="translate-model-state">{{ stateLabel(view) }}</span>
 					<!-- Whether it can run here, and if not why: the verdict and
 					     the reason are two whole sentences, never one spliced
@@ -447,6 +447,7 @@ import {modelLabel} from "../../js/helpers/modelLabel";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
+import {listedSize} from "../../js/translate/models";
 import {
 	LLM_MIN_BUFFER_BYTES,
 	llmChoice,
@@ -587,7 +588,7 @@ export default defineComponent({
 				capability.value,
 				{
 					llm: !!store.state.settings.translateLlm,
-					cpu: !!store.state.settings.translateCpu,
+					opus: !!store.state.settings.translateCpu,
 					nllb: !!store.state.settings.translateNllb,
 				},
 				enabled
@@ -606,7 +607,7 @@ export default defineComponent({
 				return null;
 			}
 
-			const block = modelBlock(choice, capability.value, {llm: true, cpu: true, nllb: true});
+			const block = modelBlock(choice, capability.value, {llm: true, opus: true, nllb: true});
 
 			return block &&
 				(block.kind === "buffer" || block.kind === "memory" || block.kind === "device")
@@ -726,6 +727,7 @@ export default defineComponent({
 			loadError,
 			problem,
 			size,
+			listedSize,
 			stateLabel,
 			allowed,
 			download,

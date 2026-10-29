@@ -180,7 +180,7 @@ function liveCatalog() {
 function switches(): EngineSwitches {
 	return {
 		llm: !!store.state.settings.translateLlm,
-		cpu: !!store.state.settings.translateCpu,
+		opus: !!store.state.settings.translateCpu,
 		nllb: !!store.state.settings.translateNllb,
 	};
 }

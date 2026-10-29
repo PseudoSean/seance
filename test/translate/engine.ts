@@ -34,7 +34,7 @@ describe("translate/engine", () => {
 				family: "llm",
 				id: "fake-model",
 				label: {kind: "llm", name: "Fake"},
-				sizeBytes: 0,
+				copies: {gpu: {sizeBytes: 0, source: "fake-model"}},
 			},
 			() => {}
 		);
@@ -63,7 +63,7 @@ describe("translate/engine", () => {
 				family: "llm",
 				id: "fake-model",
 				label: {kind: "llm", name: "Fake"},
-				sizeBytes: 0,
+				copies: {gpu: {sizeBytes: 0, source: "fake-model"}},
 			},
 			() => {}
 		);

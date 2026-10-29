@@ -89,7 +89,7 @@ function deadWorkerRig(dies: boolean, healthyFrom = Infinity) {
 			clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
 		},
 		{catalog, selectedLlm: QWEN3_1_7B_ID, ortBase: "https://app.test/js/ort/", enabled: true},
-		{llm: true, cpu: true, nllb: true}
+		{llm: true, opus: true, nllb: true}
 	);
 
 	service.onWorkerError((message) => errors.push(message));
@@ -197,7 +197,7 @@ function rig(
 			ortBase: "https://app.test/js/ort/",
 			enabled,
 		},
-		{llm: true, cpu: true, nllb: true}
+		{llm: true, opus: true, nllb: true}
 	);
 
 	return {
@@ -536,7 +536,7 @@ describe("translate/service", () => {
 		expect(r.seq2seq.calls.load).to.deep.equal([]);
 		expect(r.seq2seq.calls.translate).to.deep.equal([]);
 
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({llm: false, opus: true, nllb: true});
 		message = "";
 
 		try {
@@ -599,9 +599,9 @@ describe("translate/service", () => {
 	it("the engine settings narrow the route", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({llm: false, opus: true, nllb: true});
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
-		r.service.setSettings({llm: false, cpu: false, nllb: true});
+		r.service.setSettings({llm: false, opus: false, nllb: true});
 		expect(await r.service.route("de", "en")).to.equal(null);
 		r.service.dispose();
 	});
@@ -897,7 +897,7 @@ describe("translate/service", () => {
 				ortBase: "",
 				enabled: true,
 			},
-			{llm: true, cpu: true, nllb: true}
+			{llm: true, opus: true, nllb: true}
 		);
 
 		expect((await service.route("fr", "ja"))?.candidate).to.equal("llm");
@@ -1006,13 +1006,13 @@ describe("translate/service", () => {
 		await text(r.service.translate(base));
 		await text(r.service.translate({...base, from: "fr"}));
 
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({llm: false, opus: true, nllb: true});
 		await r.clock.tickAsync(0);
 		expect(r.llm.calls.unload).to.equal(1);
 		expect(r.seq2seq.calls.unload).to.equal(0);
 		expect(r.workers[0].terminated).to.equal(false);
 
-		r.service.setSettings({llm: false, cpu: false, nllb: true});
+		r.service.setSettings({llm: false, opus: false, nllb: true});
 		await r.clock.tickAsync(0);
 		// The last loaded tier going takes the worker with it.
 		expect(r.workers[0].terminated).to.equal(true);
@@ -1026,7 +1026,7 @@ describe("translate/service", () => {
 		const running = text(r.service.translate(base));
 
 		await r.clock.tickAsync(0);
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({llm: false, opus: true, nllb: true});
 		await r.clock.tickAsync(0);
 		// Not under the running request.
 		expect(r.llm.calls.unload).to.equal(0);
@@ -1735,7 +1735,7 @@ describe("translate/service", () => {
 
 			expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
 			// The GPU model switched off: English to French falls to the OPUS pair.
-			r.service.setSettings({llm: false, cpu: true, nllb: true});
+			r.service.setSettings({llm: false, opus: true, nllb: true});
 			expect((await r.service.route("en", "fr"))?.candidate).to.equal("opus:en-fr");
 			expect(ask.asked).to.deep.equal([]);
 			r.service.dispose();
@@ -1775,7 +1775,7 @@ describe("translate/service", () => {
 
 			expect(parseNeedsDownload(message)).to.deep.equal({
 				id: catalog.llm.id,
-				sizeBytes: catalog.llm.sizeBytes,
+				sizeBytes: catalog.llm.copies.gpu!.sizeBytes,
 				label: catalog.llm.label,
 			});
 			// The rest of the session: no question, the same answer, for any pair.
@@ -1793,7 +1793,7 @@ describe("translate/service", () => {
 			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
 			clock = r.clock;
 			// NLLB-200 off, as it ships: the walk's own last reason is that switch.
-			r.service.setSettings({llm: true, cpu: true, nllb: false});
+			r.service.setSettings({llm: true, opus: true, nllb: false});
 
 			const resolved = r.service.resolve("de", "en");
 
@@ -1932,13 +1932,13 @@ describe("translate/service", () => {
 		it("off: a pair NLLB would lead goes to the GPU model, and none goes to NLLB", async () => {
 			const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}, "*": {"*": ["nllb"]}});
 			clock = r.clock;
-			r.service.setSettings({llm: true, cpu: true, nllb: false});
+			r.service.setSettings({llm: true, opus: true, nllb: false});
 
 			expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
 			expect((await r.service.route("ja", "ko"))?.candidate ?? null).to.equal(null);
 			expect(r.seq2seq.calls.load).to.deep.equal([]);
 
-			r.service.setSettings({llm: true, cpu: true, nllb: true});
+			r.service.setSettings({llm: true, opus: true, nllb: true});
 			expect((await r.service.route("sw", "en"))?.candidate).to.equal("nllb");
 			r.service.dispose();
 		});

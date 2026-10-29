@@ -120,7 +120,7 @@ describe("translate/capability", () => {
 			expect(cap.tier).to.equal("cpu");
 			expect(cap.reasons).to.deep.equal(["GPU_LIMITS"]);
 			expect(
-				modelBlock(buildCatalog().llm, cap, {llm: true, cpu: true, nllb: true})
+				modelBlock(buildCatalog().llm, cap, {llm: true, opus: true, nllb: true})
 			).to.deep.equal({
 				kind: "device",
 				reason: "GPU_LIMITS",

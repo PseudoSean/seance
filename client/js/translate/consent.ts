@@ -12,6 +12,7 @@
 // new question. Vue-free: the service (service.ts) owns one, index.ts hands
 // it the dialog and the storage.
 
+import {listedSize} from "./models";
 import type {ModelRef} from "./engine";
 
 /** Where the models the user agreed to download are remembered: their ids. */
@@ -33,7 +34,7 @@ export interface DownloadNeed {
 }
 
 export function needsDownloadError(ref: ModelRef): string {
-	const need: DownloadNeed = {id: ref.id, sizeBytes: ref.sizeBytes, label: ref.label};
+	const need: DownloadNeed = {id: ref.id, sizeBytes: listedSize(ref), label: ref.label};
 
 	return `${NEEDS_DOWNLOAD}: ${JSON.stringify(need)}`;
 }

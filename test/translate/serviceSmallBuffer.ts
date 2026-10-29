@@ -95,7 +95,7 @@ function rig(capability: Capability, consent?: {ask: (ref: ModelRef) => Promise<
 			ortBase: "https://app.test/js/ort/",
 			enabled: true,
 		},
-		{llm: true, cpu: true, nllb: true}
+		{llm: true, opus: true, nllb: true}
 	);
 
 	return {service, configured, asked, modelsAsked, store, releaseProbe: () => release()};

@@ -95,7 +95,7 @@ function rig(mobile: boolean) {
 			ortBase: "https://app.test/js/ort/",
 			enabled: true,
 		},
-		{llm: true, cpu: true, nllb: true}
+		{llm: true, opus: true, nllb: true}
 	);
 
 	return {service, workers, log, clock, llm, seq2seq};

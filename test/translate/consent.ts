@@ -8,7 +8,7 @@ import {
 	parseNeedsDownload,
 	storedConsent,
 } from "../../client/js/translate/consent";
-import {buildCatalog} from "../../client/js/translate/models";
+import {buildCatalog, listedSize} from "../../client/js/translate/models";
 import type {ModelRef} from "../../client/js/translate/engine";
 
 const catalog = buildCatalog();
@@ -30,7 +30,7 @@ describe("translate/consent", () => {
 		expect(message.startsWith(`${NEEDS_DOWNLOAD}: `)).to.equal(true);
 		expect(parseNeedsDownload(message)).to.deep.equal({
 			id: catalog.opus["de-en"].id,
-			sizeBytes: catalog.opus["de-en"].sizeBytes,
+			sizeBytes: listedSize(catalog.opus["de-en"]),
 			label: catalog.opus["de-en"].label,
 		});
 		expect(parseNeedsDownload("timed out")).to.equal(null);

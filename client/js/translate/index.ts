@@ -14,7 +14,7 @@ import {probeOnce} from "./capability";
 import {emptyContext, type ModelRef} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {buildCatalog} from "./models";
+import {buildCatalog, listedSize} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
 import {ServiceDeps, TranslateService} from "./service";
@@ -84,7 +84,7 @@ function askDownload(ref: ModelRef): Promise<boolean> {
 			"confirm-dialog",
 			{
 				title: t("translate.consent.title", {model}),
-				text: t("translate.consent.text", {model, size: friendlysize(ref.sizeBytes)}),
+				text: t("translate.consent.text", {model, size: friendlysize(listedSize(ref))}),
 				note: meteredConnection() ? t("translate.consent.metered") : undefined,
 				button: t("translate.model.download"),
 				cancel: t("translate.consent.notNow"),
@@ -150,7 +150,7 @@ function create(): TranslateService {
 		},
 		{
 			llm: store.state.settings.translateLlm,
-			cpu: store.state.settings.translateCpu,
+			opus: store.state.settings.translateCpu,
 			nllb: !!store.state.settings.translateNllb,
 		}
 	);
@@ -162,7 +162,7 @@ function create(): TranslateService {
 				store.state.settings.translateCpu,
 				!!store.state.settings.translateNllb,
 			] as [boolean, boolean, boolean],
-		([llm, cpu, nllb]) => created.setSettings({llm, cpu, nllb})
+		([llm, opus, nllb]) => created.setSettings({llm, opus, nllb})
 	);
 	// A switch takes effect at once (service.ts `setLlmModel`): the old model
 	// unloads once its running requests are done, later requests route anew.

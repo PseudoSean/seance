@@ -8,6 +8,7 @@
 import {activeLocale, t} from "../i18n/core";
 import friendlysize from "./friendlysize";
 import type {ModelRef} from "../translate/engine";
+import {listedSize} from "../translate/models";
 import {languageName} from "../translate/languages";
 import type {RouteBlock} from "../translate/router";
 
@@ -33,7 +34,7 @@ export function modelDisplayName(ref: Pick<ModelRef, "label">): string {
 }
 
 /** "Needs downloading <model> (<size>)", with the way to do it. */
-export function needsDownloadText(ref: Pick<ModelRef, "label" | "sizeBytes">): string {
+export function needsDownloadText(ref: Pick<ModelRef, "label"> & {sizeBytes: number}): string {
 	return t("translate.why.needsDownload", {
 		model: modelDisplayName(ref),
 		size: friendlysize(ref.sizeBytes),
@@ -93,7 +94,7 @@ export function translateWhyText(block: RouteBlock): string {
 		case "down":
 			return t("translate.why.down");
 		case "download":
-			return needsDownloadText(block.ref);
+			return needsDownloadText({label: block.ref.label, sizeBytes: listedSize(block.ref)});
 		default:
 			// "source" never reaches the UI (its questions pass a null source
 			// as one the detector will name) and "unserved" is a pair no model

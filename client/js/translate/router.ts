@@ -127,7 +127,7 @@ export function routeInput(
 		to: pair.to,
 		tier: capability?.tier ?? "none",
 		allowLlm: switches.llm,
-		allowCpu: switches.cpu,
+		allowCpu: switches.opus,
 		allowNllb: switches.nllb,
 		down,
 		wasm: capability ? !capability.reasons.includes("NO_WASM_SIMD") : false,
@@ -176,7 +176,7 @@ function candidateBlock(
 		return {kind: "unserved"};
 	}
 
-	const switches = {llm: true, cpu: true, nllb: true};
+	const switches = {llm: true, opus: true, nllb: true};
 
 	if (candidate === "llm") {
 		if (input.tier !== "gpu") {
@@ -284,7 +284,7 @@ export function explainRoute(
 	if (input.tier === "none") {
 		const why =
 			(input.capability
-				? modelBlock(catalog.nllb, input.capability, {llm: true, cpu: true, nllb: true})
+				? modelBlock(catalog.nllb, input.capability, {llm: true, opus: true, nllb: true})
 				: null) ?? ({kind: "device", reason: "NO_WASM_SIMD"} as const);
 
 		return {route: null, why, polish};

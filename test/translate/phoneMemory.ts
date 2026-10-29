@@ -23,7 +23,7 @@ import {routesFor} from "../../client/js/translate/routes.default";
 
 const GiB = 1024 * 1024 * 1024;
 const MiB = 1024 * 1024;
-const all = {llm: true, cpu: true, nllb: true};
+const all = {llm: true, opus: true, nllb: true};
 
 function device(overrides: Partial<Capability> = {}): Capability {
 	return {

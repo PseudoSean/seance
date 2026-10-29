@@ -5,7 +5,7 @@ import {setCatalog} from "../../client/js/i18n/core";
 import {translateWhyText} from "../../client/js/helpers/translateWhy";
 import {translateErrorText} from "../../client/js/helpers/translateErrors";
 import type {RouteBlock} from "../../client/js/translate/router";
-import {buildCatalog, type DeviceReason} from "../../client/js/translate/models";
+import {buildCatalog, listedSize, type DeviceReason} from "../../client/js/translate/models";
 import {TRANSLATION_UNAVAILABLE} from "../../client/js/translate/service";
 import {needsDownloadError} from "../../client/js/translate/consent";
 import friendlysize from "../../client/js/helpers/friendlysize";
@@ -135,7 +135,7 @@ describe("translateErrorText", () => {
 		const ref = buildCatalog().llm;
 		const expected = en["translate.why.needsDownload"]
 			.replace("{model}", en["translate.model.llm"].replace("{name}", "Qwen3 1.7B"))
-			.replace("{size}", friendlysize(ref.sizeBytes));
+			.replace("{size}", friendlysize(listedSize(ref)));
 
 		expect(translateErrorText(needsDownloadError(ref))).to.equal(expected);
 		expect(translateWhyText({kind: "download", ref})).to.equal(expected);

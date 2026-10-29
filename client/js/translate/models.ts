@@ -3,7 +3,7 @@
 // and the cache API the worker answers "is it downloaded" / "delete it"
 // with. A router candidate names a catalog entry, never a URL.
 
-import {EngineName, ModelRef, SmallBufferBuild} from "./engine";
+import {Device, DeviceChoice, DeviceCopy, EngineName, ModelRef, SmallBufferBuild} from "./engine";
 import type {Capability, CapabilityReason, Tier} from "./capability";
 
 /** What the route table lists: the LLM, NLLB, or an OPUS-MT pair. */
@@ -75,6 +75,28 @@ export const DEFAULT_OPUS_PAIRS: Record<string, string> = {
 const LLM_SIZE_BYTES = 984_000_000;
 const NLLB_SIZE_BYTES = 912_000_000;
 const OPUS_SIZE_BYTES = 113_000_000;
+// The GPU copies (spec translation-devices.md): NLLB's q4f16 encoder and
+// merged decoder; an OPUS pair's fp16 pair of files.
+const NLLB_GPU_SIZE_BYTES = 1_260_000_000; // 584 + 612 MiB and the tokenizer
+const OPUS_GPU_SIZE_BYTES = 210_000_000;
+const NLLB_GPU_LARGEST_BYTES = 524_709_888;
+
+/**
+ * An OPUS-MT pair's largest GPU binding: its shared embedding in fp16 (en-de
+ * measured, 59,495,424 bytes). Every pair takes this constant; the real
+ * figure varies a little with the pair's vocabulary, so it is approximate.
+ */
+export const OPUS_GPU_LARGEST_BYTES = 59_495_424;
+
+/**
+ * The 1.7B's CPU copy: the Q4_K_M GGUF wllama runs (the spike,
+ * tools/translate-eval/results/2026-10-29-cpu-llm.md).
+ */
+export const CPU_LLM_COPY: DeviceCopy = {
+	sizeBytes: 1_107_409_472,
+	source: "unsloth/Qwen3-1.7B-GGUF",
+	file: "Qwen3-1.7B-Q4_K_M.gguf",
+};
 
 function opusRef(pairKey: string, id: string): ModelRef {
 	const [from, to] = pairKey.split("-");
@@ -84,7 +106,15 @@ function opusRef(pairKey: string, id: string): ModelRef {
 		family: "opus",
 		id,
 		label: {kind: "opus", from, to},
-		sizeBytes: OPUS_SIZE_BYTES,
+		copies: {
+			cpu: {sizeBytes: OPUS_SIZE_BYTES, source: id, dtype: "q8"},
+			gpu: {
+				sizeBytes: OPUS_GPU_SIZE_BYTES,
+				source: id,
+				dtype: "fp16",
+				largestBufferBytes: OPUS_GPU_LARGEST_BYTES,
+			},
+		},
 		pair: [from, to],
 	};
 }
@@ -139,9 +169,15 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		family: "llm",
 		id: QWEN3_1_7B_ID,
 		label: {kind: "llm", name: "Qwen3 1.7B"},
-		sizeBytes: LLM_SIZE_BYTES,
+		copies: {
+			gpu: {
+				sizeBytes: LLM_SIZE_BYTES,
+				source: QWEN3_1_7B_ID,
+				largestBufferBytes: 155_582_464,
+			},
+			cpu: CPU_LLM_COPY,
+		},
 		vramBytes: 2_000_000_000,
-		largestBufferBytes: 155_582_464,
 		smallBuffer: {
 			id: QWEN3_1_7B_SPLIT_ID,
 			model: QWEN3_1_7B_PINNED_MODEL,
@@ -160,9 +196,14 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		family: "llm",
 		id: QWEN3_4B_ID,
 		label: {kind: "llm", name: "Qwen3 4B"},
-		sizeBytes: 2_280_000_000,
+		copies: {
+			gpu: {
+				sizeBytes: 2_280_000_000,
+				source: QWEN3_4B_ID,
+				largestBufferBytes: 194_478_080,
+			},
+		},
 		vramBytes: 3_400_000_000,
-		largestBufferBytes: 194_478_080,
 	},
 ];
 
@@ -251,7 +292,7 @@ export function smallBufferBuildFor(
 		return null;
 	}
 
-	if ((ref.largestBufferBytes ?? 0) <= maxBufferBytes) {
+	if ((ref.copies.gpu?.largestBufferBytes ?? 0) <= maxBufferBytes) {
 		return null;
 	}
 
@@ -268,7 +309,7 @@ export function buildIdFor(ref: ModelRef, maxBufferBytes: number | null | undefi
  * when it has one. Undefined for a model of unknown size (a deploy's own).
  */
 export function minBufferNeed(ref: ModelRef): number | undefined {
-	const own = ref.largestBufferBytes;
+	const own = ref.copies.gpu?.largestBufferBytes;
 	const small = ref.smallBuffer?.largestBufferBytes;
 
 	if (own === undefined) {
@@ -333,11 +374,12 @@ export type ModelBlock =
 /**
  * The user's engine switches (`translateLlm`, `translateCpu`,
  * `translateNllb`; service.ts `ServiceSettings`). `nllb` is NLLB-200's own
- * opt-in under the CPU switch: the OPUS-MT pairs run with `cpu` alone.
+ * opt-in; the OPUS-MT pairs run with `opus` alone.
  */
 export interface EngineSwitches {
 	llm: boolean;
-	cpu: boolean;
+	/** OPUS-MT's switch (the setting `translateCpu`, kept under its old name). */
+	opus: boolean;
 	nllb: boolean;
 }
 
@@ -405,7 +447,7 @@ export function modelBlock(
 		return {kind: "device", reason: "NO_WASM_SIMD"};
 	}
 
-	if (!switches.cpu) {
+	if (!switches.opus) {
 		return {kind: "off", engine: "seq2seq"};
 	}
 
@@ -482,7 +524,7 @@ function deployLlmRef(id: string, lib: string | undefined): ModelRef {
 		family: "llm",
 		id,
 		label: {kind: "llm", name: id.replace(/-q4f16_1-MLC$/, "").replace(/-/g, " ")},
-		sizeBytes: LLM_SIZE_BYTES,
+		copies: {gpu: {sizeBytes: LLM_SIZE_BYTES, source: id}},
 	};
 
 	if (lib) {
@@ -577,6 +619,8 @@ export function buildCatalog(
 		llmChoices.push(deployLlmRef(llmId, lib));
 	}
 
+	// A deploy's own NLLB/OPUS ids get both copies: the same repo layout
+	// (q8 and q4f16/fp16 files side by side) is assumed.
 	const nllbId = options.cpu?.nllb ?? DEFAULT_NLLB_ID;
 	const pairs = {...DEFAULT_OPUS_PAIRS, ...(options.cpu?.opus ?? {})};
 	const opus: Record<string, ModelRef> = {};
@@ -596,7 +640,15 @@ export function buildCatalog(
 			family: "nllb",
 			id: nllbId,
 			label: {kind: "nllb"},
-			sizeBytes: NLLB_SIZE_BYTES,
+			copies: {
+				cpu: {sizeBytes: NLLB_SIZE_BYTES, source: nllbId, dtype: "q8"},
+				gpu: {
+					sizeBytes: NLLB_GPU_SIZE_BYTES,
+					source: nllbId,
+					dtype: "q4f16",
+					largestBufferBytes: NLLB_GPU_LARGEST_BYTES,
+				},
+			},
 		},
 		opus,
 	};
@@ -675,4 +727,33 @@ export async function cacheStates(
 			cached: await api.has(ref).catch(() => false),
 		}))
 	);
+}
+
+/** A device setting as stored: anything but the three values reads as "auto". */
+export function normalizeDeviceChoice(value: unknown): DeviceChoice {
+	return value === "gpu" || value === "cpu" || value === "auto" ? value : "auto";
+}
+
+/** The user's three device settings, by the model each governs. */
+export interface DeviceChoices {
+	llm: DeviceChoice;
+	opus: DeviceChoice;
+	nllb: DeviceChoice;
+}
+
+/** The device setting that governs `ref`'s family. */
+export function choiceFor(ref: ModelRef, choices: DeviceChoices): DeviceChoice {
+	return choices[ref.family];
+}
+
+/**
+ * The download size a plain listing shows for `ref`: the copy of the device
+ * its engine slot runs on today (the language model's GPU copy, the CPU
+ * copy of OPUS-MT and NLLB-200), else the other's; 0 when it lists none.
+ * Task 10 makes Settings per-device.
+ */
+export function listedSize(ref: Pick<ModelRef, "engine" | "copies">): number {
+	const {gpu, cpu} = ref.copies;
+
+	return (ref.engine === "llm" ? gpu ?? cpu : cpu ?? gpu)?.sizeBytes ?? 0;
 }

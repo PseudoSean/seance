@@ -68,8 +68,7 @@ describe("translate small-buffer build", () => {
 			expect(small.smallBuffer?.largestBufferBytes).to.equal(75_968 * 1024);
 			expect(minBufferNeed(small)).to.equal(77_791_232);
 			expect(minBufferNeed(large)).to.equal(194_478_080);
-			expect(minBufferNeed({...small, largestBufferBytes: undefined, smallBuffer: undefined}))
-				.to.be.undefined;
+			expect(minBufferNeed({...small, copies: {}, smallBuffer: undefined})).to.be.undefined;
 		});
 	});
 

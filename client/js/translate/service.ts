@@ -94,7 +94,7 @@ export interface ServiceOptions {
 
 export interface ServiceSettings {
 	llm: boolean;
-	cpu: boolean;
+	opus: boolean;
 	/** NLLB-200 switched on: its licence is non-commercial, so it is opt-in. */
 	nllb: boolean;
 }
@@ -549,7 +549,7 @@ export class TranslateService {
 			this.afterEngineIdle("llm");
 		}
 
-		if (before.cpu && !settings.cpu) {
+		if (before.opus && !settings.opus) {
 			this.afterEngineIdle("seq2seq");
 		}
 	}
@@ -1450,7 +1450,7 @@ export class TranslateService {
 			return;
 		}
 
-		const allowed = engine === "llm" ? this.settings.llm : this.settings.cpu;
+		const allowed = engine === "llm" ? this.settings.llm : this.settings.opus;
 
 		if (!allowed) {
 			this.unloadEngine(engine);
