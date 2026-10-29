@@ -1123,3 +1123,90 @@ and a granted permission subscribes at once. Nothing to test under mocha
 WebKit functions. On a device: open the app once with notifications
 allowed — the lobby's `WEBPUSH REGISTER` echo, and Settings → Notifications
 no longer saying blocked, are the signs.
+
+### Diagnostics: the device says where push stops (2026-10-26)
+
+Three fixes made from WebKit's source and no device later, iPhones still
+reported no push — and nobody debugging it can hold one. So the device
+reports instead. **Settings → Notifications → Diagnostics** (a fold under
+the push section) builds a text report to copy (`webpush.ts`
+`diagnostics`): the build and page, the user agent, whether the page is
+standalone and secure, the Push API and permission state, the device-wide
+answers (`thelounge.push.neverAsk`, the consent, the key-change policy);
+for each saved network its push flag, SASL account, connection, the key the
+server announced, the stored entry, the push-only registration (active /
+installing / waiting) and the browser's live subscription; every service
+worker registration on the origin with its subscription; the page's
+**journal** — what `maybePrompt` decided on each connect and why (no SASL,
+no key, push off, iOS not installed, permission denied, entry matches,
+declined, policy, silent subscribe, asking), what `subscribeNow` saw (the
+permission before and after asking, the registration's state and existing
+subscription, a subscription made against another key dropped, the
+browser's answer or its error by name and message, the REGISTER sent) and
+every `webpush:state` the server returned; and the **worker's log**
+(`service-worker.js` `logPush`, IndexedDB `pushlog`, the last 40): each
+activation with its build and network, each push with its kind (message,
+read relay, generic, unparsed, error), its size, whether the strict rule
+applied and how many notifications it showed, a `showNotification` that
+failed in all three forms, every `pushsubscriptionchange`, every click.
+Endpoints are shown as host and path tail and keys by their first
+characters: the whole endpoint is a capability, and the report is meant to
+be pasted where others read it. **Subscribe now** subscribes every
+connected network that announced a key, as a tap — the user gesture a
+subscription may need and the manual road whatever the silent path did —
+and the journal then holds the browser's own words for what came of it.
+Copy uses the clipboard and otherwise selects the report.
+
+Reading a report: `permission=granted` with `registration: none` and
+`browser subscription: none` after a connect line saying "subscribing
+silently" is a `subscribe()` that failed — its error is in the journal;
+`browser subscription` present but no `server … acknowledged` line is the
+REGISTER not reaching or not pleasing the server; a subscription
+acknowledged and a worker log without a single `push` line is the push
+never arriving at the device — the server's log (`WebPush: delivery …`) is
+the next place to look; `push … shown=0` under `strict=true` is a silent
+push, three of which WebKit answers by revoking.
+
+Apple's push service, probed from here with a throwaway key and a bogus
+device token (`tools/`-less, in the job's scratch): it validates the
+`Authorization` before the token — no header `403 BadAuthorizationHeader`,
+an unparsable key `403 BadVapidPublicKey`, a wrong `aud` or `alg=none`
+`403 BadJwtToken` — and the ircd's exact JWT shape (`vapid t=…, k=…`, the
+endpoint's origin as `aud`, a `mailto:` subject, `exp` at 24 h; even an
+expired `exp`) reached `400 BadWebPushToken`, the token check. So the
+ircd's request is one Apple accepts; what Apple answers for a real token is
+in the ircd's log alone.
+
+Tests: `test/tests/service-worker.ts` § push log (a message, a read relay
+and an unparsable push each logged with its outcome and `shown`, a dropped
+push `shown=0`, the activation line, a click). Nothing under mocha covers
+`diagnostics()` (`webpush.ts` is Vue + store).
+
+### The read relay on Chrome: a brief "Marked as read" (2026-10-29)
+
+Reported once iOS worked: Chrome and Android users get Chrome's "This
+site has been updated in the background" around push notifications. Not a
+new silent path — every iOS addition is behind `strictUserVisible()` — but
+the one that was always there, now more frequent: the **read relay**
+(`:server MARKREAD <target> timestamp=…`, which nefarious2 pushes to every
+subscription of the account once a pushed conversation is read anywhere,
+`webpush_claim_outstanding`). The worker's job for it is to close, and
+Chrome counts the notifications visible on the registration when the push
+event ends: a relay that closed the last one, or found none — the reading
+device itself when it is not in the foreground (Mark read from the shade,
+or backgrounded within the seconds the relay takes), and every other device
+whose page already closed its copy on the `markread` echo — is a silent
+push. Chrome spends the origin's engagement budget on it and then shows the
+generic. With iPhones back in the subscription set and reads coming from
+phones, the relays multiplied.
+
+Now, on a tag-replacing browser, a relay that leaves no push notification up
+on the registration shows a silent "Marked as read" (`keepChromeCount`,
+tag `push-<network>/read/<target>`) and the worker closes it
+`BRIEF_READ_STUB_MS` (4 s) later — Chrome never refuses a close, and it
+counts at the event's end, which the stub outlives. A notification for
+another conversation still up is count enough and no stub is shown. The
+relay itself stays: removing Mark read would not remove it (reading in the
+app moves the same marker), and the phone in a pocket relies on it. Tests:
+`test/tests/service-worker.ts` (the brief stub and its close, no stub beside
+another conversation's notification, a relay with nothing to close).

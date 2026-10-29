@@ -113,6 +113,10 @@ self.addEventListener("install", function (event) {
 });
 
 self.addEventListener("activate", function (event) {
+	event.waitUntil(
+		logPush("activate build=" + cacheName + (pushOnly ? " network=" + scopeNetwork : " root"))
+	);
+
 	if (pushOnly) {
 		// The cache belongs to the root worker; a push-only one of another
 		// build must not sweep it, and there are no clients to claim.
@@ -1330,6 +1334,25 @@ let pushChain = Promise.resolve();
  * shown, so its deadline knows it has answered WebKit. */
 let activePush = null;
 
+/** The worker's own account of what it did — each push and its outcome,
+ * a show that failed, a subscription change, an activation — kept in
+ * IndexedDB (`pushlog`, newest last) for Settings → Notifications →
+ * Diagnostics (webpush.ts `diagnostics`): the one way to learn what happened
+ * on a device nobody debugging it can hold. Never awaited ahead of a
+ * notification that must still be shown. */
+const PUSH_LOG_CAP = 40;
+/** Notifications shown so far (showSafely): a push's outcome line says
+ * whether it showed one. */
+let notificationsShown = 0;
+
+async function logPush(text) {
+	try {
+		await idbAppend("pushlog", new Date().toISOString() + " " + text, PUSH_LOG_CAP);
+	} catch (e) {
+		// no storage, no log
+	}
+}
+
 function handlePush(raw) {
 	if (!strictUserVisible()) {
 		return enqueuePush(() => handlePushNow(raw));
@@ -1570,6 +1593,8 @@ function fromJson(json) {
 }
 
 async function handlePushNow(raw, state = {fellBack: false}) {
+	const before = notificationsShown;
+	let outcome = "unparsed";
 	let json = null;
 
 	// RFC 8188 says the decrypter strips the aes128gcm padding delimiter
@@ -1595,6 +1620,7 @@ async function handlePushNow(raw, state = {fellBack: false}) {
 
 		// Another device read a channel (JSON opt-down tier): close what we show for it.
 		if (json && json.t === "read") {
+			outcome = "read-relay " + json.target;
 			await readRelay(json.target, json.ts, strict);
 			return;
 		}
@@ -1623,19 +1649,29 @@ async function handlePushNow(raw, state = {fellBack: false}) {
 
 		// The same relay as a MARKREAD line (the full tier).
 		if (parsed && parsed.command === "MARKREAD") {
+			outcome = "read-relay " + parsed.target;
 			await readRelay(parsed.target, parsed.timestamp, strict);
 			return;
 		}
 
 		if (parsed && (parsed.command === "PRIVMSG" || parsed.command === "NOTICE")) {
+			// The conversation, as the notification is tagged: the sender of a PM.
+			outcome =
+				"message " +
+				parsed.command +
+				" " +
+				(isChannelName(parsed.target) ? parsed.target : parsed.nick);
 			await showMessage(P, parsed, true, strict);
 			return;
 		}
 
 		// userVisibleOnly means every push should surface something.
+		outcome = "generic";
 		await showGeneric();
 		await updateBadge();
 	} catch (e) {
+		outcome = "error " + ((e && e.name) || "Error") + ": " + ((e && e.message) || e);
+
 		// Whatever failed above, the prefs' locale may or may not have been
 		// applied — a push that dies before it leaves a locale a previous
 		// push installed, which must not leak into the fallback copy.
@@ -1653,6 +1689,18 @@ async function handlePushNow(raw, state = {fellBack: false}) {
 		}
 
 		await updateBadge().catch(() => undefined);
+	} finally {
+		await logPush(
+			"push " +
+				outcome +
+				" bytes=" +
+				raw.length +
+				" strict=" +
+				strict +
+				" shown=" +
+				(notificationsShown - before) +
+				(state.fellBack ? " fellBack" : "")
+		);
 	}
 }
 
@@ -1673,9 +1721,49 @@ async function readRelay(target, ts, strict) {
 
 	if (strict) {
 		await showReadStub(target, ts);
+	} else {
+		await keepChromeCount(target);
 	}
 
 	await updateBadge();
+}
+
+/** How long the brief "Marked as read" stays on a tag-replacing browser:
+ * past the end of the push event, which is when Chrome counts. */
+const BRIEF_READ_STUB_MS = 4000;
+
+/** Chrome counts the notifications visible on this registration when the
+ * push event ends, and a read relay that closed the last one — or found
+ * nothing, the common case on the device that did the reading, or whose
+ * page closed its copy on the MARKREAD echo already — leaves none: a silent
+ * push, which spends the origin's budget and then shows Chrome's own "This
+ * site has been updated in the background". So when nothing is left up, a
+ * silent "Marked as read" takes the count to one for the event's end and is
+ * closed a few seconds later (Chrome never refuses a close); another
+ * conversation's notification still up is count enough. */
+async function keepChromeCount(target) {
+	const up = (await self.registration.getNotifications()).filter(
+		(n) => n.tag && n.tag.startsWith("push-")
+	);
+
+	if (up.length > 0) {
+		return;
+	}
+
+	const network = await networkOf();
+	const tag = tagFor(network, "read/" + foldName(target || ""));
+
+	await showSafely(appName, {
+		tag,
+		silent: true,
+		icon: "img/icon-192.png",
+		body: t("sw.markedRead"),
+		data: {kind: "read", target, network: network || undefined},
+	});
+
+	setTimeout(() => {
+		void closeStub(tag);
+	}, BRIEF_READ_STUB_MS);
 }
 
 async function showReadStub(target, ts) {
@@ -2025,14 +2113,17 @@ async function showSafely(title, options) {
 		activePush.shown = true;
 	}
 
+	let failure = null;
+
 	// Which copy under a tag is the newest (WebKit keeps them all; `tidy`).
 	options = {...options, data: {...(options.data || {}), shownAt: Date.now()}};
 
 	try {
 		await self.registration.showNotification(title, options);
+		notificationsShown++;
 		return;
 	} catch (e) {
-		// fall through to the reduced forms
+		failure = e; // fall through to the reduced forms
 	}
 
 	try {
@@ -2042,15 +2133,24 @@ async function showSafely(title, options) {
 			silent: options.silent === true,
 			data: {shownAt: options.data.shownAt},
 		});
+		notificationsShown++;
 		return;
 	} catch (e) {
-		// fall through to the bare form
+		failure = e; // fall through to the bare form
 	}
 
 	try {
 		await self.registration.showNotification(title, {});
+		notificationsShown++;
 	} catch (e) {
-		// nothing else to try
+		// nothing else to try: say so where the page can read it
+		failure = e;
+		void logPush(
+			"show failed " +
+				((failure && failure.name) || "Error") +
+				": " +
+				((failure && failure.message) || failure)
+		);
 	}
 }
 
@@ -2136,7 +2236,14 @@ function parsePushLine(line) {
 // connection; when credentials are not stashed, ask any open page to redo it
 // from the UI instead.
 self.addEventListener("pushsubscriptionchange", function (event) {
-	event.waitUntil(handleResubscribe(event.oldSubscription, event.newSubscription));
+	event.waitUntil(
+		logPush(
+			"pushsubscriptionchange old=" +
+				Boolean(event.oldSubscription) +
+				" new=" +
+				Boolean(event.newSubscription)
+		).then(() => handleResubscribe(event.oldSubscription, event.newSubscription))
+	);
 });
 
 async function handleResubscribe(oldSub, newSub) {
@@ -2387,6 +2494,10 @@ async function doneWith(data) {
 
 self.addEventListener("notificationclick", function (event) {
 	const data = event.notification.data || {};
+
+	void logPush(
+		"click action=" + (event.action || "open") + " tag=" + (event.notification.tag || "")
+	);
 
 	// Reply: an inline text field where the platform has one (event.reply),
 	// a plain button elsewhere — that one opens the conversation to type in.
