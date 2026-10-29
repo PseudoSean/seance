@@ -1,10 +1,12 @@
 // Settings → Translation on the in-page fake worker (client/js/translate/
 // fakePort.ts, reached with ?fakeTranslate on a development build): the
-// language select, the formality radios, the two engine toggles, the GPU
-// model choice, and the model manager — download with a progress bar, the
-// row turning "Downloaded", delete turning it back — plus the choices
-// surviving a reload, and the next GPU translation running on the chosen
-// model. Nothing in `yarn test` renders the tab.
+// language select, the formality radios, the engine switches, the language
+// model choice, and the model manager — a copy's download with a progress
+// bar, its line turning "Downloaded · <size>", Remove turning it back — plus
+// the choices surviving a reload, and Run on: CPU for the language model
+// (from Automatic, which then runs the 1.7B) showing its CPU copy's
+// "Not downloaded · <size>" line with a Download button. Nothing in
+// `yarn test` renders the tab.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/translate-settings.mjs
@@ -28,14 +30,21 @@ const BASE = process.env.SEANCE_HTTP || "http://localhost:8021/";
 // English copy, so a scenario that hardcodes a label goes stale the moment
 // someone rewords it (and would have passed a wrong rewording).
 const EN = JSON.parse(readFileSync("client/locales/en.json", "utf8"));
+// The interface is German from the language step on (the CPU step reads it in German).
+const DE = JSON.parse(readFileSync("client/locales/de.json", "utf8"));
 
 export const url = `${BASE}?fakeTranslate`;
 
 const ROW = (id) => `.translate-model[data-model="${id}"]`;
-const STATE = (id) =>
-	`document.querySelector('${ROW(id)} .translate-model-state')?.textContent.trim()`;
+const COPY = (id, device = "gpu") => `${ROW(id)} .translate-copy[data-device="${device}"]`;
+const STATE = (id, device = "gpu") =>
+	`document.querySelector('${COPY(id, device)} .translate-copy-state')?.textContent.trim()`;
 const STORED = (key) => `JSON.parse(localStorage.getItem("settings") ?? "{}").${key} ?? null`;
 const SMALL = "Qwen3-1.7B-q4f16_1-MLC";
+// models.ts: the 1.7B's GPU copy and its CPU copy (CPU_LLM_COPY), as friendlysize.ts writes them.
+const SMALL_GPU_SIZE = "938.4 MiB";
+const SMALL_CPU_SIZE = "1 GiB";
+const sized = (key, size) => EN[key].replace("{size}", size);
 const LARGE = "Qwen3-4B-q4f16_1-MLC";
 /** The data-model of every row marked "In use", joined: exactly one is expected. */
 const IN_USE = `[...document.querySelectorAll(".translate-model-in-use")].map((el) => el.closest(".translate-model").dataset.model).join(",")`;
@@ -116,8 +125,8 @@ export default async function run(page) {
 		label: "settings open",
 	});
 	await page.click(`.settings-menu button.translation`);
-	await page.waitFor(`document.querySelectorAll(".translate-model").length >= 4`, {
-		label: "model rows rendered",
+	await page.waitFor(`document.querySelectorAll(".translate-copy").length >= 4`, {
+		label: "copy lines rendered",
 	});
 
 	const llmId = SMALL;
@@ -151,8 +160,9 @@ export default async function run(page) {
 		)
 	);
 	page.check(
-		"LLM row not downloaded",
-		(await page.evaluate(STATE(llmId))) === EN["translate.model.notDownloaded"]
+		"LLM GPU copy not downloaded, with its size",
+		(await page.evaluate(STATE(llmId))) ===
+			sized("translate.model.copyNotDownloaded", SMALL_GPU_SIZE)
 	);
 	page.check(
 		"language defaults to Automatic, named for the browser's language",
@@ -171,25 +181,39 @@ export default async function run(page) {
 	);
 	await page.screenshot("translation-settings");
 
-	// Download the LLM: a progress bar, then "Downloaded" and a Delete button.
-	await page.click(`${ROW(llmId)} .translate-model-download`);
-	await page.waitFor(`!!document.querySelector('${ROW(llmId)} .translate-model-fill')`, {
+	// Download the LLM's GPU copy: a progress bar, then "Downloaded · <size>"
+	// and a Remove button; its CPU copy is untouched.
+	await page.evaluate(
+		`document.querySelector('${COPY(llmId)}').scrollIntoView({block: "center"})`
+	);
+	await page.click(`${COPY(llmId)} .translate-copy-download`);
+	await page.waitFor(`!!document.querySelector('${COPY(llmId)} .translate-copy-fill')`, {
 		label: "progress bar up",
 	});
 	await page.screenshot("translation-downloading");
-	await page.waitFor(`${STATE(llmId)} === ${JSON.stringify(EN["translate.model.downloaded"])}`, {
-		timeout: 10000,
-		label: "downloaded",
-	});
-	page.check(
-		"delete offered",
-		!!(await page.evaluate(`document.querySelector('${ROW(llmId)} .translate-model-delete')`))
-	);
-
-	await page.click(`${ROW(llmId)} .translate-model-delete`);
 	await page.waitFor(
-		`${STATE(llmId)} === ${JSON.stringify(EN["translate.model.notDownloaded"])}`,
-		{label: "deleted"}
+		`${STATE(llmId)} === ${JSON.stringify(
+			sized("translate.model.copyDownloaded", SMALL_GPU_SIZE)
+		)}`,
+		{timeout: 10000, label: "downloaded"}
+	);
+	page.check(
+		"remove offered",
+		!!(await page.evaluate(`document.querySelector('${COPY(llmId)} .translate-copy-remove')`))
+	);
+	page.check(
+		"the CPU copy is still not downloaded",
+		(await page.evaluate(STATE(llmId, "cpu"))) ===
+			sized("translate.model.copyNotDownloaded", SMALL_CPU_SIZE)
+	);
+	await page.screenshot("translation-downloaded");
+
+	await page.click(`${COPY(llmId)} .translate-copy-remove`);
+	await page.waitFor(
+		`${STATE(llmId)} === ${JSON.stringify(
+			sized("translate.model.copyNotDownloaded", SMALL_GPU_SIZE)
+		)}`,
+		{label: "removed"}
 	);
 
 	// The settings write through the window's onChange handler. The language
@@ -299,6 +323,63 @@ export default async function run(page) {
 		label: "4B still in use after the reload",
 	});
 
+	// Run on: CPU for the language model. From Automatic, which the fake
+	// adapter resolves to the 4B: the 4B has no CPU copy, so Automatic runs
+	// the 1.7B there (models.ts llmChoice) and the CPU is open.
+	await page.evaluate(
+		`(() => {
+			const el = document.querySelector('select[name="translateLlmModel"]');
+			el.value = "";
+			el.dispatchEvent(new Event("change", {bubbles: true}));
+		})()`
+	);
+	const CPU_RADIO = `input[name="translateLlmDevice"][value="cpu"]`;
+
+	page.check(
+		"Run on starts on Auto, saying it picks the GPU",
+		(await page.evaluate(
+			`document.querySelector('input[name="translateLlmDevice"][value="auto"]').checked`
+		)) &&
+			(await page.evaluate(
+				`document.querySelector('.translate-family[data-family="llm"] .translate-auto')?.textContent.trim()`
+			)) === DE["translate.settings.autoPicksGpu"]
+	);
+	page.check(
+		"the language model's CPU is open under Automatic",
+		(await page.evaluate(`document.querySelector('${CPU_RADIO}').disabled`)) === false
+	);
+	await page.evaluate(`document.querySelector('${CPU_RADIO}').scrollIntoView({block: "center"})`);
+	await page.click(CPU_RADIO);
+	await page.waitFor(`${STORED("translateLlmDevice")} === "cpu"`, {label: "CPU stored"});
+	await page.waitFor(`(${IN_USE}) === ${JSON.stringify(SMALL)}`, {
+		label: "the 1.7B in use on the CPU",
+	});
+	page.check(
+		"no Auto line once a device is pinned",
+		!(await page.evaluate(
+			`!!document.querySelector('.translate-family[data-family="llm"] .translate-auto')`
+		))
+	);
+	page.check(
+		`the CPU copy says "Not downloaded · ${SMALL_CPU_SIZE}", in German`,
+		(await page.evaluate(STATE(SMALL, "cpu"))) ===
+			DE["translate.model.copyNotDownloaded"].replace("{size}", SMALL_CPU_SIZE)
+	);
+	page.check(
+		"the CPU copy has a Download button",
+		(await page.evaluate(
+			`document.querySelector('${COPY(SMALL, "cpu")} .translate-copy-download')?.disabled`
+		)) === false
+	);
+	await page.evaluate(
+		`document.querySelector('.translate-family[data-family="llm"]').scrollIntoView({block: "start"})`
+	);
+	await page.screenshot("translation-llm-cpu");
+	// Back to Auto and the 4B for what follows.
+	await page.click(`input[name="translateLlmDevice"][value="auto"]`);
+	await page.waitFor(`${STORED("translateLlmDevice")} === "auto"`, {label: "Auto stored"});
+	await chooseLlm(page, LARGE);
+
 	// THE LINK, from the other side: the dev sidebar globe writes the same
 	// `locale` setting, so its select shows the pick the Translation tab
 	// made. Close the pane first — the backdrop eats sidebar clicks — then
@@ -307,6 +388,13 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector("#footer button.settings")`, {
 		label: "settings closed",
 	});
+
+	// On a phone the globe is in the off-canvas sidebar.
+	if (!(await page.evaluate(FOOTER_VISIBLE))) {
+		await page.click(`button.lt`);
+		await page.waitFor(FOOTER_VISIBLE, {label: "sidebar open"});
+	}
+
 	await page.click(`.locale-toggle`);
 	await page.waitFor(`!!document.querySelector("#locale-popover select")`, {
 		label: "globe popover open",

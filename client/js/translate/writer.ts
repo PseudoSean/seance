@@ -390,6 +390,7 @@ export async function translateOutgoing(
 					from,
 					requestFrom: from,
 					engine: engineFor(route),
+					device: route?.device,
 					model: route?.ref.id ?? null,
 				},
 			});

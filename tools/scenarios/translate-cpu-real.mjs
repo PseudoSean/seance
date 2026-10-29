@@ -6,7 +6,7 @@
 //
 // Steps: the GPU tier is switched off in settings before the page boots, so
 // every route falls to a CPU model; Settings → Translation downloads
-// Xenova/opus-mt-en-de and the row must read "Downloaded"; then the page
+// Xenova/opus-mt-en-de and its CPU copy must read "Downloaded · <size>"; then the page
 // connects to the dev ircd and translates an English sentence into German
 // through the dev console hook (`window.seanceTranslate`), which must come
 // back non-empty and different from the input. With SEANCE_REAL_MODELS=all
@@ -51,7 +51,9 @@ const NETWORK_TIMEOUT = 120000;
 
 const ROW = (id) => `.translate-model[data-model="${id}"]`;
 const STATE = (id) =>
-	`document.querySelector('${ROW(id)} .translate-model-state')?.textContent.trim()`;
+	`document.querySelector('${ROW(
+		id
+	)} .translate-copy[data-device="cpu"] .translate-copy-state')?.textContent.trim()`;
 const STORE = `document.getElementById("app").__vue_app__.config.globalProperties.$store.state`;
 // The CPU copy's view: the store lists one view per copy.
 const VIEW = (id) =>
@@ -146,16 +148,19 @@ export default async function run(page) {
 		label: "settings open",
 	});
 	await page.click(`.settings-menu button.translation`);
-	await page.waitFor(`document.querySelectorAll(".translate-model").length >= 3`, {
-		label: "model rows rendered",
+	await page.waitFor(`document.querySelectorAll(".translate-copy").length >= 3`, {
+		label: "copy lines rendered",
 	});
-	await page.waitFor(`!!document.querySelector('${ROW(OPUS)} .translate-model-download')`, {
-		label: "the OPUS row's download button",
-	});
+	await page.waitFor(
+		`!!document.querySelector('${ROW(
+			OPUS
+		)} .translate-copy[data-device="cpu"] .translate-copy-download')`,
+		{label: "the OPUS pair's CPU Download"}
+	);
 
 	const downloadStarted = Date.now();
 
-	await page.click(`${ROW(OPUS)} .translate-model-download`);
+	await page.click(`${ROW(OPUS)} .translate-copy[data-device="cpu"] .translate-copy-download`);
 	// "ready" or "failed" — a failed load keeps its reason on the view, which
 	// is what the run prints when this check goes red.
 	await page.waitFor(
@@ -172,7 +177,7 @@ export default async function run(page) {
 	await page.screenshot("cpu-real-downloaded");
 	page.check(
 		`${OPUS} downloaded and loaded`,
-		(await page.evaluate(STATE(OPUS))) === "Downloaded" && view.error === null
+		(await page.evaluate(STATE(OPUS)))?.startsWith("Downloaded ·") && view.error === null
 	);
 
 	if (view.status !== "ready") {

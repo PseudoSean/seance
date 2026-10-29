@@ -70,9 +70,9 @@ function cpuLlmName(): string {
 }
 
 /**
- * The CPU threads line under the CPU models in Settings (Task 10 renders
- * it): how many threads the language model takes, or that a reload brings
- * them; nothing where the page can never be isolated.
+ * The CPU threads line in Settings' device line (reader.ts
+ * `cpuThreadsLine`): how many threads the language model takes, or that a
+ * reload brings them; nothing where the page can never be isolated.
  */
 export function threadsText(isolation: Isolation, count: number): string {
 	switch (isolation) {

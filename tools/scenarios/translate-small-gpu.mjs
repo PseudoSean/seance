@@ -9,7 +9,7 @@
 //             (localStorage thelounge.state.gpuTestLimitMiB)
 //   desktop   the same GPU, no switch
 //
-// On the first two the 1.7B row says it runs, with the line naming the
+// On the first two the 1.7B's GPU copy line can download, with the line naming the
 // small-buffer build and its 74.2 MiB largest buffer, the device line says
 // 128 MiB (and, switched, that a test setting holds it there), the 4B says
 // it cannot with its own numbers, and Download is enabled. Download on the
@@ -19,7 +19,7 @@
 // app's own subpath URL (the server's log, and WebLLM's "webllm/wasm" key) —
 // and no weight shard: the worker has no WebGPU here, so WebLLM stops at its
 // device check, after the library and before the weights. On the desktop
-// nothing of the build is fetched or seeded and the row carries no build line;
+// nothing of the build is fetched or seeded and the copy line carries no build line;
 // its Download reads the model's own resolve/main/ config instead.
 //
 // No ircd and no model run. Serve public/ under a subpath with a request log
@@ -94,7 +94,8 @@ const GPU_STUB = `(() => {
 	Object.defineProperty(Navigator.prototype, "gpu", {configurable: true, get: () => gpu});
 })();`;
 
-const ROW = (id) => `.translate-model[data-model=${JSON.stringify(id)}]`;
+const ROW = (id) =>
+	`.translate-model[data-model=${JSON.stringify(id)}] .translate-copy[data-device="gpu"]`;
 const textOf = (selector) =>
 	`((document.querySelector(${JSON.stringify(selector)}) || {}).textContent || "").trim()`;
 
@@ -179,18 +180,15 @@ export default async function run(page) {
 		);
 		await page.send("Page.reload");
 		await page.waitFor(
-			`!window.__coldLoad && document.querySelectorAll(".translate-model").length >= 3`,
+			`!window.__coldLoad && document.querySelectorAll(".translate-copy").length >= 3`,
 			{
-				label: `${name}: model rows`,
+				label: `${name}: copy lines`,
 				timeout: 30000,
 			}
 		);
-		await page.waitFor(
-			`![...document.querySelectorAll(".translate-model-runs")].some((el) => el.textContent.trim() === ${JSON.stringify(
-				EN["translate.why.probing"]
-			)})`,
-			{label: `${name}: probe answered`}
-		);
+		await page.waitFor(`!!document.querySelector(".translate-device")`, {
+			label: `${name}: probe answered`,
+		});
 	};
 
 	const rows = async (name) => {
@@ -218,16 +216,10 @@ export default async function run(page) {
 				: testLine === ""
 		);
 		page.check(
-			`${name}: the 1.7B runs here`,
-			(await page.evaluate(
-				`document.querySelector(${JSON.stringify(small)}).dataset.runs`
-			)) === "runs"
-		);
-		page.check(
-			`${name}: its Download is enabled`,
+			`${name}: the 1.7B runs here: its GPU Download is enabled`,
 			(await page.evaluate(
 				`!!document.querySelector(${JSON.stringify(
-					small + " .translate-model-download:not([disabled])"
+					small + " .translate-copy-download:not([disabled])"
 				)})`
 			)) === true
 		);
@@ -249,9 +241,11 @@ export default async function run(page) {
 			page.check(
 				`${name}: the 4B cannot, with its own numbers`,
 				(await page.evaluate(
-					`document.querySelector(${JSON.stringify(large)}).dataset.runs`
-				)) === "cannot" &&
-					(await page.evaluate(textOf(`${large} .translate-model-why`))) ===
+					`!!document.querySelector(${JSON.stringify(
+						large + " .translate-copy-download[disabled]"
+					)})`
+				)) &&
+					(await page.evaluate(textOf(`${large} .translate-copy-why`))) ===
 						fill(EN["translate.model.needsBuffer"], {
 							needed: size(LARGE_BYTES),
 							limit: size(128 * MiB),
@@ -262,21 +256,24 @@ export default async function run(page) {
 			page.check(
 				`${name}: the 4B runs too`,
 				(await page.evaluate(
-					`document.querySelector(${JSON.stringify(large)}).dataset.runs`
-				)) === "runs"
+					`!!document.querySelector(${JSON.stringify(
+						large + " .translate-copy-download:not([disabled])"
+					)})`
+				)) === true
 			);
 		}
 
-		// The row's size is the model's download either way.
+		// The copy's size is the model's download either way.
 		page.check(
 			`${name}: the 1.7B's size is the model's own download`,
-			(await page.evaluate(textOf(`${small} .translate-model-size`))) === size(984_000_000)
+			(await page.evaluate(textOf(`${small} .translate-copy-state`))) ===
+				fill(EN["translate.model.copyNotDownloaded"], {size: size(984_000_000)})
 		);
 	};
 
 	/** Download the 1.7B, and wait for the load to stop (no WebGPU in the worker). */
 	const download = async (name) => {
-		await page.click(`${ROW(SMALL)} .translate-model-download`);
+		await page.click(`${ROW(SMALL)} .translate-copy-download`);
 		await page.waitFor(
 			`["failed", "ready"].includes(document.querySelector(${JSON.stringify(
 				ROW(SMALL)
@@ -284,7 +281,7 @@ export default async function run(page) {
 			{label: `${name}: the load stopped`, timeout: 120000}
 		);
 
-		return page.evaluate(textOf(`${ROW(SMALL)} .translate-model-state`));
+		return page.evaluate(textOf(`${ROW(SMALL)} .translate-copy-state`));
 	};
 
 	// ------------------------------------------------------------- phone

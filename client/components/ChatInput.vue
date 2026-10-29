@@ -689,7 +689,7 @@ export default defineComponent({
 			const from = entry.requestFrom
 				? readerName(entry.requestFrom)
 				: t("translate.strip.sourceAuto");
-			const gpu = entry.engine === "llm";
+			const gpu = entry.device === "gpu";
 			// One whole phrase per shape (device × retried): no translated
 			// fragment is ever glued onto another, and every key is a literal
 			// the pot check can see.
@@ -714,9 +714,12 @@ export default defineComponent({
 				return "";
 			}
 
-			// One view per copy: the one downloading is the route's.
+			// One view per copy: the route's own, on the device it runs on.
 			const view = store.state.translation.models.find(
-				(v) => v.ref.id === entry.model && v.status === "downloading"
+				(v) =>
+					v.ref.id === entry.model &&
+					(!entry.device || v.device === entry.device) &&
+					v.status === "downloading"
 			);
 
 			return view ? loadNoteText(loadNote(view)) : "";

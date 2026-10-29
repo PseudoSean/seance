@@ -12811,17 +12811,17 @@ msgctxt "translate.capability.bufferLimit"
 msgid "Largest GPU buffer: {size}"
 msgstr "Najväčšia vyrovnávacia pamäť GPU: {size}"
 
-#. Line at the top of the model list in Settings → Translation on a device whose graphics processor cannot run translation models (or has none): they run on the main processor instead. GPU and CPU are the usual abbreviations for the graphics processor and the main processor.
+#. Line at the top of the model list in Settings → Translation: this device (or browser) offers no graphics processor (GPU) the translation models can use, so they run on the main processor (CPU). The reasons follow as their own list.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.cpu"
-msgid "This device can't use the GPU, so the models run on the CPU."
-msgstr "Toto zariadenie nemôže používať GPU, preto modely bežia na CPU."
+msgid "This device has a CPU only."
+msgstr "Toto zariadenie má len CPU."
 
-#. Line at the top of the model list in Settings → Translation on a device whose graphics processor can run translation models. GPU is the usual abbreviation for the graphics processor.
+#. Line at the top of the model list in Settings → Translation: translation models can run on this device's graphics processor (GPU) and on its main processor (CPU). GPU and CPU are the usual abbreviations; the limits and any reasons follow on lines of their own.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.gpu"
-msgid "This device can run models on the GPU."
-msgstr "Toto zariadenie môže spúšťať modely na GPU."
+msgid "This device has a GPU and a CPU."
+msgstr "Toto zariadenie má GPU aj CPU."
 
 #. Verdict of the device check in Settings → Translation: no model can run at all. Any reasons follow as their own list.
 #: client/components/Settings/Translation.vue
@@ -12984,6 +12984,18 @@ msgstr "Stiahnuť {model} pre CPU?"
 msgctxt "translate.consent.titleGpu"
 msgid "Download {model} for the GPU?"
 msgstr "Stiahnuť {model} pre GPU?"
+
+#. Settings → Translation: the main processor, as the choice after "Run on" and as the label in front of a model copy line ("CPU  Not downloaded · 1 GiB"). Use the usual abbreviation in your language (most keep CPU). Very short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.device.cpu"
+msgid "CPU"
+msgstr "CPU"
+
+#. Settings → Translation: the graphics processor, as the choice after "Run on" and as the label in front of a model copy line ("GPU  Downloaded · 938 MiB"). Use the usual abbreviation in your language (most keep GPU). Very short.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.device.gpu"
+msgid "GPU"
+msgstr "GPU"
 
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
@@ -13194,35 +13206,35 @@ msgctxt "translate.menu.translateNow"
 msgid "Translate"
 msgstr "Preložiť"
 
-#. Said once by a screen reader (a polite live region in Settings > Translation) when a model's download or load ends. {model} is the model's name as its row shows it, e.g. 'NLLB-200 600M (CPU, 200 languages)'; {state} is the row's new state, e.g. 'Downloaded' or 'Failed: …'.
+#. Read out by screen readers in Settings → Translation when a download of one copy of a model ends. {model} is the model name (e.g. "Qwen3 1.7B (all languages)"), {device} the processor its copy is for ("GPU" or "CPU"), {state} the copy's new state (e.g. "Downloaded · 938.4 MiB" or "Failed: …").
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.announce"
-msgid "{model}: {state}"
+msgid "{model} ({device}): {state}"
 msgstr ""
 
-#. Settings → Translation, a model's row: status line saying this translation model cannot work on the user's device; the reason follows on the next line as a sentence of its own. Short.
+#. Settings → Translation, one copy of a translation model (the GPU one or the CPU one, named before it): its files are on this device. {size} is its download size with its unit, already formatted, e.g. "938.4 MiB". Keep the middle dot as a separator.
 #: client/components/Settings/Translation.vue
-msgctxt "translate.model.cantRun"
-msgid "Can't run on this device"
-msgstr "Na tomto zariadení nebeží"
+msgctxt "translate.model.copyDownloaded"
+msgid "Downloaded · {size}"
+msgstr "Stiahnuté · {size}"
 
-#. Button on a model row in Settings → Translation that removes the downloaded model from this device.
+#. Settings → Translation, one copy of a translation model (the GPU one or the CPU one, named before it): not on this device yet; a Download button follows. {size} is what downloading it costs, with its unit, already formatted, e.g. "1 GiB". Keep the middle dot as a separator.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.copyNotDownloaded"
+msgid "Not downloaded · {size}"
+msgstr "Nestiahnuté · {size}"
+
+#. Button in Settings → Translation: delete one downloaded copy of a translation model (its GPU or its CPU copy) from this device, to free the space. Short, like a button. Screen readers hear it followed by the model and the processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
-msgid "Delete"
-msgstr "Odstrániť"
+msgid "Remove"
+msgstr "Odobrať"
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.download"
 msgid "Download"
 msgstr "Stiahnuť"
-
-#. State of a model row in Settings → Translation: the model is on this device.
-#: client/components/Settings/Translation.vue
-msgctxt "translate.model.downloaded"
-msgid "Downloaded"
-msgstr "Stiahnuté"
 
 #. State of a model row in Settings → Translation after a download failed. {error} is the library's own untranslated message.
 #: client/components/Settings/Translation.vue
@@ -13261,12 +13273,6 @@ msgctxt "translate.model.nllb"
 msgid "NLLB-200 600M (200 languages)"
 msgstr "NLLB-200 600M (200 jazykov)"
 
-#. State of a model row in Settings → Translation: the model is not on this device yet.
-#: client/components/Settings/Translation.vue
-msgctxt "translate.model.notDownloaded"
-msgid "Not downloaded"
-msgstr "Nestiahnuté"
-
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair. {from} and {to} are language names. OPUS-MT is a product name.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.opus"
@@ -13279,23 +13285,11 @@ msgctxt "translate.model.percent"
 msgid "{percent}%"
 msgstr "{percent}%"
 
-#. Settings → Translation, a model's row: status line saying this translation model works on the user's device. Short.
-#: client/components/Settings/Translation.vue
-msgctxt "translate.model.runsHere"
-msgid "Can run on this device"
-msgstr "Na tomto zariadení beží"
-
 #. Settings → Translation, a line under the language model's row (Qwen3 1.7B) on a device whose graphics card cannot hold the model's largest piece in one buffer (most phones): the app then downloads and runs a special build of the same model whose pieces are smaller. {size} is a data size with its unit, already formatted, e.g. '74.2 MiB'. 'Buffer' is the graphics-card term (a block of GPU memory); 'build' means a compiled version of the same model.
 #: client/components/Settings/Translation.vue:213
 msgctxt "translate.model.smallBufferBuild"
 msgid "This GPU gets a build of the model made for small graphics buffers: its largest buffer is {size}."
 msgstr "Tento GPU dostane verziu modelu určenú pre malé grafické vyrovnávacie pamäte: jej najväčšia vyrovnávacia pamäť má {size}."
-
-#. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
-#: client/components/Settings/Translation.vue
-msgctxt "translate.model.switchedOff"
-msgid "Switched off above"
-msgstr "Vypnuté vyššie"
 
 #. Label of the compact equals-icon chip shown in place of a translation that failed because the engine returned the source line as its own answer. Also the chip's tooltip and aria-label; the reason text beside it only appears in development builds.
 #: client/components/TranslationLine.vue
@@ -13527,6 +13521,30 @@ msgctxt "translate.retry"
 msgid "Retry the translation"
 msgstr "Skúsiť preklad znova"
 
+#. Settings → Translation, the line under "Run on" while Auto is chosen: on this device the app runs this translation model on the main processor (CPU). "Auto" is the choice of that name; "here" means on this device.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.autoPicksCpu"
+msgid "Auto picks the CPU here."
+msgstr "Automaticky tu volí CPU."
+
+#. Settings → Translation, the line under "Run on" while Auto is chosen: on this device the app runs this translation model on the graphics processor (GPU). "Auto" is the choice of that name; "here" means on this device.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.autoPicksGpu"
+msgid "Auto picks the GPU here."
+msgstr "Automaticky tu volí GPU."
+
+#. Settings → Translation, the line under "Run on" while Auto is chosen and neither processor (GPU nor CPU) of this device can run this translation model; the reasons are shown just above it, next to the choices that cannot be picked. "Auto" is the choice of that name.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.autoPicksNone"
+msgid "Auto can't run it on this device."
+msgstr "Automaticky ho na tomto zariadení nedá spustiť."
+
+#. Settings → Translation, the first of three choices after "Run on": let the app pick the best processor (GPU or CPU) for this translation model on this device. One short word, like a button in a segmented control.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.deviceAuto"
+msgid "Auto"
+msgstr "Automaticky"
+
 #. Shown in place of the Translation settings when the site's operator has disabled the feature.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.disabled"
@@ -13610,6 +13628,36 @@ msgstr "Modely"
 msgctxt "translate.settings.nllbLicence"
 msgid "NLLB-200 is licensed CC BY-NC 4.0: for non-commercial use only."
 msgstr "NLLB-200 je pod licenciou CC BY-NC 4.0: iba na nekomerčné použitie."
+
+#. Settings → Translation, OPUS-MT, one line per processor (GPU or CPU, named before it): how many language-pair models are downloaded for it, and their size together. {count} is that number (1 or more), {size} a data size with its unit, already formatted, e.g. "215.5 MiB". Keep the middle dot as a separator.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.opusDownloaded"
+msgid "{count} pair downloaded · {size}"
+msgid_plural "{count} pairs downloaded · {size}"
+msgstr[0] "{count} pár stiahnutý · {size}"
+msgstr[1] "{count} páry stiahnuté · {size}"
+msgstr[2] "{count} párov stiahnutých · {size}"
+
+#. Settings → Translation, OPUS-MT, one line per processor (GPU or CPU, named before it): no language-pair model is downloaded for it yet. {size} is what one pair costs to download, with its unit, already formatted, e.g. "107.8 MiB". Keep the middle dot as a separator.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.opusNone"
+msgid "No pairs downloaded · about {size} a pair"
+msgstr "Žiadny pár nestiahnutý · asi {size} na pár"
+
+#. Settings → Translation, under the OPUS-MT switch: how many language pairs (one small model per pair, e.g. English → German) the app offers. {count} is that number.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.opusPairs"
+msgid "{count} language pair"
+msgid_plural "{count} language pairs"
+msgstr[0] "{count} jazykový pár"
+msgstr[1] "{count} jazykové páry"
+msgstr[2] "{count} jazykových párov"
+
+#. Settings → Translation, label before a three-way choice of where a translation model runs: Auto, GPU (the graphics processor) or CPU (the main processor). Short, like a form label.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.settings.runOn"
+msgid "Run on"
+msgstr "Spúšťať na"
 
 #. Label of the checkbox in Settings → Translation that allows the small OPUS-MT translation models (one per language pair). OPUS-MT is a product name, never translated.
 #: client/components/Settings/Translation.vue

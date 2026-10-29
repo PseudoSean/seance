@@ -249,9 +249,16 @@ nothing the router would take is hidden:
 `reader.ts` `pairVerdict(from, to)` and `currentTranslationBlock()` are the
 store glue, `helpers/translateWhy.ts` the words (one whole sentence per
 reason, shown under a lead sentence, never spliced into it). Where it
-shows: Settings -> Translation's model rows ("Can run on this device" /
-"Can't run on this device" with the reason, "Switched off above"; Download
-disabled and described by the reason); the composer's translate dialog and
+shows: Settings -> Translation, per model family (`reader.ts`
+`modelDevices`): "Run on" (Auto / GPU / CPU, a radiogroup; a device that
+cannot run the family is a disabled, struck-through choice with its reason
+as text below it and as its description, a switched-off family keeping
+every choice open), under Auto "Auto picks the GPU here." / "… the CPU
+here." / "Auto can't run it on this device.", then one line per copy
+("Downloaded · <size>" with Remove, "Not downloaded · <size>" with
+Download, disabled and described by its reason where that copy cannot run;
+OPUS-MT adds a per-device "<n> pairs downloaded · <size>" summary above its
+pairs); the composer's translate dialog and
 the chips' "Retranslate from…" (the confirm disabled, the reason in a polite
 live region that describes it); the panel (a notice when nothing runs, the
 reading switch's On disabled, languages nothing can write in greyed under
@@ -1758,8 +1765,9 @@ the OPUS-MT pairs come before NLLB in every shipped row anyway
 (`test/translate/routes.ts`), the GPU model serves the rest where it runs,
 and a pair only NLLB could serve here -- a language without an OPUS pair on
 a device without the GPU model -- is unavailable with the reason "This needs
-NLLB-200, which is switched off in Settings → Translation." The NLLB row
-says "Switched off above" and can still be downloaded ahead of use.
+NLLB-200, which is switched off in Settings → Translation." The NLLB
+family keeps its Run on open, and its copies can still be downloaded ahead
+of use.
 `translationBlock` counts the CPU models with NLLB on, so the opt-in never
 makes translation as a whole unavailable. A deploy can still point
 `translation.cpu.nllb` at a model it may use (`docs/resources/branding.md`

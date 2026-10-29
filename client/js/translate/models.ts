@@ -566,9 +566,9 @@ function cpuBlock(
 
 /**
  * The device `ref`'s slot ran on before models ran on either (the language
- * model on the GPU, OPUS-MT and NLLB-200 on the CPU). Interim: only
- * Settings/Translation.vue still reads it, to show one copy per model until
- * its per-copy rows (Task 10).
+ * model on the GPU, OPUS-MT and NLLB-200 on the CPU): the copy the download
+ * question asks about with its plain title (index.ts), the other device's
+ * naming its device.
  */
 export function nativeDevice(ref: ModelRef): Device {
 	return ref.engine === "llm" ? "gpu" : "cpu";
@@ -943,7 +943,8 @@ export function choiceFor(ref: ModelRef, choices: DeviceChoices): DeviceChoice {
  * The download size a plain listing shows for `ref`: the copy of the device
  * its engine slot runs on today (the language model's GPU copy, the CPU
  * copy of OPUS-MT and NLLB-200), else the other's; 0 when it lists none.
- * Task 10 makes Settings per-device.
+ * The language model select's sizes and a download question that names no
+ * device read it; Settings' copy lines show each copy's own size.
  */
 export function listedSize(ref: Pick<ModelRef, "engine" | "copies">): number {
 	const {gpu, cpu} = ref.copies;
