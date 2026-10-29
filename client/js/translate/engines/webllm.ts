@@ -24,9 +24,15 @@
 // where WebLLM reads it (`WebLlmDeps.seedSplit`). Everything above the
 // engine keeps the model's own id: `isLoaded`, `loadedModels` and the
 // requests' `model` name the 1.7B whichever build runs.
+//
+// The same engine runs the language model on the CPU (cpuLlm.ts): created
+// with `{device: "cpu", contextWindow: CPU_CONTEXT_WINDOW}` over an
+// `MlcLike` of the CPU library's. On the CPU no WebLLM record is read (its
+// `create` ignores the app config), no small-buffer build applies, and a
+// failure is never a lost GPU: only the GPU instance is handed
+// `takeDeviceLoss`.
 
 import {fitToWindow} from "../budget";
-import {takeDeviceLoss} from "./gpuLimits";
 import {
 	BATCH_REFUSED,
 	Device,
@@ -119,6 +125,23 @@ export interface WebLlmDeps {
 	 * library was built from; the build then does not load.
 	 */
 	seedSplit?(build: SmallBufferBuild): Promise<unknown>;
+	/**
+	 * The GPU instance's: the last device loss recorded (gpuLimits.ts
+	 * `takeDeviceLoss`), so a failed generation can say the GPU stopped. The
+	 * CPU instance has none, and a GPU loss is never reported as its own.
+	 */
+	takeDeviceLoss?: () => {reason: string; message: string} | null;
+}
+
+/** How one instance runs: on which device, and with which window. */
+export interface WebLlmOptions {
+	/** The device this instance's models load on; "gpu" unless said. */
+	device?: Device;
+	/**
+	 * The context window every reload asks for, in tokens, instead of the
+	 * GPU's (`contextWindowFor`): the CPU instance's `CPU_CONTEXT_WINDOW`.
+	 */
+	contextWindow?: number;
 }
 
 const HF_MLC = "https://huggingface.co/mlc-ai/";
@@ -396,6 +419,8 @@ export class WebLlmEngine implements Engine {
 	private window = DEFAULT_CONTEXT_WINDOW;
 	private deps: WebLlmDeps;
 	private languageName: (code: string) => string;
+	private device: Device;
+	private fixedWindow: number | null;
 	private failures = 0;
 	private failuresModel: string | null = null;
 	/**
@@ -407,9 +432,15 @@ export class WebLlmEngine implements Engine {
 	 */
 	private generating: number | null = null;
 
-	constructor(deps: WebLlmDeps, languageName: (code: string) => string) {
+	constructor(
+		deps: WebLlmDeps,
+		languageName: (code: string) => string,
+		options: WebLlmOptions = {}
+	) {
 		this.deps = deps;
 		this.languageName = languageName;
+		this.device = options.device ?? "gpu";
+		this.fixedWindow = options.contextWindow ?? null;
 	}
 
 	/** Consecutive generation failures; a completed generation resets it. */
@@ -432,7 +463,21 @@ export class WebLlmEngine implements Engine {
 
 	/** The build of `ref` this device loads (models.ts `smallBufferBuildFor`); null: the model itself. */
 	buildFor(ref: ModelRef): SmallBufferBuild | null {
-		return smallBufferBuildFor(ref, this.gpu?.maxBufferBytes);
+		return this.device === "gpu" ? smallBufferBuildFor(ref, this.gpu?.maxBufferBytes) : null;
+	}
+
+	/** What WebLLM is created with for `ref`; nothing on the CPU, whose `create` reads none. */
+	private appConfig(ref: ModelRef, build: SmallBufferBuild | null): {model_list: ModelRecord[]} {
+		if (this.device !== "gpu") {
+			return {model_list: []};
+		}
+
+		return build
+			? smallBufferConfig(ref, build, this.deps.prebuilt, this.appRoot())
+			: appConfigFor(ref, this.deps.prebuilt, {
+					modelBase: this.catalog?.modelBase,
+					lib: ref.lib,
+			  });
 	}
 
 	// Two callers can ask for the same model at once — Settings downloading it
@@ -467,12 +512,7 @@ export class WebLlmEngine implements Engine {
 
 		try {
 			const build = this.buildFor(ref);
-			const appConfig = build
-				? smallBufferConfig(ref, build, this.deps.prebuilt, this.appRoot())
-				: appConfigFor(ref, this.deps.prebuilt, {
-						modelBase: this.catalog?.modelBase,
-						lib: ref.lib,
-				  });
+			const appConfig = this.appConfig(ref, build);
 			// Let go of the old engine before awaiting its unload, not after: a
 			// translate() landing in between must report "model not loaded"
 			// rather than generate on an engine that is being torn down.
@@ -501,8 +541,9 @@ export class WebLlmEngine implements Engine {
 			// A phone's window is smaller than the record's (models.ts
 			// `contextWindowFor`): the KV cache is the memory the window
 			// costs, allocated whole at load. Elsewhere the reload is the
-			// one it always was, and the record's own window holds.
-			const window = contextWindowFor(this.gpu);
+			// one it always was, and the record's own window holds. An
+			// instance given its own window (the CPU's) always asks for it.
+			const window = this.fixedWindow ?? contextWindowFor(this.gpu);
 
 			if (window !== null) {
 				await this.engine.reload(build?.id ?? ref.id, {context_window_size: window});
@@ -557,7 +598,7 @@ export class WebLlmEngine implements Engine {
 	}
 
 	isLoaded(id: string, device?: Device): boolean {
-		return (device === undefined || device === "gpu") && this.model === id;
+		return (device === undefined || device === this.device) && this.model === id;
 	}
 
 	capabilities(): EngineCapabilities {
@@ -736,8 +777,15 @@ export class WebLlmEngine implements Engine {
 			// A lost device settles its `lost` promise a moment after the
 			// call that failed on it: wait one turn of the event loop, then
 			// say why the GPU went away beside what failed (gpuLimits.ts).
-			await new Promise((resolve) => setTimeout(resolve, 50));
-			const loss = takeDeviceLoss();
+			// Only the GPU instance asks; a CPU failure is the CPU's.
+			const take = this.deps.takeDeviceLoss;
+			let loss: {reason: string; message: string} | null = null;
+
+			if (take) {
+				await new Promise((resolve) => setTimeout(resolve, 50));
+				loss = take();
+			}
+
 			const failed = e instanceof Error ? e.message : String(e);
 
 			throw new EngineError(

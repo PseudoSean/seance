@@ -51,6 +51,7 @@
   "dependencies": {
     "@huggingface/transformers": "4.2.0",
     "@mlc-ai/web-llm": "0.2.85",
+    "@wllama/wllama": "3.8.1",
     "flourite": "1.3.0",
     "franc": "6.2.0",
     "got": "11.8.6",

@@ -184,7 +184,7 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 				break;
 			case "delete":
 				try {
-					await deps.cache.delete(message.ref);
+					await deps.cache.delete(message.ref, nativeDevice(message.ref));
 					port.postMessage({type: "deleted", ref: message.ref});
 				} catch (e) {
 					port.postMessage({

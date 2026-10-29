@@ -7,6 +7,7 @@
 import {env, pipeline} from "@huggingface/transformers";
 import {CacheApi} from "../models";
 import {PipelineLike, Seq2seqDeps} from "./seq2seq";
+import {seq2seqCacheApi} from "./seq2seqCache";
 
 const CACHE_NAME = "transformers-cache";
 
@@ -64,23 +65,21 @@ export const realSeq2seqDeps: Seq2seqDeps = {
 	threads: () => typeof SharedArrayBuffer !== "undefined",
 };
 
-/** The library caches every file under a URL containing the repo id. */
+/**
+ * The library caches every file under a URL containing the repo id; a copy
+ * is its dtype's weights among them (seq2seqCache.ts).
+ */
 export function seq2seqCache(): CacheApi {
-	const keysFor = async (id: string) => {
-		const cache = await caches.open(CACHE_NAME);
-		const keys = await cache.keys();
+	return seq2seqCacheApi({
+		async keys() {
+			const cache = await caches.open(CACHE_NAME);
 
-		return {cache, keys: keys.filter((request) => request.url.includes(`/${id}/`))};
-	};
-
-	return {
-		has: async (ref) => (await keysFor(ref.id)).keys.length > 0,
-		async delete(ref) {
-			const {cache, keys} = await keysFor(ref.id);
-
-			for (const key of keys) {
-				await cache.delete(key);
-			}
+			return (await cache.keys()).map((request) => request.url);
 		},
-	};
+		async delete(url) {
+			const cache = await caches.open(CACHE_NAME);
+
+			await cache.delete(url);
+		},
+	});
 }

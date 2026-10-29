@@ -86,7 +86,7 @@ describe("translate/engines/webllmCache", () => {
 	it("asks a desktop about the model itself, a phone about its small-buffer build", async () => {
 		const onDesktop = stand(desktop);
 
-		await onDesktop.api.has(small);
+		await onDesktop.api.has(small, "gpu");
 		expect(onDesktop.calls.map((c) => c.id)).to.deep.equal([QWEN3_1_7B_ID]);
 		expect(onDesktop.calls[0].config).to.deep.equal({
 			cacheBackend: "cache",
@@ -95,7 +95,7 @@ describe("translate/engines/webllmCache", () => {
 
 		const onPhone = stand(phone);
 
-		await onPhone.api.has(small);
+		await onPhone.api.has(small, "gpu");
 		expect(onPhone.calls.map((c) => c.id)).to.deep.equal([QWEN3_1_7B_SPLIT_ID]);
 		expect(onPhone.calls[0].config.model_list[0]).to.deep.include({
 			model_id: QWEN3_1_7B_SPLIT_ID,
@@ -108,15 +108,15 @@ describe("translate/engines/webllmCache", () => {
 	it("asks before the probe, and about a model without a build, as itself", async () => {
 		const early = stand(null);
 
-		await early.api.has(small);
-		await early.api.has(large);
+		await early.api.has(small, "gpu");
+		await early.api.has(large, "gpu");
 		expect(early.calls.map((c) => c.id)).to.deep.equal([QWEN3_1_7B_ID, QWEN3_4B_ID]);
 	});
 
 	it("deletes a phone's build and its seeded manifest, and no model it never fetched", async () => {
 		const {api, calls, store, opened} = stand(phone, [SPLIT_MANIFEST]);
 
-		await api.delete(small);
+		await api.delete(small, "gpu");
 
 		expect(calls.map((c) => `${c.op} ${c.id}`)).to.deep.equal([
 			`delete ${QWEN3_1_7B_SPLIT_ID}`,
@@ -128,14 +128,14 @@ describe("translate/engines/webllmCache", () => {
 	it("deletes a desktop's model, and a build the test switch left behind", async () => {
 		const plain = stand(desktop);
 
-		await plain.api.delete(small);
+		await plain.api.delete(small, "gpu");
 		expect(plain.calls.map((c) => `${c.op} ${c.id}`)).to.deep.equal([
 			`delete ${QWEN3_1_7B_ID}`,
 		]);
 
 		const leftover = stand(desktop, [OWN_MANIFEST, SPLIT_MANIFEST]);
 
-		await leftover.api.delete(small);
+		await leftover.api.delete(small, "gpu");
 		expect(leftover.calls.map((c) => `${c.op} ${c.id}`)).to.deep.equal([
 			`delete ${QWEN3_1_7B_ID}`,
 			`delete ${QWEN3_1_7B_SPLIT_ID}`,
@@ -146,14 +146,14 @@ describe("translate/engines/webllmCache", () => {
 	it("deletes a phone's model itself only when something of it is there", async () => {
 		const both = stand(phone, [OWN_MANIFEST, SPLIT_MANIFEST]);
 
-		await both.api.delete(small);
+		await both.api.delete(small, "gpu");
 		expect(both.calls.map((c) => c.id)).to.deep.equal([QWEN3_1_7B_ID, QWEN3_1_7B_SPLIT_ID]);
 
 		// Nothing of either: nothing is asked of WebLLM, which would fetch a
 		// manifest from the network to delete what it lists.
 		const none = stand(phone);
 
-		await none.api.delete(small);
+		await none.api.delete(small, "gpu");
 		expect(none.calls).to.deep.equal([]);
 	});
 

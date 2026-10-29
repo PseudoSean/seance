@@ -194,6 +194,8 @@ const chunkNotices: Record<string, string> = {
 		"/*! @huggingface/transformers 4.2.0 | Apache-2.0 | Copyright Hugging Face | " +
 		"https://github.com/huggingface/transformers.js */\n" +
 		"/*! @mlc-ai/web-llm 0.2.85 | Apache-2.0 | https://github.com/mlc-ai/web-llm */\n" +
+		"/*! @wllama/wllama 3.8.1 | MIT | Copyright (c) Xuan Son NGUYEN | " +
+		"https://github.com/ngxson/wllama */\n" +
 		"/*! Licensed under the Apache License, Version 2.0: " +
 		"https://www.apache.org/licenses/LICENSE-2.0 */\n",
 };
@@ -261,7 +263,7 @@ const config: webpack.Configuration = {
 		// push chunk, which the second configuration below emits into the same
 		// tree (and runs after this one; see `dependencies`).
 		clean: {
-			keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\/|^models\//,
+			keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\/|^js\/wllama\.wasm$|^models\//,
 		},
 		path: path.resolve(__dirname, "public"),
 		filename: "[name]",
@@ -623,6 +625,14 @@ const translateConfig: webpack.Configuration = {
 					from: "ort-wasm-simd-threaded.wasm",
 					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
 					to: "js/ort/[name][ext]",
+				},
+				// The CPU language model's library (engines/cpuLlm.real.ts):
+				// wllama's single-thread build, next to the worker, which
+				// resolves it against its own location.
+				{
+					from: "wllama.wasm",
+					context: path.resolve(__dirname, "node_modules/@wllama/wllama/esm/wasm"),
+					to: "js/[name][ext]",
 				},
 				// The GPU models' libraries of our own (tools/translate-split/):
 				// the 1.7B's small-buffer build, which WebLLM fetches from

@@ -992,7 +992,7 @@ describe("translate/engines/webllm", () => {
 
 	it("a generation failure on a lost GPU says why the GPU stopped", async () => {
 		const d = deps([]);
-		const engine = new WebLlmEngine(d.deps, name);
+		const engine = new WebLlmEngine({...d.deps, takeDeviceLoss}, name);
 		engine.configure(catalog);
 		const mlc = d.deps.create({model_list: []}, () => {});
 		const mapAsync =
@@ -1026,6 +1026,59 @@ describe("translate/engines/webllm", () => {
 			detail: mapAsync,
 		});
 		expect(takeDeviceLoss(), "the loss is spent").to.equal(null);
+	});
+
+	it("a GPU failure without the loss dependency does not read the GPU's loss", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		const mlc = d.deps.create({model_list: []}, () => {});
+		mlc.chat.completions.create = () => Promise.reject(new Error("boom"));
+		d.deps.create = () => mlc;
+		takeDeviceLoss();
+		noteDeviceLoss({reason: "unknown", message: "GPU process terminated"});
+		await engine.load(catalog.llm, "gpu", () => {});
+		let error: Error | null = null;
+
+		try {
+			for await (const _c of engine.translate(request(), new AbortController().signal)) {
+				// consume
+			}
+		} catch (e) {
+			error = e as Error;
+		}
+
+		expect(error?.message).to.equal("boom");
+		expect(takeDeviceLoss(), "left for whoever owns it").to.deep.equal({
+			reason: "unknown",
+			message: "GPU process terminated",
+		});
+	});
+
+	it("a contextWindow option is the window every reload asks for", async () => {
+		const reloads: (number | undefined)[] = [];
+		const d = deps([]);
+		const mlc = d.deps.create({model_list: []}, () => {});
+		const reload = mlc.reload.bind(mlc);
+
+		mlc.reload = (id, opts) => {
+			reloads.push(opts?.context_window_size);
+			return reload(id, opts);
+		};
+
+		d.deps.create = () => mlc;
+		const engine = new WebLlmEngine(d.deps, name, {contextWindow: 1024});
+
+		// Even on a phone, whose GPU window would be 2048.
+		engine.configure(catalog, {
+			maxBufferBytes: 1024 * 1024 * 1024,
+			capBytes: null,
+			mobile: true,
+		});
+		await engine.load(catalog.llm, "gpu", () => {});
+
+		expect(reloads).to.deep.equal([1024]);
+		expect(engine.contextWindow).to.equal(1024);
 	});
 
 	it("the second generation failure in a row is a load-class failure", async () => {

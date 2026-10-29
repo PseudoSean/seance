@@ -98,6 +98,25 @@ export const CPU_LLM_COPY: DeviceCopy = {
 	file: "Qwen3-1.7B-Q4_K_M.gguf",
 };
 
+/**
+ * The commit of `CPU_LLM_COPY.source` its file is fetched at (the repo's
+ * head on 2026-10-29, `x-repo-commit` of the file, 1,107,409,472 bytes).
+ * Pinned, as `QWEN3_1_7B_PINNED_MODEL` is: the file's cache key is its URL
+ * (engines/cpuLlm.ts `cpuLlmUrl`), so a moving `main` would never change
+ * what is cached under it.
+ */
+export const CPU_LLM_REVISION = "d7f544eead698dbd1f15126ef60b45a1e1933222";
+
+/**
+ * The context window the language model loads with on the CPU, in tokens
+ * (tools/translate-eval/results/2026-10-29-cpu-llm.md § The 15 s rule): it
+ * holds the 700-token context budget, the prompt and a 160-token answer.
+ * The prompt costs what it costs on the CPU whatever the window — the
+ * system prompt alone is past the spec's 15 s on the sandbox's core — so a
+ * smaller window would only cut context, not time.
+ */
+export const CPU_CONTEXT_WINDOW = 1024;
+
 function opusRef(pairKey: string, id: string): ModelRef {
 	const [from, to] = pairKey.split("-");
 
@@ -853,10 +872,14 @@ export function candidateOf(ref: ModelRef): Candidate {
 	return `opus:${from}-${to}`;
 }
 
-/** Answered by the worker, where Cache Storage and the libraries' cache helpers live. */
+/**
+ * Answered by the worker, where Cache Storage and the libraries' cache
+ * helpers live: per copy, the model's copy for `device`. An engine's own
+ * helper, which only ever holds one device's copies, may ignore it.
+ */
 export interface CacheApi {
-	has(ref: ModelRef): Promise<boolean>;
-	delete(ref: ModelRef): Promise<void>;
+	has(ref: ModelRef, device: Device): Promise<boolean>;
+	delete(ref: ModelRef, device: Device): Promise<void>;
 }
 
 export interface ModelCacheState {
@@ -877,7 +900,7 @@ export async function cacheStates(
 	return Promise.all(
 		catalogModels(catalog).map(async (ref) => ({
 			ref,
-			cached: await api.has(ref).catch(() => false),
+			cached: await api.has(ref, nativeDevice(ref)).catch(() => false),
 		}))
 	);
 }
