@@ -128,9 +128,13 @@ describe("public folder", function () {
 			"utf8"
 		);
 		// wllama's own worker, which it carries as one string literal.
+		// A development build also carries the library's source once more,
+		// unminified and indented, so only the string literal is counted
+		// (a quote right before the code).
 		const marker = "var Module=typeof Module";
+		const literal = /['"`]var Module=typeof Module/g;
 
-		expect(worker.split(marker).length - 1).to.equal(1);
+		expect(worker.match(literal)?.length).to.equal(1);
 		expect(fs.existsSync(path.join(publicFolder, "js", "wllama.wasm"))).to.be.true;
 
 		// Only the worker loads it: the page's bundle never carries it.

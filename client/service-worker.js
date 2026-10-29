@@ -619,7 +619,7 @@ function tidyLater() {
 }
 
 /** This worker's network: its scope's, or (the root worker) the first one
- * the page stashed, remembered for the push whose storage has stalled. */
+ * the page stashed, remembered for the push whose store has stalled. */
 let knownNetwork = scopeNetwork;
 
 async function networkOf() {
@@ -1410,7 +1410,7 @@ function conversationOf(parsed) {
 }
 
 /**
- * A strict push whose handler has not finished by the deadline (storage
+ * A strict push whose handler has not finished by the deadline (the store
  * stalled): show something now, silently, under a tag of its own
  * (`push-<network>/fallback/<conversation>`) — never the conversation's, so
  * it cannot overwrite the real notification should that land meanwhile.
