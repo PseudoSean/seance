@@ -20,9 +20,9 @@ export const PHONE_THREAD_CAP = 4;
 
 /**
  * Threads for the CPU language model on a device with `hardwareConcurrency`
- * logical cores: on a phone at most `PHONE_THREAD_CAP`, on a computer one
- * core left to the page and at most `DESKTOP_THREAD_CAP`. Never under one;
- * a missing or odd count is one core.
+ * logical cores: one core left to the page, and at most `PHONE_THREAD_CAP`
+ * on a phone or `DESKTOP_THREAD_CAP` on a computer. Never under one; a
+ * missing or odd count is one core.
  */
 export function cpuThreads(hardwareConcurrency: number, mobile: boolean): number {
 	const cores =
@@ -30,16 +30,15 @@ export function cpuThreads(hardwareConcurrency: number, mobile: boolean): number
 			? Math.floor(hardwareConcurrency)
 			: 1;
 
-	return mobile
-		? Math.min(PHONE_THREAD_CAP, cores)
-		: Math.min(DESKTOP_THREAD_CAP, Math.max(1, cores - 1));
+	return Math.min(mobile ? PHONE_THREAD_CAP : DESKTOP_THREAD_CAP, Math.max(1, cores - 1));
 }
 
 /**
  * Whether this page can run the CPU models multithreaded: "isolated" it
  * does; "reload" the next load will (the worker did not serve this page);
- * "unsupported" it never will here (WebKit has no `credentialless`, or the
- * worker served the page and it is still not isolated).
+ * "unsupported" it never will here (WebKit has no `credentialless`, the
+ * worker is never registered here, or it served the page and the page is
+ * still not isolated).
  */
 export type Isolation = "isolated" | "reload" | "unsupported";
 
@@ -58,6 +57,13 @@ export interface IsolationEnv {
 	controlled: boolean;
 	/** WebKit (Safari, every iOS browser): no COEP `credentialless`. */
 	webkit: boolean;
+	/**
+	 * Whether the service worker is registered here at all (pwa.ts
+	 * `serviceWorkerCanServe`): not on a plain-http origin other than
+	 * localhost, nor in the Capacitor shell. Where it is not, no reload
+	 * ever brings the headers.
+	 */
+	workerCanServe: boolean;
 }
 
 export function isolationState(env: IsolationEnv): Isolation {
@@ -65,5 +71,5 @@ export function isolationState(env: IsolationEnv): Isolation {
 		return "isolated";
 	}
 
-	return !env.controlled && !env.webkit ? "reload" : "unsupported";
+	return env.workerCanServe && !env.controlled && !env.webkit ? "reload" : "unsupported";
 }

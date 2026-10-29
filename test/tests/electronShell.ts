@@ -36,6 +36,15 @@ describe("Electron shell (shells/electron/main.js)", function () {
 		expect(scripts).to.not.include("'unsafe-eval'");
 	});
 
+	it("lets the translation worker and the CPU language model's blob: workers start", function () {
+		// js/translate-worker.js and ONNX Runtime's thread workers are 'self';
+		// wllama (engines/cpuLlm.real.ts) starts its proxy worker from a
+		// blob: URL, even single-threaded, and its pthreads from that worker.
+		const workers = directive("worker-src");
+		expect(workers).to.include("'self'");
+		expect(workers).to.include("blob:");
+	});
+
 	it("serves .wasm as application/wasm", function () {
 		// Under nosniff an octet-stream wasm cannot compile streaming.
 		expect(source).to.match(/"\.wasm": "application\/wasm"/);
