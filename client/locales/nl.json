@@ -2265,6 +2265,7 @@
   "translate.why.gpuLimits": "De shaderlimieten van deze GPU zijn te laag voor de GPU-modellen.",
   "translate.why.insecureOrigin": "WebGPU vereist dat de app via HTTPS (of vanaf localhost) wordt geladen, dus de GPU-modellen kunnen hier niet draaien.",
   "translate.why.llmOff": "Het GPU-model staat uit in Instellingen → Vertaling.",
+  "translate.why.llmOrNllbOff": "Hiervoor is het GPU-model of NLLB-200 nodig, en beide staan uit in Instellingen → Vertaling.",
   "translate.why.needsDownload": "Vereist {model}, een download van {size}: download het in Instellingen → Vertaling.",
   "translate.why.nllbOff": "Hiervoor is NLLB-200 nodig, dat uit staat in Instellingen → Vertaling.",
   "translate.why.noAdapter": "Deze browser heeft WebGPU, maar vond geen bruikbare GPU.",

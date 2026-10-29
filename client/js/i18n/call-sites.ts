@@ -2198,6 +2198,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.why.gpuLimits",
 	"translate.why.insecureOrigin",
 	"translate.why.llmOff",
+	"translate.why.llmOrNllbOff",
 	"translate.why.needsDownload",
 	"translate.why.nllbOff",
 	"translate.why.noAdapter",

@@ -2304,6 +2304,7 @@
   "translate.why.gpuLimits": "Giới hạn shader của GPU này quá thấp đối với các mô hình GPU.",
   "translate.why.insecureOrigin": "WebGPU yêu cầu ứng dụng được phục vụ qua HTTPS (hoặc từ localhost), nên các mô hình GPU không thể chạy ở đây.",
   "translate.why.llmOff": "Mô hình GPU đang tắt trong Cài đặt → Dịch.",
+  "translate.why.llmOrNllbOff": "Cần mô hình GPU hoặc NLLB-200, nhưng cả hai đang tắt trong Cài đặt → Dịch.",
   "translate.why.needsDownload": "Cần {model}, dung lượng tải xuống {size}: hãy tải trong Cài đặt → Dịch.",
   "translate.why.nllbOff": "Cần NLLB-200, mô hình này đang tắt trong Cài đặt → Dịch.",
   "translate.why.noAdapter": "Trình duyệt này có WebGPU nhưng không tìm thấy GPU nào dùng được.",

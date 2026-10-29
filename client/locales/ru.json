@@ -2480,6 +2480,7 @@
   "translate.why.gpuLimits": "Лимиты шейдеров этого GPU слишком низкие для GPU-моделей.",
   "translate.why.insecureOrigin": "WebGPU требует, чтобы приложение открывалось по HTTPS (или с localhost), поэтому GPU-модели здесь работать не могут.",
   "translate.why.llmOff": "GPU-модель выключена в разделе «Настройки → Перевод».",
+  "translate.why.llmOrNllbOff": "Для этого нужна GPU-модель или NLLB-200, а обе выключены в разделе «Настройки → Перевод».",
   "translate.why.needsDownload": "Нужна модель {model}, скачивание {size}: скачайте её в разделе «Настройки → Перевод».",
   "translate.why.nllbOff": "Для этого нужна модель NLLB-200, которая выключена в разделе «Настройки → Перевод».",
   "translate.why.noAdapter": "В этом браузере есть WebGPU, но он не нашёл пригодного GPU.",

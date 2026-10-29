@@ -327,7 +327,8 @@ export type ModelBlock =
 	 * model's). `nllb`: NLLB-200 alone, which is off until the user opts in
 	 * (its licence is non-commercial, CC-BY-NC-4.0).
 	 */
-	| {kind: "off"; engine: EngineName | "nllb" | "all"};
+	// "llmOrNllb": the pair has the GPU model or NLLB-200, and both are off.
+	| {kind: "off"; engine: EngineName | "nllb" | "llmOrNllb" | "all"};
 
 /**
  * The user's engine switches (`translateLlm`, `translateCpu`,

@@ -2602,6 +2602,7 @@
   "translate.why.gpuLimits": "حدود المظللات في وحدة GPU هذه منخفضة جدًا بالنسبة لنماذج GPU.",
   "translate.why.insecureOrigin": "يتطلب WebGPU تقديم التطبيق عبر HTTPS (أو من localhost)، لذا لا يمكن لنماذج GPU العمل هنا.",
   "translate.why.llmOff": "نموذج GPU متوقف في «الإعدادات ← الترجمة».",
+  "translate.why.llmOrNllbOff": "يحتاج هذا إلى نموذج GPU أو NLLB-200، وكلاهما متوقف في «الإعدادات ← الترجمة».",
   "translate.why.needsDownload": "يحتاج إلى {model}، وحجم تنزيله {size}: نزّله من «الإعدادات ← الترجمة».",
   "translate.why.nllbOff": "يحتاج هذا إلى NLLB-200، وهو متوقف في «الإعدادات ← الترجمة».",
   "translate.why.noAdapter": "يدعم هذا المتصفح WebGPU لكنه لم يجد وحدة GPU يمكنه استخدامها.",

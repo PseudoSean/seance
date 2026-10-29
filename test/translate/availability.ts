@@ -210,6 +210,8 @@ describe("translate availability", () => {
 				["fr", "en"],
 				["en", "en"],
 				["en", "fil"],
+				// No OPUS-MT pair: the GPU model or NLLB-200.
+				["en", "ja"],
 				[null, "en"],
 				[null, "fil"],
 			];
@@ -234,26 +236,36 @@ describe("translate availability", () => {
 							// A switch named as the reason is a real fix: turned on,
 							// the pair routes or a different reason takes over.
 							if (verdict.why?.kind === "off" && verdict.why.engine !== "all") {
-								const fixed =
-									verdict.why.engine === "llm"
-										? {...switches, llm: true}
-										: verdict.why.engine === "nllb"
-										? {...switches, nllb: true}
-										: {...switches, cpu: true};
-								const after = explainRoute(
-									table,
-									catalog,
-									routeInput(capability, fixed, {from, to, sourceLater})
-								);
+								const engine = verdict.why.engine;
+								// "llmOrNllb" names two ways in: each must be one.
+								const fixes =
+									engine === "llm"
+										? [{...switches, llm: true}]
+										: engine === "nllb"
+										? [{...switches, nllb: true}]
+										: engine === "llmOrNllb"
+										? [
+												{...switches, llm: true},
+												{...switches, nllb: true},
+										  ]
+										: [{...switches, cpu: true}];
 
-								// Or it names the other switch the pair also needs (the CPU
-								// models and NLLB-200 both off: NLLB needs both on).
-								expect(
-									after.route !== null ||
-										after.why?.kind !== "off" ||
-										after.why.engine !== verdict.why.engine,
-									`${label} fixed`
-								).to.equal(true);
+								for (const fixed of fixes) {
+									const after = explainRoute(
+										table,
+										catalog,
+										routeInput(capability, fixed, {from, to, sourceLater})
+									);
+
+									// Or it names the other switch the pair also needs (the CPU
+									// models and NLLB-200 both off: NLLB needs both on).
+									expect(
+										after.route !== null ||
+											after.why?.kind !== "off" ||
+											after.why.engine !== engine,
+										`${label} fixed by ${JSON.stringify(fixed)}`
+									).to.equal(true);
+								}
 							}
 						}
 					}

@@ -2405,6 +2405,7 @@
   "translate.why.gpuLimits": "Limity shaderů tohoto GPU jsou pro modely GPU příliš nízké.",
   "translate.why.insecureOrigin": "WebGPU vyžaduje, aby aplikace běžela přes HTTPS (nebo z localhost), takže modely GPU zde běžet nemohou.",
   "translate.why.llmOff": "Model GPU je vypnutý v Nastavení → Překlad.",
+  "translate.why.llmOrNllbOff": "K tomu je potřeba model GPU nebo NLLB-200 a oba jsou vypnuté v Nastavení → Překlad.",
   "translate.why.needsDownload": "Vyžaduje {model}, stažení o velikosti {size}: stáhněte ho v Nastavení → Překlad.",
   "translate.why.nllbOff": "K tomu je potřeba NLLB-200, který je vypnutý v Nastavení → Překlad.",
   "translate.why.noAdapter": "Tento prohlížeč má WebGPU, ale nenašel žádné použitelné GPU.",

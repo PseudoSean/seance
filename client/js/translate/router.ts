@@ -249,6 +249,12 @@ function pickReason(blocks: RouteBlock[]): RouteBlock {
 		return {kind: "off", engine: "all"};
 	}
 
+	// The GPU model or NLLB-200 would serve (English -> Japanese has no
+	// OPUS-MT pair): naming the GPU switch alone hid the other way in.
+	if (off("llm") && off("nllb")) {
+		return {kind: "off", engine: "llmOrNllb"};
+	}
+
 	return (
 		blocks.find((block) => block.kind === "off") ??
 		blocks.find((block) => block.kind === "download") ??

@@ -2304,6 +2304,7 @@
   "translate.why.gpuLimits": "ขีดจำกัดเชเดอร์ของ GPU นี้ต่ำเกินไปสำหรับโมเดล GPU",
   "translate.why.insecureOrigin": "WebGPU ต้องให้แอปโหลดผ่าน HTTPS (หรือจาก localhost) โมเดล GPU จึงทำงานที่นี่ไม่ได้",
   "translate.why.llmOff": "โมเดล GPU ถูกปิดอยู่ใน การตั้งค่า → การแปล",
+  "translate.why.llmOrNllbOff": "ต้องใช้โมเดล GPU หรือ NLLB-200 แต่ทั้งสองถูกปิดอยู่ใน การตั้งค่า → การแปล",
   "translate.why.needsDownload": "ต้องใช้ {model} ซึ่งต้องดาวน์โหลด {size}: ดาวน์โหลดได้ใน การตั้งค่า → การแปล",
   "translate.why.nllbOff": "ต้องใช้ NLLB-200 ซึ่งถูกปิดอยู่ใน การตั้งค่า → การแปล",
   "translate.why.noAdapter": "เบราว์เซอร์นี้มี WebGPU แต่ไม่พบ GPU ที่ใช้งานได้",
