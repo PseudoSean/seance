@@ -218,8 +218,10 @@ function isNavigation(request) {
 // The page is isolated from the load after the worker took control of it.
 // WebKit (Safari, every iOS browser: `strictUserVisible` below) has no
 // `credentialless`, so it gets neither header and stays exactly as it was.
-// Only requests inside the scope reach this (the fetch handler), so a
-// worker script here is always the app's own.
+// The fetch event sees every request a controlled page makes, other
+// origins' included, but the fetch handler returns early for any URL that
+// does not start with `shellUrl`, so only requests inside the scope reach
+// this, and a worker script here is always the app's own.
 const ISOLATION_HEADERS = [
 	["Cross-Origin-Opener-Policy", "same-origin"],
 	["Cross-Origin-Embedder-Policy", "credentialless"],
