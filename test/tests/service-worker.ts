@@ -950,8 +950,59 @@ describe("service worker push notifications", function () {
 		);
 		await firePush(sw, ":irc.example MARKREAD alice timestamp=2099-01-01T00:00:00.000Z");
 
+		// The message is gone; what stands is the brief "Marked as read" that
+		// keeps Chrome's count at one (closed a few seconds on, below).
 		const live = sw.records.filter((n) => !n.closed);
-		expect(live).to.have.lengthOf(0);
+		expect(live.map((n) => n.data.kind)).to.deep.equal(["read"]);
+		expect(sw.records[0].closed).to.equal(true);
+	});
+
+	it("a read relay that leaves nothing up shows a brief silent Marked as read on Chrome, closed a few seconds later", async function () {
+		const sw = makeSW({fastTimers: true});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+		await firePush(
+			sw,
+			`{"t":"read","target":"alice","ts":"${new Date(Date.now() + 5000).toISOString()}"}`
+		);
+
+		expect(sw.shown, "the stub was shown").to.have.lengthOf(2);
+		const stub = sw.shown[1];
+		expect(stub.silent).to.equal(true);
+		expect(stub.body).to.equal("Marked as read");
+		expect(stub.data.kind).to.equal("read");
+		expect(sw.records.filter((n) => !n.closed)).to.deep.equal([stub]);
+
+		// 4 s, a hundred times faster: the worker closes it itself.
+		await new Promise((r) => setTimeout(r, 120));
+		expect(stub.closed, "stub closed").to.equal(true);
+		expect(sw.records.filter((n) => !n.closed)).to.have.lengthOf(0);
+	});
+
+	it("a read relay that leaves another conversation's notification up shows no stub on Chrome", async function () {
+		const sw = makeSW();
+
+		await firePush(sw, msgPayload("alice", "pushtest", "one"));
+		await firePush(sw, msgPayload("bob", "pushtest", "two"));
+		await firePush(
+			sw,
+			`{"t":"read","target":"alice","ts":"${new Date(Date.now() + 5000).toISOString()}"}`
+		);
+
+		expect(sw.shown).to.have.lengthOf(2);
+		expect(sw.records.filter((n) => !n.closed).map((n) => n.data.target)).to.deep.equal([
+			"bob",
+		]);
+	});
+
+	it("a read relay with nothing to close still keeps Chrome's count with the brief stub", async function () {
+		const sw = makeSW();
+
+		await firePush(sw, `{"t":"read","target":"alice","ts":"${new Date().toISOString()}"}`);
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].body).to.equal("Marked as read");
+		expect(sw.shown[0].silent).to.equal(true);
 	});
 
 	it("a MARKREAD line leaves a notification that postdates it", async function () {
@@ -2133,6 +2184,69 @@ describe("service worker subscription renewal", function () {
 		expect(unregister, "old endpoint unregistered").to.be.greaterThan(-1);
 		expect(register, "new endpoint registered").to.be.greaterThan(-1);
 		expect(unregister, "unregister before register").to.be.lessThan(register);
+	});
+});
+
+describe("service worker push log", function () {
+	// The worker writes what it did with each push into IndexedDB
+	// (`pushlog`), for Settings → Notifications → Diagnostics: the one way to
+	// read a device nobody debugging it can hold.
+	const IOS_UA =
+		"Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+
+	function log(sw: SWHarness): string[] {
+		const entries = sw.kv.get("pushlog");
+		return Array.isArray(entries) ? (entries as string[]) : [];
+	}
+
+	it("records each push with its outcome and whether it showed", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+		await firePush(sw, `{"t":"read","target":"alice","ts":"${new Date().toISOString()}"}`);
+		await firePush(sw, "garbage that parses as nothing");
+
+		const lines = log(sw);
+		expect(lines).to.have.lengthOf(3);
+		expect(lines[0]).to.match(/ push message PRIVMSG alice bytes=\d+ strict=true shown=1$/);
+		expect(lines[1]).to.match(/ push read-relay alice bytes=\d+ strict=true shown=1$/);
+		expect(lines[2]).to.match(/ push generic bytes=\d+ strict=true shown=1$/);
+		expect(lines[0]).to.match(/^\d{4}-\d{2}-\d{2}T/);
+	});
+
+	it("records a push the lenient worker dropped as shown=0", async function () {
+		const sw = makeSW();
+		const msgid = "BjAAAaBjzZ0";
+
+		sw.kv.set("seen", [msgid]);
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", msgid));
+
+		expect(log(sw)[0]).to.match(/ push message PRIVMSG alice bytes=\d+ strict=false shown=0$/);
+	});
+
+	it("records the worker's activation with its build and network", async function () {
+		const sw = makeSW({scope: `${SCOPE}push/net-1/`});
+		const waited: Array<Promise<unknown>> = [];
+
+		for (const handler of sw.handlers.activate ?? []) {
+			handler({waitUntil: (p: Promise<unknown>) => waited.push(p)});
+		}
+
+		await Promise.all(waited);
+
+		expect(log(sw)).to.have.lengthOf(1);
+		expect(log(sw)[0]).to.match(/ activate build=__HASH__ network=net-1$/);
+	});
+
+	it("records a click with its action and tag", async function () {
+		const sw = makeSW();
+		const rec = await pushed(sw);
+
+		await fireClick(sw, rec, "markread");
+
+		expect(
+			log(sw).some((line) => / click action=markread tag=push-net-1\/alice$/.test(line))
+		).to.equal(true);
 	});
 });
 

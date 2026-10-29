@@ -12117,6 +12117,30 @@ msgctxt "settings.notifications.commaList"
 msgid "Comma-separated, e.g.: word, some more words, anotherword"
 msgstr ""
 
+#. The Copy button's label for a moment after the diagnostics report was copied to the clipboard.
+#: client/components/Settings/Notifications.vue:130
+msgctxt "settings.notifications.copied"
+msgid "Copied"
+msgstr ""
+
+#. Button in the push diagnostics fold: copies the diagnostics report to the clipboard.
+#: client/components/Settings/Notifications.vue:130
+msgctxt "settings.notifications.copyDiagnostics"
+msgid "Copy"
+msgstr ""
+
+#. Heading of the fold at the end of Settings → Notifications → Push that holds the push diagnostics report (what this device knows about push) and its buttons.
+#: client/components/Settings/Notifications.vue:130
+msgctxt "settings.notifications.diagnosticsHeading"
+msgid "Diagnostics"
+msgstr ""
+
+#. Help text under the Diagnostics heading in Settings → Notifications: what the report contains, that it is safe to paste, and what the Subscribe now button does. 'Subscribe now' names the button labelled settings.notifications.subscribeNow.
+#: client/components/Settings/Notifications.vue:130
+msgctxt "settings.notifications.diagnosticsHelp"
+msgid "What this device knows about push: its permission, each network's subscription, and what the browser and the server answered. Copy it and paste it where someone can read it — nothing in it lets anyone push to this device. Subscribe now asks for this device's subscription again, on every connected network."
+msgstr ""
+
 #. Checkbox in Settings > Notifications; when ticked, messages mentioning you are drawn with a colored background and can notify.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
@@ -12231,6 +12255,12 @@ msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
 msgstr ""
 
+#. Button in the push diagnostics fold: builds the diagnostics report again.
+#: client/components/Settings/Notifications.vue:130
+msgctxt "settings.notifications.refreshDiagnostics"
+msgid "Refresh"
+msgstr ""
+
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.serverUnsupported"
@@ -12247,6 +12277,12 @@ msgstr ""
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.stale"
 msgid "A server's push identity (its key) changed, so this device's push subscription for it no longer works. Renew it from that network's settings (Edit network → “Renew push notifications”) to keep being notified while the app is closed."
+msgstr ""
+
+#. Button in the push diagnostics fold: subscribes this device to push on every connected chat network that announced a push key (a tap, which the browser may require).
+#: client/components/Settings/Notifications.vue:130
+msgctxt "settings.notifications.subscribeNow"
+msgid "Subscribe now"
 msgstr ""
 
 #. Warning line in Settings > Notifications when the browser cannot do web push; the parentheses name the browser features push requires.
