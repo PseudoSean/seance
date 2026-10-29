@@ -2231,7 +2231,6 @@
   "translate.retry": "Vertaling opnieuw proberen",
   "translate.settings.autoPicksCpu": "Auto kiest hier de CPU.",
   "translate.settings.autoPicksGpu": "Auto kiest hier de GPU.",
-  "translate.settings.autoPicksNone": "Auto kan het op dit apparaat niet uitvoeren.",
   "translate.settings.disabled": "Vertaling is uitgeschakeld in deze installatie.",
   "translate.settings.gpuAutomatic": "Automatisch — het beste voor dit apparaat",
   "translate.settings.gpuModel": "Taalmodel",

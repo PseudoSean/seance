@@ -2446,7 +2446,6 @@
   "translate.retry": "Повторить перевод",
   "translate.settings.autoPicksCpu": "Здесь «Авто» выбирает CPU.",
   "translate.settings.autoPicksGpu": "Здесь «Авто» выбирает GPU.",
-  "translate.settings.autoPicksNone": "«Авто» не может запустить её на этом устройстве.",
   "translate.settings.deviceAuto": "Авто",
   "translate.settings.disabled": "Перевод выключен в этой установке.",
   "translate.settings.gpuAutomatic": "Автоматически — лучшее для этого устройства",

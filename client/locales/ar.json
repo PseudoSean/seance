@@ -2568,7 +2568,6 @@
   "translate.retry": "إعادة محاولة الترجمة",
   "translate.settings.autoPicksCpu": "يختار «تلقائي» هنا وحدة CPU.",
   "translate.settings.autoPicksGpu": "يختار «تلقائي» هنا وحدة GPU.",
-  "translate.settings.autoPicksNone": "لا يستطيع «تلقائي» تشغيله على هذا الجهاز.",
   "translate.settings.deviceAuto": "تلقائي",
   "translate.settings.disabled": "الترجمة معطّلة في هذا النشر.",
   "translate.settings.gpuAutomatic": "تلقائي — الأفضل لهذا الجهاز",

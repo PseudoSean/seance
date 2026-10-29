@@ -2269,7 +2269,6 @@
   "translate.retry": "Prøv oversættelsen igen",
   "translate.settings.autoPicksCpu": "Her vælger Automatisk CPU'en.",
   "translate.settings.autoPicksGpu": "Her vælger Automatisk GPU'en.",
-  "translate.settings.autoPicksNone": "Automatisk kan ikke køre den på denne enhed.",
   "translate.settings.deviceAuto": "Automatisk",
   "translate.settings.disabled": "Oversættelse er slået fra i denne installation.",
   "translate.settings.gpuAutomatic": "Automatisk – bedst til denne enhed",

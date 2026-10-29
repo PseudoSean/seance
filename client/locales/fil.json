@@ -2242,7 +2242,6 @@
   "translate.retry": "Subukang isalin ulit",
   "translate.settings.autoPicksCpu": "Dito, CPU ang pinipili ng Awtomatiko.",
   "translate.settings.autoPicksGpu": "Dito, GPU ang pinipili ng Awtomatiko.",
-  "translate.settings.autoPicksNone": "Hindi ito kayang patakbuhin ng Awtomatiko sa device na ito.",
   "translate.settings.deviceAuto": "Awtomatiko",
   "translate.settings.disabled": "Naka-off ang pagsasalin sa deployment na ito.",
   "translate.settings.gpuAutomatic": "Awtomatiko — pinakamainam para sa device na ito",

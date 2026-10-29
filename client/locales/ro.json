@@ -2329,7 +2329,6 @@
   "translate.retry": "Încearcă din nou traducerea",
   "translate.settings.autoPicksCpu": "Aici, Automat alege CPU-ul.",
   "translate.settings.autoPicksGpu": "Aici, Automat alege GPU-ul.",
-  "translate.settings.autoPicksNone": "Automat nu îl poate rula pe acest dispozitiv.",
   "translate.settings.deviceAuto": "Automat",
   "translate.settings.disabled": "Traducerea este dezactivată în această instalare.",
   "translate.settings.gpuAutomatic": "Automat — cel mai bun pentru acest dispozitiv",

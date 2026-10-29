@@ -2221,7 +2221,6 @@
   "translate.retry": "Réessayer la traduction",
   "translate.settings.autoPicksCpu": "Ici, Auto choisit le CPU.",
   "translate.settings.autoPicksGpu": "Ici, Auto choisit le GPU.",
-  "translate.settings.autoPicksNone": "Auto ne peut pas l'exécuter sur cet appareil.",
   "translate.settings.disabled": "La traduction est désactivée dans ce déploiement.",
   "translate.settings.gpuAutomatic": "Automatique — le meilleur pour cet appareil",
   "translate.settings.gpuModel": "Modèle de langage",

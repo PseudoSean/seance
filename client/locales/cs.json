@@ -2371,7 +2371,6 @@
   "translate.retry": "Zkusit překlad znovu",
   "translate.settings.autoPicksCpu": "Automaticky zde volí CPU.",
   "translate.settings.autoPicksGpu": "Automaticky zde volí GPU.",
-  "translate.settings.autoPicksNone": "Automaticky ho na tomto zařízení spustit nelze.",
   "translate.settings.deviceAuto": "Automaticky",
   "translate.settings.disabled": "Překlad je v tomto nasazení vypnutý.",
   "translate.settings.gpuAutomatic": "Automaticky — nejlepší pro toto zařízení",

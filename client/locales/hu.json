@@ -2321,7 +2321,6 @@
   "translate.retry": "Fordítás újrapróbálása",
   "translate.settings.autoPicksCpu": "Itt az Automatikus a CPU-t választja.",
   "translate.settings.autoPicksGpu": "Itt az Automatikus a GPU-t választja.",
-  "translate.settings.autoPicksNone": "Az Automatikus ezen az eszközön nem tudja futtatni.",
   "translate.settings.deviceAuto": "Automatikus",
   "translate.settings.disabled": "A fordítás ki van kapcsolva ebben a telepítésben.",
   "translate.settings.gpuAutomatic": "Automatikus – a legjobb ehhez az eszközhöz",

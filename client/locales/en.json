@@ -2345,7 +2345,6 @@
   "translate.retry": "Retry the translation",
   "translate.settings.autoPicksCpu": "Auto picks the CPU here.",
   "translate.settings.autoPicksGpu": "Auto picks the GPU here.",
-  "translate.settings.autoPicksNone": "Auto can't run it on this device.",
   "translate.settings.deviceAuto": "Auto",
   "translate.settings.disabled": "Translation is turned off in this deployment.",
   "translate.settings.gpuAutomatic": "Automatic — best for this device",

@@ -2268,7 +2268,6 @@
   "translate.retry": "번역 다시 시도",
   "translate.settings.autoPicksCpu": "이 기기에서는 '자동'이 CPU를 선택합니다.",
   "translate.settings.autoPicksGpu": "이 기기에서는 '자동'이 GPU를 선택합니다.",
-  "translate.settings.autoPicksNone": "'자동'으로는 이 기기에서 실행할 수 없습니다.",
   "translate.settings.deviceAuto": "자동",
   "translate.settings.disabled": "이 배포에서는 번역이 꺼져 있습니다.",
   "translate.settings.gpuAutomatic": "자동 — 이 기기에 가장 적합",

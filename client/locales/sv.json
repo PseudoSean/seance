@@ -2271,7 +2271,6 @@
   "translate.retry": "Försök att översätta igen",
   "translate.settings.autoPicksCpu": "Här väljer Auto CPU:n.",
   "translate.settings.autoPicksGpu": "Här väljer Auto GPU:n.",
-  "translate.settings.autoPicksNone": "Auto kan inte köra den på den här enheten.",
   "translate.settings.disabled": "Översättning är inaktiverad i den här installationen.",
   "translate.settings.gpuAutomatic": "Automatiskt – bäst för den här enheten",
   "translate.settings.gpuModel": "Språkmodell",

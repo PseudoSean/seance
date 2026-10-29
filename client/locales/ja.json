@@ -2273,7 +2273,6 @@
   "translate.retry": "翻訳を再試行",
   "translate.settings.autoPicksCpu": "このデバイスでは「自動」は CPU を選びます。",
   "translate.settings.autoPicksGpu": "このデバイスでは「自動」は GPU を選びます。",
-  "translate.settings.autoPicksNone": "「自動」ではこのデバイスで実行できません。",
   "translate.settings.deviceAuto": "自動",
   "translate.settings.disabled": "このデプロイメントでは翻訳がオフです。",
   "translate.settings.gpuAutomatic": "自動 — このデバイスにとって最適",

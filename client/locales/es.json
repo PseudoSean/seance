@@ -2240,7 +2240,6 @@
   "translate.retry": "Reintentar la traducción",
   "translate.settings.autoPicksCpu": "Aquí, Automático elige la CPU.",
   "translate.settings.autoPicksGpu": "Aquí, Automático elige la GPU.",
-  "translate.settings.autoPicksNone": "Automático no puede ejecutarlo en este dispositivo.",
   "translate.settings.deviceAuto": "Automático",
   "translate.settings.disabled": "La traducción está desactivada en este despliegue.",
   "translate.settings.gpuAutomatic": "Automático: el mejor para este dispositivo",

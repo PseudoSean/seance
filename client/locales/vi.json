@@ -2270,7 +2270,6 @@
   "translate.retry": "Thử dịch lại",
   "translate.settings.autoPicksCpu": "Ở đây, Tự động chọn CPU.",
   "translate.settings.autoPicksGpu": "Ở đây, Tự động chọn GPU.",
-  "translate.settings.autoPicksNone": "Tự động không thể chạy nó trên thiết bị này.",
   "translate.settings.deviceAuto": "Tự động",
   "translate.settings.disabled": "Tính năng dịch đã bị tắt trên bản triển khai này.",
   "translate.settings.gpuAutomatic": "Tự động — tốt nhất cho thiết bị này",

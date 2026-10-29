@@ -2426,7 +2426,6 @@
   "translate.retry": "Ponów tłumaczenie",
   "translate.settings.autoPicksCpu": "Tutaj Automatycznie wybiera CPU.",
   "translate.settings.autoPicksGpu": "Tutaj Automatycznie wybiera GPU.",
-  "translate.settings.autoPicksNone": "Automatycznie nie może go uruchomić na tym urządzeniu.",
   "translate.settings.deviceAuto": "Automatycznie",
   "translate.settings.disabled": "Tłumaczenie jest wyłączone w tym wdrożeniu.",
   "translate.settings.gpuAutomatic": "Automatycznie — najlepszy dla tego urządzenia",

@@ -254,7 +254,8 @@ shows: Settings -> Translation, per model family (`reader.ts`
 cannot run the family is a disabled, struck-through choice with its reason
 as text below it and as its description, a switched-off family keeping
 every choice open), under Auto "Auto picks the GPU here." / "… the CPU
-here." / "Auto can't run it on this device.", then one line per copy
+here." / the first device's reason when nothing runs (said once: that
+choice is then described by this line), then one line per copy
 ("Downloaded · <size>" with Remove, "Not downloaded · <size>" with
 Download, disabled and described by its reason where that copy cannot run;
 OPUS-MT adds a per-device "<n> pairs downloaded · <size>" summary above its

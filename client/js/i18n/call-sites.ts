@@ -2164,7 +2164,6 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.retry",
 	"translate.settings.autoPicksCpu",
 	"translate.settings.autoPicksGpu",
-	"translate.settings.autoPicksNone",
 	"translate.settings.deviceAuto",
 	"translate.settings.disabled",
 	"translate.settings.gpuAutomatic",

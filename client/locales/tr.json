@@ -2321,7 +2321,6 @@
   "translate.retry": "Çeviriyi yeniden dene",
   "translate.settings.autoPicksCpu": "Otomatik burada CPU'yu seçiyor.",
   "translate.settings.autoPicksGpu": "Otomatik burada GPU'yu seçiyor.",
-  "translate.settings.autoPicksNone": "Otomatik bunu bu cihazda çalıştıramıyor.",
   "translate.settings.deviceAuto": "Otomatik",
   "translate.settings.disabled": "Bu kurulumda çeviri kapalı.",
   "translate.settings.gpuAutomatic": "Otomatik — bu cihaz için en iyisi",

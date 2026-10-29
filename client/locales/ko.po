@@ -12691,13 +12691,13 @@ msgctxt "translate.capability.bufferLimit"
 msgid "Largest GPU buffer: {size}"
 msgstr "최대 GPU 버퍼: {size}"
 
-#. Line at the top of the model list in Settings → Translation: this device (or browser) offers no graphics processor (GPU) the translation models can use, so they run on the main processor (CPU). The reasons follow as their own list.
+#. Line at the top of the model list in Settings → Translation: the browser offers no graphics processor (GPU) at all here (no WebGPU, or no adapter), so the translation models can only run on the main processor (CPU). The reasons follow as their own list.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.cpu"
 msgid "This device has a CPU only."
 msgstr "이 기기에는 CPU만 있습니다."
 
-#. Line at the top of the model list in Settings → Translation: translation models can run on this device's graphics processor (GPU) and on its main processor (CPU). GPU and CPU are the usual abbreviations; the limits and any reasons follow on lines of their own.
+#. Line at the top of the model list in Settings → Translation: the browser offers a graphics processor (GPU, through WebGPU) as well as the main processor (CPU). It says only that the GPU is there, not that every model fits it: the largest buffer it binds, and anything it lacks, follow on lines of their own. GPU and CPU are the usual abbreviations.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.gpu"
 msgid "This device has a GPU and a CPU."
@@ -13412,12 +13412,6 @@ msgstr "이 기기에서는 '자동'이 CPU를 선택합니다."
 msgctxt "translate.settings.autoPicksGpu"
 msgid "Auto picks the GPU here."
 msgstr "이 기기에서는 '자동'이 GPU를 선택합니다."
-
-#. Settings → Translation, the line under "Run on" while Auto is chosen and neither processor (GPU nor CPU) of this device can run this translation model; the reasons are shown just above it, next to the choices that cannot be picked. "Auto" is the choice of that name.
-#: client/components/Settings/Translation.vue
-msgctxt "translate.settings.autoPicksNone"
-msgid "Auto can't run it on this device."
-msgstr "'자동'으로는 이 기기에서 실행할 수 없습니다."
 
 #. Settings → Translation, the first of three choices after "Run on": let the app pick the best processor (GPU or CPU) for this translation model on this device. One short word, like a button in a segmented control.
 #: client/components/Settings/Translation.vue

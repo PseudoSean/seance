@@ -512,14 +512,15 @@ export default async function run(page) {
 					: ["gpu", "cpu"];
 			const pick = order.find((d) => verdicts[d] === null);
 
-			// Nothing runs: the disabled choices above give the why.
+			// Nothing runs: the first device's reason, said once (the disabled
+			// choice is described by this line, not by a second copy of it).
 			return pick
 				? EN[
 						pick === "gpu"
 							? "translate.settings.autoPicksGpu"
 							: "translate.settings.autoPicksCpu"
 				  ]
-				: EN["translate.settings.autoPicksNone"];
+				: verdicts[order[0]];
 		};
 		const families = {
 			llm: {gpu: device.runs[SMALL] ? null : device.why(SMALL), cpu: null},

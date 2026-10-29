@@ -2270,7 +2270,6 @@
   "translate.retry": "ลองแปลอีกครั้ง",
   "translate.settings.autoPicksCpu": "บนอุปกรณ์นี้ อัตโนมัติจะเลือก CPU",
   "translate.settings.autoPicksGpu": "บนอุปกรณ์นี้ อัตโนมัติจะเลือก GPU",
-  "translate.settings.autoPicksNone": "อัตโนมัติไม่สามารถเรียกใช้บนอุปกรณ์นี้ได้",
   "translate.settings.deviceAuto": "อัตโนมัติ",
   "translate.settings.disabled": "การแปลถูกปิดในระบบที่ติดตั้งนี้",
   "translate.settings.gpuAutomatic": "อัตโนมัติ — ดีที่สุดสำหรับอุปกรณ์นี้",

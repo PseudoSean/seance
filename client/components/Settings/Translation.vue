@@ -213,7 +213,7 @@
 									:disabled="!!radioWhy(family, choice)"
 									:aria-describedby="
 										radioWhy(family, choice)
-											? reasonId(family.id, choice)
+											? reasonId(family, choice)
 											: undefined
 									"
 								/>
@@ -225,7 +225,7 @@
 				<ul v-if="radioReasons(family).length" class="translate-run-on-reasons">
 					<li
 						v-for="reason in radioReasons(family)"
-						:id="reasonId(family.id, reason.device)"
+						:id="listedReasonId(family.id, reason.device)"
 						:key="reason.device"
 						class="translate-run-on-why"
 					>
@@ -233,8 +233,10 @@
 					</li>
 				</ul>
 				<div
-					v-if="family.devices.choice === 'auto' && autoLine(family)"
+					v-if="autoLine(family)"
+					:id="autoId(family.id)"
 					class="translate-hint translate-auto"
+					:class="{blocked: !runsOn(family)}"
 				>
 					{{ autoLine(family) }}
 				</div>
@@ -497,6 +499,11 @@
 
 .translate-copy-why {
 	display: block;
+}
+
+/* Auto has nothing to run on: its line is the reason, in a reason's colour. */
+.translate-family .translate-auto.blocked {
+	color: var(--error-fg, #c33);
 }
 
 .translate-model-in-use {
@@ -846,13 +853,9 @@ export default defineComponent({
 		const radioWhy = (family: Family, choice: DeviceChoice) =>
 			choice === "auto" ? "" : blockWhy(family.devices.blocks[choice], family.ref);
 
-		const reasonId = (familyId: FamilyId, device: DeviceChoice) =>
+		const autoId = (familyId: FamilyId) => `translate-auto-${familyId}`;
+		const listedReasonId = (familyId: FamilyId, device: DeviceChoice) =>
 			`translate-run-on-why-${familyId}-${device}`;
-
-		const radioReasons = (family: Family) =>
-			(["gpu", "cpu"] as const)
-				.map((device) => ({device, text: radioWhy(family, device)}))
-				.filter((reason) => reason.text);
 
 		// Where the family runs here: the first device in its order this
 		// device can run it on (the switch aside: it would run there).
@@ -862,11 +865,10 @@ export default defineComponent({
 			return order.find((device) => !blocks[device] || blocks[device]!.kind === "off");
 		};
 
-		// What Auto picks here, else that it has nothing to run on: the why
-		// is the disabled choices' own reasons, just above, never said twice.
-		// Nothing while the probe runs.
+		// What Auto picks here, else why nothing runs, in the first device's
+		// words; only while Auto is chosen, and nothing while the probe runs.
 		const autoLine = (family: Family) => {
-			if (!capability.value) {
+			if (family.devices.choice !== "auto" || !capability.value) {
 				return "";
 			}
 
@@ -880,14 +882,26 @@ export default defineComponent({
 
 			const first = family.devices.blocks[family.devices.order[0]];
 
-			if (!first) {
-				return "";
-			}
-
-			return radioReasons(family).length
-				? t("translate.settings.autoPicksNone")
-				: translateWhyText(first, llmWords(family.ref));
+			return first ? translateWhyText(first, llmWords(family.ref)) : "";
 		};
+
+		// The disabled choices' reasons, each said once: one the Auto line
+		// already says (nothing runs, and this device is why) is not listed
+		// again under the group, and its choice is described by that line.
+		const radioReasons = (family: Family) => {
+			const auto = autoLine(family);
+
+			return (["gpu", "cpu"] as const)
+				.map((device) => ({device, text: radioWhy(family, device)}))
+				.filter((reason) => reason.text && reason.text !== auto);
+		};
+
+		// Where a disabled choice's reason is shown: its own line under the
+		// group, or the Auto line when that says it.
+		const reasonId = (family: Family, device: DeviceChoice) =>
+			radioWhy(family, device) === autoLine(family)
+				? autoId(family.id)
+				: listedReasonId(family.id, device);
 
 		// The language model runs somewhere here (the switch aside): only then
 		// is one of the choices "in use".
@@ -994,7 +1008,7 @@ export default defineComponent({
 			}
 
 			return why === radioWhy(family, view.device)
-				? reasonId(family.id, view.device)
+				? reasonId(family, view.device)
 				: copyId("why", view);
 		};
 
@@ -1130,7 +1144,10 @@ export default defineComponent({
 			radioWhy,
 			radioReasons,
 			reasonId,
+			listedReasonId,
+			autoId,
 			autoLine,
+			runsOn,
 			copyOrder,
 			modelsOf,
 			opusModels,

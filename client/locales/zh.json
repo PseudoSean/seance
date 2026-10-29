@@ -2273,7 +2273,6 @@
   "translate.retry": "重试翻译",
   "translate.settings.autoPicksCpu": "在此设备上，“自动”选择 CPU。",
   "translate.settings.autoPicksGpu": "在此设备上，“自动”选择 GPU。",
-  "translate.settings.autoPicksNone": "“自动”无法在此设备上运行它。",
   "translate.settings.deviceAuto": "自动",
   "translate.settings.disabled": "此部署中翻译已关闭。",
   "translate.settings.gpuAutomatic": "自动 — 最适合此设备",
