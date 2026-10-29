@@ -18,6 +18,7 @@ import {
 	UNCHANGED,
 	WRITE_DETECT_MIN_GAP,
 	WRITE_TIMEOUT_MS,
+	CPU_WRITE_TIMEOUT_MS,
 	answerError,
 	isAnsweredQuestion,
 	bareRetry,
@@ -943,6 +944,35 @@ describe("translate/outgoing", () => {
 			await r.clock.tickAsync(WRITE_TIMEOUT_MS + 1);
 			expect(await failed).to.equal(TIMED_OUT);
 			expect(r.signals[0].aborted).to.equal(true);
+		});
+
+		it("a CPU route's deadline is CPU_WRITE_TIMEOUT_MS", async () => {
+			const r = rig(() => ["never"]);
+			const never: OutgoingDeps = {
+				...r.deps,
+				translate(_req, signal) {
+					r.signals.push(signal);
+
+					// eslint-disable-next-line require-yield -- ends only by abort or timeout, never yields
+					return (async function* (): AsyncIterable<TranslateChunk> {
+						await new Promise<void>((resolve) =>
+							signal.addEventListener("abort", () => resolve())
+						);
+					})();
+				},
+			};
+			const promise = translateDraft(
+				never,
+				{...request(), device: "cpu"},
+				new AbortController().signal,
+				() => {}
+			);
+			const failed = promise.catch((e: Error) => e.message);
+
+			await r.clock.tickAsync(WRITE_TIMEOUT_MS + 1);
+			expect(r.signals[0].aborted).to.equal(false);
+			await r.clock.tickAsync(CPU_WRITE_TIMEOUT_MS - WRITE_TIMEOUT_MS);
+			expect(await failed).to.equal(TIMED_OUT);
 		});
 
 		it("waits out a model download, and times out once the download stalls", async () => {

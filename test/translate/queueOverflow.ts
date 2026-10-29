@@ -28,7 +28,7 @@ function rig(answer: (req: Request) => string | Error) {
 	const requests: Request[] = [];
 	const paused: string[] = [];
 	const deps: QueueDeps = {
-		route: () => Promise.resolve("llm"),
+		route: () => Promise.resolve({engine: "llm" as const, device: "gpu" as const}),
 		translate(req) {
 			requests.push(req);
 

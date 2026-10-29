@@ -304,7 +304,7 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 						throw new Error(needsDownloadError(refused, refusedDevice ?? undefined));
 					}
 
-					return route?.ref.engine ?? null;
+					return route ? {engine: route.ref.engine, device: route.device} : null;
 				}),
 			translate: (req, signal) => service.translate(req, signal),
 			loadTicks: () => service.loadTicks(),

@@ -1268,7 +1268,11 @@ describe("translate/service", () => {
 		const paused: string[] = [];
 		const queue = new TranslateQueue({
 			route: (from, to, hint) =>
-				r.service.route(from, to, hint).then((route) => route?.ref.engine ?? null),
+				r.service
+					.route(from, to, hint)
+					.then((route) =>
+						route ? {engine: route.ref.engine, device: route.device} : null
+					),
 			translate: (req, signal) => r.service.translate(req, signal),
 			priority: () => 0,
 			arrivals: () => 0,
@@ -1794,7 +1798,7 @@ describe("translate/service", () => {
 							throw new Error(needsDownloadError(refused));
 						}
 
-						return route?.ref.engine ?? null;
+						return route ? {engine: route.ref.engine, device: route.device} : null;
 					}),
 				translate: (req, signal) => service.translate(req, signal),
 				priority: () => 0,
@@ -1974,7 +1978,7 @@ describe("translate/service", () => {
 			const paused: string[] = [];
 			const refusal = needsDownloadError(catalog.llm);
 			const queue = new TranslateQueue({
-				route: () => Promise.resolve("llm"),
+				route: () => Promise.resolve({engine: "llm" as const, device: "gpu" as const}),
 				async *translate() {
 					await Promise.resolve();
 

@@ -10,6 +10,7 @@ import {
 	type TranslateChunk,
 	type TranslateRequest,
 	emptyContext,
+	type Device,
 } from "./engine";
 import {parseBatchedOutput, stripSentinel} from "./prompt";
 import {
@@ -23,6 +24,8 @@ import {
 
 /** A draft's translation is given up after this long (the queue's limit). */
 export const WRITE_TIMEOUT_MS = 2 * 60 * 1000;
+/** The composer's deadline on a route that runs on the CPU (queue.ts has the figures). */
+export const CPU_WRITE_TIMEOUT_MS = 6 * 60 * 1000;
 /** A draft this short (words) whose translation is also short is a term worth remembering. */
 export const TERM_MAX_WORDS = 3;
 export const TERM_MAX_CHARS = 40;
@@ -857,6 +860,8 @@ export interface OutgoingRequest {
 	 * prompt can say what the text it is looking at carries.
 	 */
 	markers?: MarkerForm;
+	/** The device the route runs on: a CPU route gets the longer deadline. */
+	device?: Device;
 	/**
 	 * Already protected, `text` being its protected form: the reading queue
 	 * protects a whole message once (a fenced block is one span across its
@@ -1072,10 +1077,14 @@ export async function translateDraft(
 
 	// Waits out a model download (armDeadline): the first draft in a weak
 	// language may be what downloads NLLB.
-	const timer = armDeadline(deps, WRITE_TIMEOUT_MS, () => {
-		timedOut = true;
-		controller.abort();
-	});
+	const timer = armDeadline(
+		deps,
+		request.device === "cpu" ? CPU_WRITE_TIMEOUT_MS : WRITE_TIMEOUT_MS,
+		() => {
+			timedOut = true;
+			controller.abort();
+		}
+	);
 
 	// A stream that ended because of the timeout or the caller's abort ends
 	// normally (client.ts closes it at once), so the result is checked, not
