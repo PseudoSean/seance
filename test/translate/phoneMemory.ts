@@ -17,13 +17,16 @@ import {
 	llmRunsOn,
 	modelBlock,
 	tooLargeForPhone,
+	type DeviceChoices,
 } from "../../client/js/translate/models";
 import {explainRoute, routeInput} from "../../client/js/translate/router";
 import {routesFor} from "../../client/js/translate/routes.default";
 
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
+
 const GiB = 1024 * 1024 * 1024;
 const MiB = 1024 * 1024;
-const all = {llm: true, cpu: true, nllb: true};
+const all = {llm: true, opus: true, nllb: true};
 
 function device(overrides: Partial<Capability> = {}): Capability {
 	return {
@@ -128,23 +131,23 @@ describe("translate: a phone's page memory", () => {
 		});
 
 		it("is a memory block on a phone, whatever the GPU binds and the switch says", () => {
-			expect(modelBlock(large, device(), all)).to.deep.equal({
+			expect(modelBlock(large, "gpu", device(), all)).to.deep.equal({
 				kind: "memory",
 				needed: large.vramBytes,
 			});
-			expect(modelBlock(large, device(), {...all, llm: false})).to.deep.include({
+			expect(modelBlock(large, "gpu", device(), {...all, llm: false})).to.deep.include({
 				kind: "memory",
 			});
-			expect(modelBlock(small, device(), all)).to.equal(null);
+			expect(modelBlock(small, "gpu", device(), all)).to.equal(null);
 		});
 
 		it("runs on a computer", () => {
-			expect(modelBlock(large, device({mobile: false}), all)).to.equal(null);
+			expect(modelBlock(large, "gpu", device({mobile: false}), all)).to.equal(null);
 		});
 
 		it("names the device's own reason first: no GPU is no GPU", () => {
 			expect(
-				modelBlock(large, device({tier: "cpu", reasons: ["NO_F16"]}), all)
+				modelBlock(large, "gpu", device({tier: "cpu", reasons: ["NO_F16"]}), all)
 			).to.deep.equal({kind: "device", reason: "NO_F16"});
 		});
 
@@ -174,7 +177,7 @@ describe("translate: a phone's page memory", () => {
 			const deploy = buildCatalog({llm: {model: QWEN3_4B_ID}});
 			const table = routesFor(QWEN3_4B_ID);
 			const verdict = explainRoute(table, deploy, {
-				...routeInput(device(), all, {from: "de", to: "en"}),
+				...routeInput(device(), all, AUTO, {from: "de", to: "en"}),
 				cached: () => true,
 			});
 
@@ -185,7 +188,7 @@ describe("translate: a phone's page memory", () => {
 			expect(verdict.route?.ref.engine).to.equal("seq2seq");
 
 			const llmOnly = explainRoute({en: {de: ["llm"]}}, deploy, {
-				...routeInput(device(), all, {from: "de", to: "en"}),
+				...routeInput(device(), all, AUTO, {from: "de", to: "en"}),
 				cached: () => true,
 			});
 

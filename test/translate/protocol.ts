@@ -6,7 +6,9 @@ import {createPortPair} from "../../client/js/translate/protocol";
 import {serveEngines} from "../../client/js/translate/worker";
 import {FakeEngine} from "./fakeEngine";
 
-const catalog = buildCatalog();
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 const llmRef: ModelRef = catalog.llm;
 const nllbRef: ModelRef = catalog.nllb;
 
@@ -17,13 +19,16 @@ function rig(
 	const [mainPort, workerPort] = createPortPair();
 	const llm = new FakeEngine("llm", (req) => script(req.text));
 	const seq2seq = new FakeEngine("seq2seq", (req) => [`[${req.to}] ${req.text}`]);
+	// A copy at a time: `<id>@<device>`.
 	const cached = new Set<string>();
+	const deleted: string[] = [];
 	const cache: CacheApi = {
-		has(ref) {
-			return Promise.resolve(cached.has(ref.id));
+		has(ref, device) {
+			return Promise.resolve(cached.has(`${ref.id}@${device}`));
 		},
-		delete(ref) {
-			cached.delete(ref.id);
+		delete(ref, device) {
+			deleted.push(`${ref.id}@${device}`);
+			cached.delete(`${ref.id}@${device}`);
 			return Promise.resolve();
 		},
 	};
@@ -46,7 +51,7 @@ function rig(
 
 	client.configure(catalog, "https://app.test/js/ort/");
 
-	return {client, llm, seq2seq, cached, cache, configured, stop};
+	return {client, llm, seq2seq, cached, deleted, cache, configured, stop};
 }
 
 async function collect(iterable: AsyncIterable<{text: string; done: boolean}>) {
@@ -71,7 +76,7 @@ describe("translate/protocol", () => {
 		const {client, llm} = rig();
 		const progress: number[] = [];
 
-		await client.load(llmRef, (p) => progress.push(p.fraction));
+		await client.load(llmRef, "gpu", (p) => progress.push(p.fraction));
 
 		expect(llm.calls.load).to.deep.equal([llmRef]);
 		// The port boundary posts a plain copy of every ref (client.ts), so a
@@ -90,7 +95,7 @@ describe("translate/protocol", () => {
 		let message = "";
 
 		try {
-			await client.load(llmRef);
+			await client.load(llmRef, "gpu");
 		} catch (e) {
 			message = (e as Error).message;
 		}
@@ -144,7 +149,7 @@ describe("translate/protocol", () => {
 
 	it("a failed translation rejects the stream", async () => {
 		const {client, llm} = rig();
-		await client.load(llmRef);
+		await client.load(llmRef, "gpu");
 		llm.failTranslate = new Error("device lost");
 		let message = "";
 
@@ -172,7 +177,7 @@ describe("translate/protocol", () => {
 
 	it("leaving the stream early cancels the request in the worker", async () => {
 		const {client, llm} = rig(() => ["a", "ab", "abc", "abcd"]);
-		await client.load(llmRef);
+		await client.load(llmRef, "gpu");
 		const seen: string[] = [];
 
 		for await (const chunk of client.translate(
@@ -198,21 +203,78 @@ describe("translate/protocol", () => {
 	});
 
 	it("unload, models and delete round-trip", async () => {
-		const {client, llm, cached} = rig();
-		cached.add(nllbRef.id);
+		const {client, llm, cached, deleted} = rig();
+		cached.add(`${nllbRef.id}@gpu`);
+		cached.add(`${nllbRef.id}@cpu`);
 
-		await client.load(llmRef);
+		await client.load(llmRef, "gpu");
 		await client.unload("llm");
 		expect(llm.calls.unload).to.equal(1);
 		expect((await client.status()).llm.status).to.equal("cold");
 
-		const before = await client.models();
+		const nllb = (states: Awaited<ReturnType<typeof client.models>>) =>
+			states.filter((m) => m.ref.id === nllbRef.id).map((m) => [m.device, m.cached]);
 
-		expect(before.find((m) => m.ref.id === nllbRef.id)?.cached).to.equal(true);
-		await client.deleteModel(nllbRef);
-		const after = await client.models();
+		expect(nllb(await client.models())).to.deep.equal([
+			["gpu", true],
+			["cpu", true],
+		]);
+		await client.deleteModel(nllbRef, "cpu");
+		expect(deleted).to.deep.equal([`${nllbRef.id}@cpu`]);
+		// The other device's copy stays.
+		expect(nllb(await client.models())).to.deep.equal([
+			["gpu", true],
+			["cpu", false],
+		]);
+	});
 
-		expect(after.find((m) => m.ref.id === nllbRef.id)?.cached).to.equal(false);
+	it("a load names its device, and its progress and answer come back for that copy", async () => {
+		const {client, llm} = rig();
+		const progress: number[] = [];
+
+		await client.load(llmRef, "cpu", (p) => progress.push(p.fraction));
+		expect(llm.calls.devices).to.deep.equal(["cpu"]);
+		expect(progress).to.deep.equal([0.5, 1]);
+	});
+
+	it("loads of one model on two devices are two loads, and one failing fails only its own", async () => {
+		const {client, llm} = rig();
+
+		llm.failLoad = new Error("device lost");
+
+		const [gpu, cpu] = await Promise.allSettled([
+			client.load(llmRef, "gpu"),
+			client.load(llmRef, "cpu"),
+		]);
+
+		expect(llm.calls.devices).to.deep.equal(["gpu", "cpu"]);
+		expect(gpu.status).to.equal("rejected");
+		expect(cpu.status).to.equal("fulfilled");
+	});
+
+	it("a translate request loads its model on the request's device", async () => {
+		const {client, seq2seq} = rig();
+		const req = {
+			id: 3,
+			device: "gpu" as const,
+			model: nllbRef.id,
+			text: "x",
+			from: "de",
+			to: "en",
+			purpose: "read" as const,
+			context: emptyContext(),
+		};
+
+		await collect(client.translate(req, nllbRef));
+		expect(seq2seq.calls.devices).to.deep.equal(["gpu"]);
+
+		// Loaded on the GPU: a CPU request loads the CPU copy.
+		await collect(client.translate({...req, id: 4, device: "cpu"}, nllbRef));
+		expect(seq2seq.calls.devices).to.deep.equal(["gpu", "cpu"]);
+
+		// A request without a device runs where the model is loaded.
+		await collect(client.translate({...req, id: 5, device: undefined}, nllbRef));
+		expect(seq2seq.calls.devices).to.deep.equal(["gpu", "cpu"]);
 	});
 
 	it("dispose rejects everything still pending", async () => {
@@ -233,7 +295,7 @@ describe("translate/protocol", () => {
 
 	it("client.cancel() from inside the for-await ends the loop", async () => {
 		const {client, llm} = rig(() => ["a", "ab", "abc", "abcd"]);
-		await client.load(llmRef);
+		await client.load(llmRef, "gpu");
 		const seen: string[] = [];
 		const req = {
 			id: 5,
@@ -262,8 +324,8 @@ describe("translate/protocol", () => {
 		const progressB: number[] = [];
 
 		await Promise.all([
-			client.load(llmRef, (p) => progressA.push(p.fraction)),
-			client.load(llmRef, (p) => progressB.push(p.fraction)),
+			client.load(llmRef, "gpu", (p) => progressA.push(p.fraction)),
+			client.load(llmRef, "gpu", (p) => progressB.push(p.fraction)),
 		]);
 
 		expect(llm.calls.load.length).to.equal(1);
@@ -365,7 +427,7 @@ describe("translate/protocol", () => {
 	it("a failed translation is a request error, not the model's", async () => {
 		const {client, llm} = rig();
 
-		await client.load(llmRef);
+		await client.load(llmRef, "gpu");
 		llm.failTranslate = new Error("seq2seq engines do not batch");
 
 		let error: unknown = null;
@@ -499,7 +561,7 @@ describe("translate/protocol", () => {
 
 	it("a load-class EngineError from translate arrives as a load failure", async () => {
 		const {client, llm} = rig();
-		await client.load(llmRef);
+		await client.load(llmRef, "gpu");
 		llm.failTranslate = new EngineError("device lost twice", "load");
 		let caught: unknown = null;
 
@@ -528,7 +590,7 @@ describe("translate/protocol", () => {
 
 	it("translate posts a plain copy, so a reactive Proxy inside the request cannot fail structured cloning", async () => {
 		const {client, llm} = rig();
-		await client.load(llmRef);
+		await client.load(llmRef, "gpu");
 		const context = emptyContext();
 
 		// A bare Proxy is enough: structured clone rejects any Proxy, which is

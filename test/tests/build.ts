@@ -122,6 +122,27 @@ describe("public folder", function () {
 		expect(root.some((name) => /^[0-9a-f]{16,}\.mjs$/.test(name))).to.be.false;
 	});
 
+	it("the CPU language model's library is in the worker once, and its wasm beside it", function () {
+		const worker = fs.readFileSync(
+			path.join(publicFolder, "js", "translate-worker.js"),
+			"utf8"
+		);
+		// wllama's own worker, which it carries as one string literal.
+		// A development build also carries the library's source once more,
+		// unminified and indented, so only the string literal is counted
+		// (a quote right before the code).
+		const marker = "var Module=typeof Module";
+		const literal = /['"`]var Module=typeof Module/g;
+
+		expect(worker.match(literal)?.length).to.equal(1);
+		expect(fs.existsSync(path.join(publicFolder, "js", "wllama.wasm"))).to.be.true;
+
+		// Only the worker loads it: the page's bundle never carries it.
+		const bundle = fs.readFileSync(path.join(publicFolder, "js", "bundle.js"), "utf8");
+
+		expect(bundle.includes(marker)).to.be.false;
+	});
+
 	it("style files are built", function () {
 		expect(fs.existsSync(path.join(publicFolder, "css", "style.css"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "css", "style.css.map"))).to.be.true;

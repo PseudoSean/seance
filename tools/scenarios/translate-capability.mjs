@@ -15,27 +15,38 @@
 //             the 1.7B runs, the 4B cannot -- too large for a phone's page
 //
 // For each, after a cold load with a fresh profile's storage: Settings →
-// Translation's model rows say "Can run on this device" / "Can't run on this
-// device" with the reason as its own line (the device code in words, or the
-// buffer numbers), Download is disabled exactly where it cannot run and is
-// described by that reason, and "In use" marks a GPU model only where one
-// can run; the composer's translate dialog, opened on the
+// Translation's device line ("This device has a GPU and a CPU." / "… a CPU
+// only."), then each model family's Run on (Auto / GPU / CPU, a radiogroup):
+// a device that cannot run the family is a disabled radio with the reason as
+// visible text and as its description -- the language model's GPU on
+// noWebgpu says WebGPU, OPUS-MT's and NLLB-200's GPU says this version has
+// no GPU copy wherever the device itself would not say why first (this build
+// ships them CPU only: models.ts CatalogOptions `seq2seqGpu`), the language
+// model's CPU is open everywhere -- and under Auto the line saying what Auto
+// picks here (the CPU for OPUS-MT and NLLB-200, the GPU can't run them);
+// then one line per copy (none on the GPU for OPUS-MT and NLLB-200): a GPU copy's Download
+// is disabled exactly where it cannot run and is described by that reason,
+// and "In use" marks a language model only where one can run. Under
+// --mobile every device is a phone (`userAgentData.mobile`): the 4B is
+// too large for its page and OPUS-MT's Auto picks the CPU. The composer's
+// translate dialog, opened on the
 // same language twice (the cleanup pass, LLM-only), shows the confirm
 // disabled with "Correcting a message needs the GPU model." and the reason
 // where the GPU model cannot run, and "Correct" enabled where it can, and
 // German as the target is on offer everywhere (the CPU models serve it);
 // the channel panel greys the user's own language under "Send my messages
 // in" with the same two sentences where the cleanup pass cannot run.
-// Then, on the desktop device, the switches: the GPU model off makes its
-// rows "Switched off above" and the cleanup pass say so; both off puts the
+// Then, on the desktop device, the switches: the language model off leaves
+// its Run on and its Downloads open (a download ahead of use) and makes the
+// cleanup pass say so; both off puts the
 // panel's notice up ("Translation can't run here right now." and both
 // switches named), disables the reading switch's On, dims the header button
 // and makes its click open the panel, disables the message toolbar's
 // Translate with the reason as its description, and disables German in the
 // composer's dialog. On noWebgpu, the CPU models off is the one switch named.
 //
-// NLLB-200 (CC-BY-NC-4.0) is off until switched on: its row says "Switched
-// off above" on every device with its licence line under the switch, and on
+// NLLB-200 (CC-BY-NC-4.0) is off until switched on, its licence line under
+// the switch on every device, its Run on still open where it can run, and on
 // noWebgpu English -> Japanese (no OPUS pair) is disabled in the composer's
 // dialog with "This needs NLLB-200, which is switched off …" until the switch
 // is turned on. The GPU model select greys a model this GPU cannot bind
@@ -44,7 +55,7 @@
 // several German lines switched to reading asks once ("Download <model>?",
 // its size, Download / Not now), Not now fails every line with "Needs
 // <model>, a <size> download: …" and pauses nothing, nothing is remembered,
-// a Retry asks once more, and every model row still says "Not downloaded".
+// a Retry asks once more, and every copy line still says "Not downloaded".
 //
 // Not on the fake engine: ?fakeTranslate replaces the probe with its own
 // answer. A production build is fine; no model is ever downloaded.
@@ -75,34 +86,59 @@ const LARGE = "Qwen3-4B-q4f16_1-MLC";
 const NLLB = "Xenova/nllb-200-distilled-600M";
 // models.ts LLM_CHOICES largestBufferBytes (the 4B has no small-buffer build).
 const NEEDS = {[SMALL]: 155_582_464, [LARGE]: 194_478_080};
+// OPUS-MT and NLLB-200 have no GPU copy in this build (models.ts
+// CatalogOptions `seq2seqGpu`): where the device itself is no reason, that
+// is what their GPU choice says.
+const NO_GPU_COPY = () => EN["translate.why.noGpuCopy"];
+// The 1.7B's CPU copy (models.ts CPU_LLM_COPY).
+const SMALL_CPU_SIZE = 1_107_409_472;
 
 const DEVICES = {
 	noWebgpu: {
 		gpu: null,
 		runs: {[SMALL]: false, [LARGE]: false},
 		why: () => EN["translate.why.noWebgpu"],
+		// NLLB-200's and OPUS-MT's GPU choice: null = it runs there. The
+		// device's own reason comes before the missing copy (models.ts gpuBlock).
+		seq2seqGpu: () => EN["translate.why.noWebgpu"],
+		nllbGpu: () => EN["translate.why.noWebgpu"],
 	},
 	noF16: {
 		gpu: {f16: false, max: 2 * GiB},
 		runs: {[SMALL]: false, [LARGE]: false},
 		why: () => EN["translate.why.noF16"],
+		seq2seqGpu: () => EN["translate.why.noF16"],
+		nllbGpu: () => EN["translate.why.noF16"],
 	},
 	lowLimits: {
 		gpu: {f16: true, max: 2 * GiB, storageBuffers: 8},
 		runs: {[SMALL]: false, [LARGE]: false},
 		why: () => EN["translate.why.gpuLimits"],
+		// WebLLM's shader floors are the language model's alone.
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 	binds128: {
 		gpu: {f16: true, max: 128 * MiB},
 		runs: {[SMALL]: true, [LARGE]: false},
 		why: (id) => needsBuffer(NEEDS[id], 128 * MiB),
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 	binds160: {
 		gpu: {f16: true, max: 160 * MiB},
 		runs: {[SMALL]: true, [LARGE]: false},
 		why: (id) => needsBuffer(NEEDS[id], 160 * MiB),
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
-	desktop: {gpu: {f16: true, max: 2 * GiB}, runs: {[SMALL]: true, [LARGE]: true}, why: () => ""},
+	desktop: {
+		gpu: {f16: true, max: 2 * GiB},
+		runs: {[SMALL]: true, [LARGE]: true},
+		why: () => "",
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
+	},
 	// The desktop's GPU on a phone (`userAgentData.mobile`): the 4B is too
 	// large for a phone's page whatever the GPU binds (models.ts
 	// tooLargeForPhone), the 1.7B runs and is the default.
@@ -111,8 +147,20 @@ const DEVICES = {
 		mobile: true,
 		runs: {[SMALL]: true, [LARGE]: false},
 		why: (id) => (id === LARGE ? EN["translate.why.phoneMemory"] : ""),
+		seq2seqGpu: NO_GPU_COPY,
+		nllbGpu: NO_GPU_COPY,
 	},
 };
+
+/**
+ * A device as this run sees it: under --mobile every device is a phone, so
+ * the desktop's GPU is the phone's (the 4B too large for the page).
+ */
+function deviceFor(name) {
+	const device = DEVICES[name];
+
+	return MOBILE && name === "desktop" ? {...DEVICES.phone, gpu: device.gpu} : device;
+}
 
 /** friendlysize.ts under the English locale. */
 function size(bytes) {
@@ -154,6 +202,14 @@ const GPU_STUB = `(() => {
 })();`;
 
 const ROW = (id) => `.translate-model[data-model=${JSON.stringify(id)}]`;
+const COPY = (id, device) => `${ROW(id)} .translate-copy[data-device="${device}"]`;
+const RADIO = (setting, value) => `input[name="${setting}"][value="${value}"]`;
+const FAMILY = (family) => `.translate-family[data-family="${family}"]`;
+const SETTING = {
+	llm: "translateLlmDevice",
+	opus: "translateOpusDevice",
+	nllb: "translateNllbDevice",
+};
 const text = (selector) =>
 	`((document.querySelector(${JSON.stringify(selector)}) || {}).textContent || "").trim()`;
 const GLOBE = "#chat button.translate";
@@ -200,7 +256,10 @@ export default async function run(page) {
 		const path = `/?host=127.0.0.1&port=8067&tls=false&nick=${nick}&join=${encodeURIComponent(
 			CHANNEL
 		)}`;
-		const device = JSON.stringify({gpu: DEVICES[name].gpu, mobile: !!DEVICES[name].mobile});
+		const device = JSON.stringify({
+			gpu: DEVICES[name].gpu,
+			mobile: !!DEVICES[name].mobile || MOBILE,
+		});
 
 		if (first) {
 			first = false;
@@ -261,16 +320,13 @@ export default async function run(page) {
 
 	const openSettings = async () => {
 		await page.evaluate(`location.hash = "#/settings/translation"`);
-		await page.waitFor(`document.querySelectorAll(".translate-model").length >= 3`, {
-			label: "model rows",
+		await page.waitFor(`document.querySelectorAll(".translate-copy").length >= 3`, {
+			label: "copy lines",
 		});
-		// The probe has answered once no row is still "checking".
-		await page.waitFor(
-			`![...document.querySelectorAll(".translate-model-runs")].some((el) => el.textContent.trim() === ${JSON.stringify(
-				EN["translate.why.probing"]
-			)})`,
-			{label: "probe answered"}
-		);
+		// The probe has answered once the device line is up.
+		await page.waitFor(`!!document.querySelector(".translate-device")`, {
+			label: "probe answered",
+		});
 	};
 
 	const closeSettings = async () => {
@@ -400,7 +456,7 @@ export default async function run(page) {
 	const readOnSegment = `[...document.querySelectorAll(".translation-panel-section")][0].querySelectorAll(".translation-panel-segment")[1]`;
 
 	for (const [index, name] of names.entries()) {
-		const device = DEVICES[name];
+		const device = DEVICES[name] && deviceFor(name);
 
 		if (!device) {
 			throw new Error(`unknown --device=${name}`);
@@ -409,58 +465,179 @@ export default async function run(page) {
 		page.check(`--- ${name}`, true);
 		await coldLoad(name, index);
 
-		// 1. Settings → Translation: one verdict per row, the reason under it.
+		// 1. Settings → Translation: the device line, each family's Run on
+		// and Auto line, and one line per copy.
 		await openSettings();
+
+		const mobile = !!DEVICES[name].mobile || MOBILE;
+		const deviceLine = await page.evaluate(text(".translate-device-has"));
+		const hasGpu = DEVICES[name].gpu !== null;
+
+		page.check(
+			`${name}: the device line says ${
+				hasGpu ? "a GPU and a CPU" : "a CPU only"
+			} (${deviceLine})`,
+			deviceLine === EN[hasGpu ? "translate.capability.gpu" : "translate.capability.cpu"]
+		);
+
+		/** A family's Run on: each radio's state and reason, and the Auto line. */
+		const runOn = (family) =>
+			page.evaluate(`(() => {
+				const group = document.querySelector(${JSON.stringify(FAMILY(family))} + " [role=radiogroup]");
+				const radios = {};
+				for (const value of ["auto", "gpu", "cpu"]) {
+					const input = document.querySelector(${JSON.stringify(
+						`input[name="${SETTING[family]}"]`
+					)} + '[value="' + value + '"]');
+					const described = input && input.getAttribute("aria-describedby");
+					const reason = described ? document.getElementById(described) : null;
+					const why = reason ? reason.textContent.trim() : "";
+					// Visible text, not a tooltip: rendered, and not inside the radio's own label.
+					const shown = reason && reason.getClientRects().length > 0 && !reason.closest("label") ? why : "";
+					radios[value] = input ? {disabled: input.disabled, checked: input.checked, why, shown} : null;
+				}
+				return {
+					group: !!group && !!group.getAttribute("aria-labelledby"),
+					radios,
+					auto: ((document.querySelector(${JSON.stringify(
+						FAMILY(family)
+					)} + " .translate-auto")) || {}).textContent?.trim() || "",
+				};
+			})()`);
+		const autoSays = (family, verdicts) => {
+			const order =
+				family === "llm"
+					? ["gpu"]
+					: family === "nllb"
+					? verdicts.gpu === null
+						? ["gpu", "cpu"]
+						: ["cpu"]
+					: mobile
+					? ["cpu", "gpu"]
+					: ["gpu", "cpu"];
+			const pick = order.find((d) => verdicts[d] === null);
+
+			if (pick === "gpu") {
+				// The 1.7B on a 128 MiB binding runs its small-buffer build.
+				return EN[
+					family === "llm" && name === "binds128"
+						? "translate.settings.autoPicksGpuSmallBuild"
+						: "translate.settings.autoPicksGpu"
+				];
+			}
+
+			if (pick === "cpu") {
+				// The GPU could run it (OPUS-MT on a phone), or it cannot.
+				return EN[
+					verdicts.gpu === null
+						? "translate.settings.autoPicksCpu"
+						: family === "nllb"
+						? "translate.settings.autoPicksCpuNoGpuNllb"
+						: "translate.settings.autoPicksCpuNoGpuOpus"
+				];
+			}
+
+			// Nothing runs: the first device's reason, said once (the disabled
+			// choice is described by this line, not by a second copy of it).
+			return verdicts[order[0]];
+		};
+		const families = {
+			llm: {gpu: device.runs[SMALL] ? null : device.why(SMALL), cpu: null},
+			opus: {gpu: device.seq2seqGpu ? device.seq2seqGpu() : null, cpu: null},
+			nllb: {gpu: device.nllbGpu ? device.nllbGpu() : null, cpu: null},
+		};
+
+		for (const [family, verdicts] of Object.entries(families)) {
+			const state = await runOn(family);
+
+			page.check(`${name}: ${family}'s Run on is a labelled radiogroup`, state.group);
+			page.check(
+				`${name}: ${family}'s Run on starts on Auto, which is open`,
+				!!state.radios.auto && state.radios.auto.checked && !state.radios.auto.disabled
+			);
+
+			for (const d of ["gpu", "cpu"]) {
+				const radio = state.radios[d];
+				const why = verdicts[d];
+
+				page.check(
+					`${name}: ${family}'s ${d.toUpperCase()} is ${
+						why ? `disabled: "${why}"` : "open"
+					} (${
+						radio ? (radio.disabled ? `disabled: ${radio.why}` : "open") : "missing"
+					})`,
+					!!radio &&
+						radio.disabled === !!why &&
+						(why ? radio.why === why && radio.shown === why : radio.why === "")
+				);
+			}
+
+			const auto = autoSays(family, verdicts);
+
+			page.check(
+				`${name}: ${family}'s Auto line is "${auto}" (${state.auto})`,
+				state.auto === auto
+			);
+		}
 
 		for (const id of [SMALL, LARGE]) {
 			const runs = device.runs[id];
 			const state = await page.evaluate(`(() => {
-				const row = document.querySelector(${JSON.stringify(ROW(id))});
-				const button = row.querySelector(".translate-model-download");
+				const line = document.querySelector(${JSON.stringify(COPY(id, "gpu"))});
+				const button = line && line.querySelector(".translate-copy-download");
 				const described = button && button.getAttribute("aria-describedby");
 				const named = button && button.getAttribute("aria-labelledby");
+				const label = (id) => (document.getElementById(id) || {}).textContent?.replace(/\\s+/g, " ").trim();
 				return {
-					name: named ? named.split(" ").map((id) => (document.getElementById(id) || {}).textContent?.replace(/\\s+/g, " ").trim()).join(" ") : "",
-					modelName: row.querySelector(".translate-model-name > span:first-child").textContent.replace(/\\s+/g, " ").trim(),
-					runs: row.dataset.runs,
-					verdict: row.querySelector(".translate-model-runs").textContent.trim(),
-					why: (row.querySelector(".translate-model-why") || {}).textContent?.trim() || "",
+					line: !!line,
+					name: named ? named.split(" ").map(label).join(" ") : "",
+					modelName: document.querySelector(${JSON.stringify(
+						ROW(id)
+					)} + " .translate-model-name > span:first-child").textContent.replace(/\\s+/g, " ").trim(),
+					state: line ? line.querySelector(".translate-copy-state").textContent.trim() : "",
 					disabled: button ? button.disabled : null,
-					describedBy: described ? (document.getElementById(described) || {}).textContent?.trim() : "",
+					describedBy: described ? label(described) : "",
+					cpuLine: !!document.querySelector(${JSON.stringify(COPY(id, "cpu"))}),
+					cpuDisabled: (document.querySelector(${JSON.stringify(
+						COPY(id, "cpu")
+					)} + " .translate-copy-download") || {}).disabled ?? null,
 				};
 			})()`);
 
 			page.check(
-				`${name}: ${id} says ${runs ? "it runs" : "it can't run"} (${state.verdict})`,
-				state.runs === (runs ? "runs" : "cannot") &&
-					state.verdict ===
-						(runs ? EN["translate.model.runsHere"] : EN["translate.model.cantRun"])
+				`${name}: ${id}'s GPU copy says it is not downloaded (${state.state})`,
+				state.line &&
+					state.state.startsWith(EN["translate.model.copyNotDownloaded"].split(" ·")[0])
 			);
 			page.check(
-				`${name}: ${id}'s reason is "${device.why(id)}" (${state.why})`,
-				state.why === (runs ? "" : device.why(id))
+				`${name}: ${id}'s GPU Download is ${
+					runs ? "enabled" : `disabled, described by "${device.why(id)}"`
+				} (${state.disabled ? `disabled: ${state.describedBy}` : "enabled"})`,
+				state.disabled === !runs && (runs || state.describedBy === device.why(id))
 			);
 			page.check(
-				`${name}: ${id}'s Download is ${
-					runs ? "enabled" : "disabled, described by the reason"
+				`${name}: ${id}'s GPU Download is named for its model and device (${state.name})`,
+				state.name ===
+					`${EN["translate.model.download"]} ${state.modelName} ${EN["translate.device.gpu"]}`
+			);
+			// Only the 1.7B has a CPU copy; it can be downloaded everywhere here.
+			page.check(
+				`${name}: ${id} ${
+					id === SMALL ? "has an open CPU copy line" : "has no CPU copy line"
 				}`,
-				state.disabled === !runs && (runs || state.describedBy === state.why)
-			);
-			page.check(
-				`${name}: ${id}'s Download is named for its model (${state.name})`,
-				state.name === `${EN["translate.model.download"]} ${state.modelName}`
+				id === SMALL ? state.cpuLine && state.cpuDisabled === false : !state.cpuLine
 			);
 		}
 
-		// "In use" only on a GPU model that can run here.
+		// "In use" only on a language model that can run here.
 		const inUse = await page.evaluate(
 			`[...document.querySelectorAll(".translate-model-in-use")].map((el) => el.closest(".translate-model").dataset.model).join(",")`
 		);
-		const expectInUse = {binds128: SMALL, binds160: SMALL, phone: SMALL}[name];
+		const expectInUse = device.runs[SMALL] && !device.runs[LARGE] ? SMALL : undefined;
 
 		page.check(
 			`${name}: "In use" is on ${
-				expectInUse ?? (device.runs[SMALL] ? "a GPU model" : "no row")
+				expectInUse ?? (device.runs[SMALL] ? "a language model" : "no row")
 			} (${inUse || "none"})`,
 			expectInUse
 				? inUse === expectInUse
@@ -470,25 +647,37 @@ export default async function run(page) {
 		);
 
 		const nllb = await page.evaluate(`(() => {
-			const row = document.querySelector(${JSON.stringify(ROW(NLLB))});
 			const input = document.querySelector('input[name="translateNllb"]');
 			return {
-				runs: row.dataset.runs,
-				verdict: row.querySelector(".translate-model-runs").textContent.trim(),
 				switchOn: input.checked,
 				licence: (document.getElementById(input.getAttribute("aria-describedby")) || {}).textContent?.trim() || "",
+				cpuOpen: (document.querySelector(${JSON.stringify(
+					COPY(NLLB, "cpu")
+				)} + " .translate-copy-download") || {}).disabled === false,
 			};
 		})()`);
 
 		page.check(
-			`${name}: NLLB-200 is off until switched on, its licence named (${nllb.verdict} / ${nllb.licence})`,
-			nllb.runs === "off" &&
-				nllb.verdict === EN["translate.model.switchedOff"] &&
-				!nllb.switchOn &&
-				nllb.licence === EN["translate.settings.nllbLicence"]
+			`${name}: NLLB-200 is off until switched on, its licence named, its CPU Download open (${nllb.licence})`,
+			!nllb.switchOn && nllb.licence === EN["translate.settings.nllbLicence"] && nllb.cpuOpen
 		);
 
-		// The GPU model select: a model this GPU cannot bind is greyed, with why.
+		// No GPU copy of OPUS-MT or NLLB-200 to download in this build.
+		const seq2seqCopies = await page.evaluate(`(() => ({
+			nllb: [...document.querySelectorAll(${JSON.stringify(
+				`${ROW(NLLB)} .translate-copy`
+			)})].map((el) => el.dataset.device).join(","),
+			opus: [...document.querySelectorAll(${JSON.stringify(
+				`${FAMILY("opus")} .translate-copy, ${FAMILY("opus")} .translate-opus-device`
+			)})].map((el) => el.dataset.device).filter((d, i, all) => all.indexOf(d) === i).join(","),
+		}))()`);
+
+		page.check(
+			`${name}: OPUS-MT and NLLB-200 list a CPU copy alone (OPUS ${seq2seqCopies.opus}, NLLB ${seq2seqCopies.nllb})`,
+			seq2seqCopies.nllb === "cpu" && seq2seqCopies.opus === "cpu"
+		);
+
+		// The language model select: a model this GPU cannot bind is greyed, with why.
 		const select = await page.evaluate(`(() => {
 			const s = document.querySelector('select[name="translateLlmModel"]');
 			const hint = document.getElementById("translate-llm-unfit");
@@ -498,10 +687,10 @@ export default async function run(page) {
 				described: s.getAttribute("aria-describedby"),
 			};
 		})()`);
-		const unfit = name === "binds128" || name === "binds160" || name === "phone" ? [LARGE] : [];
+		const unfit = device.runs[SMALL] && !device.runs[LARGE] ? [LARGE] : [];
 
 		page.check(
-			`${name}: the GPU model select greys ${unfit.join(", ") || "nothing"} (${
+			`${name}: the language model select greys ${unfit.join(", ") || "nothing"} (${
 				select.disabled.join(", ") || "nothing"
 			}${select.hint ? `: ${select.hint}` : ""})`,
 			JSON.stringify(select.disabled) === JSON.stringify(unfit) &&
@@ -520,10 +709,15 @@ export default async function run(page) {
 			);
 			await page.screenshot(`${name}-gpu-select`);
 		}
-		await page.evaluate(
-			`document.querySelector(".translate-models").scrollIntoView({block: "start"})`
-		);
-		await page.screenshot(`${name}-settings`);
+
+		for (const family of ["llm", "opus", "nllb"]) {
+			await page.evaluate(
+				`document.querySelector(${JSON.stringify(
+					FAMILY(family)
+				)}).scrollIntoView({block: "start"})`
+			);
+			await page.screenshot(`${name}-settings-${family}`);
+		}
 		await closeSettings();
 
 		// 2. The composer's dialog: what it opens on, the cleanup pass, German.
@@ -696,11 +890,19 @@ export default async function run(page) {
 			await openSettings();
 			await setSwitch("translateNllb", true);
 
-			const row = await page.evaluate(
-				`document.querySelector(${JSON.stringify(ROW(NLLB))}).dataset.runs`
-			);
+			const row = await page.evaluate(`(() => ({
+				auto: (document.querySelector(${JSON.stringify(
+					FAMILY("nllb")
+				)} + " .translate-auto") || {}).textContent?.trim() || "",
+				open: (document.querySelector(${JSON.stringify(
+					COPY(NLLB, "cpu")
+				)} + " .translate-copy-download") || {}).disabled === false,
+			}))()`);
 
-			page.check(`noWebgpu, NLLB on: its row runs (${row})`, row === "runs");
+			page.check(
+				`noWebgpu, NLLB on: Auto runs it on the CPU, its Download open (${row.auto})`,
+				row.auto === EN["translate.settings.autoPicksCpuNoGpuNllb"] && row.open
+			);
 			await closeSettings();
 			await openPicker();
 			await pickTarget("ja");
@@ -717,6 +919,9 @@ export default async function run(page) {
 		// 4. The switches.
 		if (name === "noWebgpu") {
 			await openSettings();
+			// NLLB-200 counts while it is on (router.ts translationBlock):
+			// back off first, so OPUS-MT's switch is the one named.
+			await setSwitch("translateNllb", false);
 			await setSwitch("translateCpu", false);
 			await closeSettings();
 			await openPanel();
@@ -737,18 +942,34 @@ export default async function run(page) {
 			await openSettings();
 			await setSwitch("translateLlm", false);
 
-			const rows = await page.evaluate(
-				`[${JSON.stringify(SMALL)}, ${JSON.stringify(
-					LARGE
-				)}].map((id) => document.querySelector('.translate-model[data-model="' + id + '"] .translate-model-runs').textContent.trim())`
-			);
+			// Off is not "can't": its Run on and its Downloads stay open (a
+			// download ahead of use), and no reason is shown for the switch.
+			const rows = await page.evaluate(`(() => ({
+				gpu: !document.querySelector(${JSON.stringify(RADIO("translateLlmDevice", "gpu"))}).disabled,
+				cpu: !document.querySelector(${JSON.stringify(RADIO("translateLlmDevice", "cpu"))}).disabled,
+				downloads: ${JSON.stringify(
+					[COPY(SMALL, "gpu"), COPY(SMALL, "cpu")].concat(
+						device.runs[LARGE] ? [COPY(LARGE, "gpu")] : []
+					)
+				)}.every((sel) => document.querySelector(sel + " .translate-copy-download").disabled === false),
+				auto: (document.querySelector(${JSON.stringify(
+					FAMILY("llm")
+				)} + " .translate-auto") || {}).textContent?.trim() || "",
+			}))()`);
 
 			page.check(
-				`desktop, GPU off: the GPU rows say switched off (${rows})`,
-				rows.every((v) => v === EN["translate.model.switchedOff"])
+				`desktop, the language model off: Run on and the Downloads stay open (${JSON.stringify(
+					rows
+				)})`,
+				rows.gpu &&
+					rows.cpu &&
+					rows.downloads &&
+					rows.auto === EN["translate.settings.autoPicksGpu"]
 			);
 			await page.evaluate(
-				`document.querySelector(".translate-models").scrollIntoView({block: "start"})`
+				`document.querySelector(${JSON.stringify(
+					FAMILY("llm")
+				)}).scrollIntoView({block: "start"})`
 			);
 			await page.screenshot("desktop-gpu-off-settings");
 			await closeSettings();
@@ -771,7 +992,10 @@ export default async function run(page) {
 				`desktop, GPU off: the cleanup pass names the switch (${polish.why})`,
 				polish.disabled &&
 					polish.lead === EN["translate.picker.sameLanguageNeedsGpu"] &&
-					polish.why === EN["translate.why.llmOff"]
+					["Qwen3 1.7B", "Qwen3 4B"].some(
+						(model) =>
+							polish.why === EN["translate.why.llmOff"].replace("{model}", model)
+					)
 			);
 			await closePicker();
 
@@ -828,9 +1052,15 @@ export default async function run(page) {
 			);
 
 			if (!MOBILE) {
-				await page.hover("#chat .msg:not(.self):last-of-type");
+				// The speaker's line by its text: the list's last element of
+				// its type need not be a message.
+				await page.evaluate(`(() => {
+					const msg = [...document.querySelectorAll("#chat .msg:not(.self)")].reverse().find((m) => m.textContent.includes("Hallo zusammen"));
+					msg.setAttribute("data-cap-target", "1");
+				})()`);
+				await page.hover("[data-cap-target]");
 				await page.screenshot("desktop-both-off-toolbar", {
-					selector: "#chat .msg:not(.self):last-of-type",
+					selector: "[data-cap-target]",
 					pad: 40,
 				});
 			} else {
@@ -1011,7 +1241,8 @@ export default async function run(page) {
 			await closePanel();
 		}
 
-		const reason = EN["translate.why.needsDownload"]
+		// The language model's copy is the GPU's (a reason names its device).
+		const reason = EN["translate.why.downloadGpu"]
 			.replace("{model}", model)
 			.replace("{size}", size(sizeOf[model]));
 		const FAILED = `${JSON.stringify(
@@ -1071,13 +1302,13 @@ export default async function run(page) {
 		await openSettings();
 
 		const rows = await page.evaluate(
-			`[...document.querySelectorAll(".translate-model")].map((row) => row.dataset.status + ":" + row.querySelector(".translate-model-state").textContent.trim())`
+			`[...document.querySelectorAll(".translate-copy")].map((line) => line.dataset.status + ":" + line.dataset.cached + ":" + line.querySelector(".translate-copy-state").textContent.trim().split(" ·")[0])`
 		);
+		const idle = `idle:false:${EN["translate.model.copyNotDownloaded"].split(" ·")[0]}`;
 
 		page.check(
-			`consent: no model downloaded or downloading (${[...new Set(rows)].join(", ")})`,
-			rows.length > 3 &&
-				rows.every((row) => row === `idle:${EN["translate.model.notDownloaded"]}`)
+			`consent: no copy downloaded or downloading (${[...new Set(rows)].join(", ")})`,
+			rows.length > 3 && rows.every((row) => row === idle)
 		);
 		await closeSettings();
 

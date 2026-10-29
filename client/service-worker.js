@@ -206,6 +206,53 @@ function isNavigation(request) {
 	return request.mode === "navigate" || request.destination === "document";
 }
 
+// Cross-origin isolation (docs/projects/translation-devices.md
+// § Multithreading): multithreaded WebAssembly for the CPU translation
+// models needs a cross-origin-isolated page and worker, which needs these
+// two headers on the document and on the worker's script, and a static
+// host (GitHub Pages) sends neither. So the worker adds them to the app's
+// documents and its own worker scripts, from the network and from the
+// shell cache alike. `credentialless`, not `require-corp`: a cross-origin
+// image, video or upload host keeps loading without a header of its own,
+// fetched without cookies. A deploy that sends its own policy keeps it.
+// The page is isolated from the load after the worker took control of it.
+// WebKit (Safari, every iOS browser: `strictUserVisible` below) has no
+// `credentialless`, so it gets neither header and stays exactly as it was.
+// The fetch event sees every request a controlled page makes, other
+// origins' included, but the fetch handler returns early for any URL that
+// does not start with `shellUrl`, so only requests inside the scope reach
+// this, and a worker script here is always the app's own.
+const ISOLATION_HEADERS = [
+	["Cross-Origin-Opener-Policy", "same-origin"],
+	["Cross-Origin-Embedder-Policy", "credentialless"],
+];
+
+function wantsIsolation(request) {
+	return (isNavigation(request) || request.destination === "worker") && !strictUserVisible();
+}
+
+function isolate(response) {
+	// An error or opaque response has nothing to add to (and status 0
+	// cannot be constructed).
+	if (!response || response.status === 0 || response.type === "opaque") {
+		return response;
+	}
+
+	const headers = new Headers(response.headers);
+
+	for (const [name, value] of ISOLATION_HEADERS) {
+		if (!headers.has(name)) {
+			headers.set(name, value);
+		}
+	}
+
+	return new Response(response.body, {
+		headers,
+		status: response.status,
+		statusText: response.statusText,
+	});
+}
+
 // The shell cache exists so an installed app opens offline; it is not a
 // general-purpose cache, and a browser that runs out of quota evicts the
 // whole origin at once. A large same-origin response — a mirrored model
@@ -248,6 +295,12 @@ async function cleanRedirect(response) {
 }
 
 async function networkOrCache(event) {
+	const response = await fromNetworkOrCache(event);
+
+	return wantsIsolation(event.request) ? isolate(response) : response;
+}
+
+async function fromNetworkOrCache(event) {
 	const request = event.request;
 	const navigation = isNavigation(request);
 
@@ -568,7 +621,7 @@ function tidyLater() {
 }
 
 /** This worker's network: its scope's, or (the root worker) the first one
- * the page stashed, remembered for the push whose storage has stalled. */
+ * the page stashed, remembered for the push whose store has stalled. */
 let knownNetwork = scopeNetwork;
 
 async function networkOf() {
@@ -1359,7 +1412,7 @@ function conversationOf(parsed) {
 }
 
 /**
- * A strict push whose handler has not finished by the deadline (storage
+ * A strict push whose handler has not finished by the deadline (the store
  * stalled): show something now, silently, under a tag of its own
  * (`push-<network>/fallback/<conversation>`) — never the conversation's, so
  * it cannot overwrite the real notification should that land meanwhile.

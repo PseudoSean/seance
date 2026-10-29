@@ -13,10 +13,17 @@
 // wires the real worker, the store, the settings and the dialog.
 
 import {Capability} from "./capability";
-import {ConsentStore, DownloadConsent, memoryConsent, needsDownloadError} from "./consent";
+import {
+	ConsentStore,
+	DownloadConsent,
+	consentId,
+	memoryConsent,
+	needsDownloadError,
+} from "./consent";
 import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
 import {
 	BATCH_REFUSED,
+	Device,
 	EngineName,
 	LoadProgress,
 	ModelRef,
@@ -26,14 +33,16 @@ import {
 import {ABORTED} from "./outgoing";
 import {
 	Candidate,
+	DeviceChoices,
+	EngineSwitches,
 	GpuBudget,
 	ModelCatalog,
-	buildIdFor,
 	candidateOf,
 	catalogModels,
+	copyDevices,
 	selectLlm,
 } from "./models";
-import {Route, RouteTable, explainRoute, mergeRoutes, routeInput} from "./router";
+import {DownKey, Route, RouteTable, explainRoute, mergeRoutes, routeInput} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
 
 /** A loaded GPU model with no request for this long gives its memory back. */
@@ -55,11 +64,12 @@ export interface ServiceDeps {
 	setTimeout(fn: () => void, ms: number): unknown;
 	clearTimeout(handle: unknown): void;
 	/**
-	 * The question before a model nobody downloaded by name is downloaded
-	 * (consent.ts): true to download it, false for "not now". Absent, every
-	 * download goes ahead unasked (the tests that are not about consent).
+	 * The question before a model's copy nobody downloaded by name is
+	 * downloaded (consent.ts): true to download it, false for "not now".
+	 * `device` is the copy's, for its size. Absent, every download goes
+	 * ahead unasked (the tests that are not about consent).
 	 */
-	askDownload?(ref: ModelRef): Promise<boolean>;
+	askDownload?(ref: ModelRef, device: Device): Promise<boolean>;
 	/** Where the yeses are remembered; in memory when absent. */
 	consent?: ConsentStore;
 }
@@ -67,11 +77,12 @@ export interface ServiceDeps {
 /**
  * A route, or why there is none that needs no declined download: `refused`
  * is the model the best route would have downloaded, when "not now" is
- * what left the request without one.
+ * what left the request without one, and `refusedDevice` that copy's device.
  */
 export interface RouteResolution {
 	route: Route | null;
 	refused: ModelRef | null;
+	refusedDevice: Device | null;
 }
 
 export interface ServiceOptions {
@@ -93,16 +104,18 @@ export interface ServiceOptions {
 }
 
 export interface ServiceSettings {
-	llm: boolean;
-	cpu: boolean;
-	/** NLLB-200 switched on: its licence is non-commercial, so it is opt-in. */
-	nllb: boolean;
+	/** The switch per model family; NLLB-200's is opt-in (its licence is non-commercial). */
+	switches: EngineSwitches;
+	/** The device setting per model family (`translate*Device`). */
+	devices: DeviceChoices;
 }
 
 export type ModelStatus = "idle" | "downloading" | "ready" | "failed";
 
+/** One copy of a model: its download state on this device and its load state. */
 export interface ModelView {
 	ref: ModelRef;
+	device: Device;
 	cached: boolean;
 	status: ModelStatus;
 	fraction: number;
@@ -133,16 +146,22 @@ export function loadNote(view: ModelView): LoadNote {
 	};
 }
 
+/** What a copy's view is kept under. */
+function copyKey(ref: Pick<ModelRef, "id">, device: Device): string {
+	return `${ref.id}@${device}`;
+}
+
 export class TranslateService {
 	private worker: {client: TranslateClient; terminate(): void} | null = null;
 	private capability: Promise<Capability> | null = null;
 	/** The probe's answer once it has one; the GPU default follows it. */
 	private probed: Capability | null = null;
 	private selectedLlm: string | null = null;
-	private down = new Set<Candidate>();
+	private down = new Set<DownKey>();
 	private idleTimer: unknown = null;
 	private inFlight = 0;
 	private nextId = 1;
+	/** By copy (`copyKey`). */
 	private views = new Map<string, ModelView>();
 	private listeners = new Set<(views: ModelView[]) => void>();
 	private workerErrorListeners = new Set<(message: string | null) => void>();
@@ -175,6 +194,18 @@ export class TranslateService {
 	private engineWaiters: {engine: EngineName; resolve: () => void}[] = [];
 	/** Engines given a model since they were last unloaded. */
 	private loadedEngines = new Set<EngineName>();
+	/**
+	 * The device each slot was last given work on: the slot holds one
+	 * device's models at a time (engines/onDevice.ts), so this is the device
+	 * its models are on. It picks the idle wait and whether deleting a copy
+	 * has to unload it first.
+	 */
+	private engineDevice: Record<EngineName, Device | null> = {llm: null, seq2seq: null};
+	/**
+	 * The families the seq2seq engine has held since it was last loaded
+	 * (OPUS-MT, NLLB-200): its unload follows their own switches.
+	 */
+	private seq2seqFamilies = new Set<ModelRef["family"]>();
 	private engineTimers: Record<EngineName, unknown> = {llm: null, seq2seq: null};
 	/** Whether translation is wanted anywhere (reader.ts `translationInUse`); unset, it always is. */
 	private inUse: (() => boolean) | null = null;
@@ -199,13 +230,21 @@ export class TranslateService {
 		private settings: ServiceSettings
 	) {
 		for (const ref of catalogModels(options.catalog)) {
-			this.views.set(ref.id, {ref, cached: false, status: "idle", fraction: 0, error: null});
+			for (const device of copyDevices(ref)) {
+				this.view(ref, device);
+			}
 		}
 
 		this.selectedLlm = options.selectedLlm ?? null;
 		this.table = this.buildTable();
+		// The catalog was built without the device setting: a language model
+		// pinned to the CPU resolves an unset choice differently.
+		this.applyLlmSelection();
 		this.consent = deps.askDownload
-			? new DownloadConsent((ref) => deps.askDownload!(ref), deps.consent ?? memoryConsent())
+			? new DownloadConsent(
+					(ref, device) => deps.askDownload!(ref, device),
+					deps.consent ?? memoryConsent()
+			  )
 			: null;
 	}
 
@@ -241,7 +280,12 @@ export class TranslateService {
 
 	/** Re-resolve the stored selection (a change, or the probe landing). */
 	private applyLlmSelection(): void {
-		const next = selectLlm(this.options.catalog, this.selectedLlm, this.probed);
+		const next = selectLlm(
+			this.options.catalog,
+			this.selectedLlm,
+			this.probed,
+			this.settings.devices.llm
+		);
 
 		if (next === this.options.catalog) {
 			return;
@@ -251,7 +295,7 @@ export class TranslateService {
 
 		this.options = {...this.options, catalog: next};
 		this.table = this.buildTable();
-		this.down.delete("llm");
+		this.forgetDown("llm");
 		this.retireLlm(previous);
 	}
 
@@ -529,14 +573,9 @@ export class TranslateService {
 		}
 	}
 
-	/**
-	 * The id a download's consent is kept under: the build that would be
-	 * downloaded here (models.ts `buildIdFor`). A yes to the model itself on
-	 * a desktop is not a yes to its small-buffer build — another download of
-	 * the same size — once the test switch makes that the build.
-	 */
-	private consentId(ref: ModelRef): string {
-		return buildIdFor(ref, this.probed?.maxBufferBytes);
+	/** The id a copy's consent is kept under (consent.ts `consentId`). */
+	private consentId(ref: ModelRef, device: Device): string {
+		return consentId(ref, device, this.probed?.maxBufferBytes);
 	}
 
 	/** A tier switched off gives its memory back at once, once nothing runs on it. */
@@ -545,12 +584,32 @@ export class TranslateService {
 
 		this.settings = settings;
 
-		if (before.llm && !settings.llm) {
+		if (before.switches.llm && !settings.switches.llm) {
 			this.afterEngineIdle("llm");
 		}
 
-		if (before.cpu && !settings.cpu) {
+		if (
+			(before.switches.opus && !settings.switches.opus) ||
+			(before.switches.nllb && !settings.switches.nllb)
+		) {
 			this.afterEngineIdle("seq2seq");
+		}
+
+		// Pinned to the CPU, an unset choice resolves to a model with a CPU
+		// copy (models.ts `llmChoice`), and back again when it is not.
+		if (before.devices.llm !== settings.devices.llm) {
+			this.applyLlmSelection();
+		}
+	}
+
+	/**
+	 * Lifts the session's down-mark off `candidate`'s copy for `device`, or
+	 * off every copy when no device is named (another model now answers
+	 * for the candidate).
+	 */
+	private forgetDown(candidate: Candidate, device?: Device): void {
+		for (const d of device ? [device] : (["gpu", "cpu"] as const)) {
+			this.down.delete(`${candidate}@${d}`);
 		}
 	}
 
@@ -616,7 +675,7 @@ export class TranslateService {
 		hint: string | null = null
 	): Promise<RouteResolution> {
 		if (!this.options.enabled) {
-			return {route: null, refused: null};
+			return {route: null, refused: null, refusedDevice: null};
 		}
 
 		const capability = await this.capabilities();
@@ -629,9 +688,20 @@ export class TranslateService {
 		let cachedOnly = !!consent?.anyDeclined;
 
 		const input = (refuse: boolean) => ({
-			...routeInput(capability, this.settings, {from, to, hint}, this.down),
-			cached: (ref: ModelRef) => this.views.get(ref.id)?.cached === true,
-			refuse: refuse ? (ref: ModelRef) => this.needsConsent(ref) : undefined,
+			...routeInput(
+				capability,
+				this.settings.switches,
+				this.settings.devices,
+				{from, to, hint},
+				this.down
+			),
+			// Per copy: one device's download, or its yes, says nothing of
+			// the other's.
+			cached: (ref: ModelRef, device: Device) =>
+				this.views.get(copyKey(ref, device))?.cached === true,
+			refuse: refuse
+				? (ref: ModelRef, device: Device) => this.needsConsent(ref, device)
+				: undefined,
 		});
 
 		for (;;) {
@@ -642,21 +712,25 @@ export class TranslateService {
 				// taken with the download allowed. Not the walk's own reason,
 				// which may name a switch further down (NLLB-200 off) while
 				// the model the user declined is what would have served.
+				const refused = cachedOnly
+					? explainRoute(this.table, this.options.catalog, input(false)).route
+					: null;
+
 				return {
 					route: null,
-					refused: cachedOnly
-						? explainRoute(this.table, this.options.catalog, input(false)).route?.ref ??
-						  null
-						: null,
+					refused: refused?.ref ?? null,
+					refusedDevice: refused?.device ?? null,
 				};
 			}
 
-			if (!consent || !this.needsConsent(route.ref)) {
-				return {route, refused: null};
+			if (!consent || !this.needsConsent(route.ref, route.device)) {
+				return {route, refused: null, refusedDevice: null};
 			}
 
-			const yes = await consent.ask({...route.ref, id: this.consentId(route.ref)}, () =>
-				this.needsConsent(route.ref)
+			const yes = await consent.ask(
+				{...route.ref, id: this.consentId(route.ref, route.device)},
+				route.device,
+				() => this.needsConsent(route.ref, route.device)
 			);
 
 			// Yes: route again, the model now agreed to (the selection or the
@@ -669,21 +743,21 @@ export class TranslateService {
 	}
 
 	/**
-	 * Whether `ref`'s download needs the user's yes first: not on the device,
-	 * not downloading already (a Settings download in flight is joined, not
-	 * started), and never agreed to.
+	 * Whether the download of `ref`'s copy for `device` needs the user's yes
+	 * first: not on the device, not downloading already (a Settings download
+	 * in flight is joined, not started), and never agreed to.
 	 */
-	private needsConsent(ref: ModelRef): boolean {
+	private needsConsent(ref: ModelRef, device: Device): boolean {
 		if (!this.consent) {
 			return false;
 		}
 
-		const view = this.views.get(ref.id);
+		const view = this.views.get(copyKey(ref, device));
 
 		return (
 			!view?.cached &&
 			view?.status !== "downloading" &&
-			!this.consent.granted(this.consentId(ref))
+			!this.consent.granted(this.consentId(ref, device))
 		);
 	}
 
@@ -772,7 +846,11 @@ export class TranslateService {
 
 		try {
 			for (;;) {
-				const {route, refused} = await this.resolve(request.from, request.to, hint);
+				const {route, refused, refusedDevice} = await this.resolve(
+					request.from,
+					request.to,
+					hint
+				);
 
 				// After the teardown check: a worker torn down while the route
 				// resolved is the truer report of the two.
@@ -785,7 +863,7 @@ export class TranslateService {
 				// "Not now" to the download this request needed: the reason
 				// names the model and its size (helpers/translateErrors.ts).
 				if (!route && refused) {
-					throw new Error(needsDownloadError(refused));
+					throw new Error(needsDownloadError(refused, refusedDevice ?? undefined));
 				}
 
 				if (!route) {
@@ -846,8 +924,14 @@ export class TranslateService {
 				// A seq2seq model has no prompt to detect a source in: it takes
 				// the hint as its source. The LLM keeps `from: null`.
 				const from = request.from ?? (route.ref.engine === "seq2seq" ? hint : null);
-				const req: TranslateRequest = {...request, from, id, model: route.ref.id};
-				const view = this.view(route.ref);
+				const req: TranslateRequest = {
+					...request,
+					from,
+					id,
+					model: route.ref.id,
+					device: route.device,
+				};
+				const view = this.view(route.ref, route.device);
 				let yielded = false;
 
 				attemptedView = view;
@@ -855,7 +939,7 @@ export class TranslateService {
 
 				const llmId = route.ref.engine === "llm" ? route.ref.id : null;
 
-				this.engineStarted(route.ref.engine);
+				this.engineStarted(route.ref, route.device);
 
 				if (llmId) {
 					this.llmStarted(llmId);
@@ -934,7 +1018,7 @@ export class TranslateService {
 						(llmId === this.options.catalog.llm.id &&
 							!this.otherLlmStartedSince(llmId, llmSeq))
 					) {
-						this.down.add(route.candidate);
+						this.down.add(`${route.candidate}@${route.device}`);
 					}
 				} finally {
 					if (llmId) {
@@ -979,7 +1063,7 @@ export class TranslateService {
 			}
 
 			for (const state of states) {
-				const view = this.views.get(state.ref.id);
+				const view = this.views.get(copyKey(state.ref, state.device));
 
 				if (view) {
 					view.cached = state.cached;
@@ -1062,11 +1146,12 @@ export class TranslateService {
 		return () => this.workerErrorListeners.delete(listener);
 	}
 
-	async download(ref: ModelRef): Promise<void> {
-		const view = this.view(ref);
+	/** Settings' Download of `ref`'s copy for `device`. */
+	async download(ref: ModelRef, device: Device): Promise<void> {
+		const view = this.view(ref, device);
 
 		// Settings' Download, which shows the size: the user's yes.
-		this.consent?.grant(this.consentId(ref));
+		this.consent?.grant(this.consentId(ref, device));
 
 		view.status = "downloading";
 		view.fraction = 0;
@@ -1099,7 +1184,7 @@ export class TranslateService {
 				}
 			}
 
-			this.engineStarted(ref.engine);
+			this.engineStarted(ref, device);
 			engineClaimed = true;
 
 			if (ref.engine === "llm") {
@@ -1136,7 +1221,7 @@ export class TranslateService {
 				this.cpuHeapUsed = true;
 			}
 
-			await client.load(ref, (progress: LoadProgress) => {
+			await client.load(ref, device, (progress: LoadProgress) => {
 				// On a phone a request for the other engine waits for this
 				// download (`makeRoom`): its deadline is kept alive while the
 				// download moves, as a request's own download keeps it.
@@ -1150,9 +1235,10 @@ export class TranslateService {
 			view.status = "ready";
 			view.fraction = 1;
 			view.cached = true;
-			// It loads again: whatever took this candidate out of the session
-			// (a download that failed, a device that was lost) is over.
-			this.down.delete(candidateOf(ref));
+			// This copy loads again: whatever took it out of the session (a
+			// download that failed, a device that was lost) is over. The
+			// other device's copy keeps its own mark.
+			this.forgetDown(candidateOf(ref), device);
 		} catch (e) {
 			const message = e instanceof Error ? e.message : String(e);
 
@@ -1181,26 +1267,39 @@ export class TranslateService {
 		}
 	}
 
-	async deleteModel(ref: ModelRef): Promise<void> {
-		const view = this.view(ref);
+	/**
+	 * Settings' Remove of `ref`'s copy for `device`: unloaded first when that
+	 * copy is the one in memory, then its files deleted. The other device's
+	 * copy -- its files, and the model in memory when it runs there -- is
+	 * left alone.
+	 */
+	async remove(ref: ModelRef, device: Device): Promise<void> {
+		const view = this.view(ref, device);
 
 		this.inFlight++;
 		this.clearIdle();
 
 		try {
 			if (ref.engine === "llm") {
-				await this.releaseLlmForDelete(ref.id);
+				await this.releaseLlmForDelete(ref.id, device);
 			} else {
-				await this.releaseEngineForDelete(ref.engine);
+				await this.releaseEngineForDelete(ref.engine, device);
 			}
 
-			await this.client().deleteModel(ref);
-			// Deleted on purpose: downloading it again is a new question. The
-			// worker deletes every build of the model, so every build's yes goes.
-			this.consent?.revoke(ref.id);
+			await this.client().deleteModel(ref, device);
 
-			if (ref.smallBuffer) {
-				this.consent?.revoke(ref.smallBuffer.id);
+			// Deleted on purpose: downloading this copy again is a new
+			// question; the other copy's yes is its own. The worker deletes
+			// every build of the language model's GPU copy, so every build's
+			// yes goes.
+			this.consent?.revoke(this.consentId(ref, device));
+
+			if (ref.engine === "llm" && device === "gpu") {
+				this.consent?.revoke(ref.id);
+
+				if (ref.smallBuffer) {
+					this.consent?.revoke(ref.smallBuffer.id);
+				}
 			}
 
 			view.cached = false;
@@ -1226,23 +1325,32 @@ export class TranslateService {
 	}
 
 	/**
-	 * Before a GPU model's files are deleted: once no request or download runs
-	 * on it, unload the GPU engine only if it holds that model. Deleting the
-	 * unselected model never touches the model another request is using, and
-	 * the engine's idle clock is left to that work.
+	 * Before a language model's copy is deleted: once no request or download
+	 * runs on the model, unload the slot only if it holds that model on that
+	 * copy's device. Deleting the unselected model, or the copy of the other
+	 * device, never touches the model another request is using, and the
+	 * slot's idle clock is left to that work.
 	 */
-	private async releaseLlmForDelete(id: string): Promise<void> {
+	private async releaseLlmForDelete(id: string, device: Device): Promise<void> {
 		if (this.llmSwitch) {
 			await this.llmSwitch;
 		}
 
 		await this.whenLlm(() => !this.llmRunning.get(id));
 
+		if (this.engineDevice.llm !== device) {
+			return;
+		}
+
 		const client = this.client();
 		const status = await client.status();
 
 		// Work on it started again while the worker answered: it is in use.
-		if (!status.llm.models.includes(id) || this.llmRunning.get(id)) {
+		if (
+			!status.llm.models.includes(id) ||
+			this.llmRunning.get(id) ||
+			this.engineDevice.llm !== device
+		) {
 			return;
 		}
 
@@ -1251,20 +1359,25 @@ export class TranslateService {
 	}
 
 	/**
-	 * Before a CPU model's files are deleted: the engine holds every seq2seq
-	 * model at once, so it is unloaded — but not out from under a request
-	 * still generating on it, the way the GPU path waits in
-	 * `releaseLlmForDelete`. `engineRunning` counts downloads too, so a
-	 * delete also waits behind another seq2seq download, exactly as the GPU
-	 * path does. Only the unload waits: the files go either way.
+	 * Before a seq2seq copy's files are deleted: the slot holds every seq2seq
+	 * model of its device at once, so it is unloaded when it is on that
+	 * copy's device — but not out from under a request still generating on
+	 * it, the way the language model's path waits in `releaseLlmForDelete`.
+	 * `engineRunning` counts downloads too, so a delete also waits behind
+	 * another seq2seq download, exactly as that path does. Only the unload
+	 * waits: the files go either way. A slot on the other device holds none
+	 * of this copy and stays.
 	 *
 	 * Not `async`: with nothing running the unload is posted in the caller's
 	 * own tick, so a teardown in that same tick rejects it as a disposal
 	 * rather than leaving it posted to a worker that will never answer.
 	 */
-	private releaseEngineForDelete(engine: EngineName): Promise<void> {
+	private releaseEngineForDelete(engine: EngineName, device: Device): Promise<void> {
+		const onDevice = () =>
+			this.engineDevice[engine] === null || this.engineDevice[engine] === device;
+
 		if (this.engineRunning[engine] === 0) {
-			return this.unloadForDelete(engine);
+			return onDevice() ? this.unloadForDelete(engine) : Promise.resolve();
 		}
 
 		const worker = this.worker;
@@ -1272,7 +1385,12 @@ export class TranslateService {
 		return this.whenEngineIdle(engine).then(() => {
 			// Work on it started again while we waited, or the worker went
 			// with a teardown that unloaded everything anyway.
-			if (this.engineRunning[engine] > 0 || this.worker !== worker || !this.worker) {
+			if (
+				this.engineRunning[engine] > 0 ||
+				this.worker !== worker ||
+				!this.worker ||
+				!onDevice()
+			) {
 				return;
 			}
 
@@ -1414,7 +1532,19 @@ export class TranslateService {
 		}
 	}
 
-	private engineStarted(engine: EngineName): void {
+	private engineStarted(ref: ModelRef, device: Device): void {
+		const engine = ref.engine;
+
+		this.engineDevice[engine] = device;
+
+		if (engine === "seq2seq") {
+			if (!this.loadedEngines.has("seq2seq")) {
+				this.seq2seqFamilies.clear();
+			}
+
+			this.seq2seqFamilies.add(ref.family);
+		}
+
 		this.engineRunning[engine]++;
 		// Counted as loaded from the first request on: unloading an engine
 		// whose load then failed costs nothing, missing one costs its memory.
@@ -1442,17 +1572,16 @@ export class TranslateService {
 
 	/**
 	 * An engine with nothing running: unloaded at once when its tier is
-	 * switched off, otherwise after its idle wait (3 minutes for the GPU
-	 * model, 5 for the CPU models) unless a request arrives first.
+	 * switched off, otherwise after its idle wait unless a request arrives
+	 * first -- by the device its models are on, 3 minutes on the GPU and 5 on
+	 * the CPU.
 	 */
 	private afterEngineIdle(engine: EngineName): void {
 		if (this.engineRunning[engine] > 0 || !this.loadedEngines.has(engine)) {
 			return;
 		}
 
-		const allowed = engine === "llm" ? this.settings.llm : this.settings.cpu;
-
-		if (!allowed) {
+		if (!this.engineAllowed(engine)) {
 			this.unloadEngine(engine);
 			return;
 		}
@@ -1466,8 +1595,31 @@ export class TranslateService {
 					this.unloadEngine(engine);
 				}
 			},
-			engine === "llm" ? GPU_IDLE_UNLOAD_MS : CPU_IDLE_UNLOAD_MS
+			(this.engineDevice[engine] ?? (engine === "llm" ? "gpu" : "cpu")) === "gpu"
+				? GPU_IDLE_UNLOAD_MS
+				: CPU_IDLE_UNLOAD_MS
 		);
+	}
+
+	/**
+	 * Whether the user's switches still want what `engine` holds: the
+	 * language model's switch, or for the seq2seq engine the switch of a
+	 * family it has loaded (NLLB-200 needs no OPUS-MT switch, nor the other
+	 * way round). The engine unloads whole, so it stays while any of its
+	 * families is still on.
+	 */
+	private engineAllowed(engine: EngineName): boolean {
+		const switches = this.settings.switches;
+
+		if (engine === "llm") {
+			return switches.llm;
+		}
+
+		if (this.seq2seqFamilies.size === 0) {
+			return switches.opus || switches.nllb;
+		}
+
+		return [...this.seq2seqFamilies].some((family) => switches[family]);
 	}
 
 	/** The engine's models out of memory; the last engine going takes the worker. */
@@ -1506,29 +1658,34 @@ export class TranslateService {
 		}
 	}
 
-	private view(ref: ModelRef): ModelView {
-		let view = this.views.get(ref.id);
+	private view(ref: ModelRef, device: Device): ModelView {
+		const key = copyKey(ref, device);
+		let view = this.views.get(key);
 
 		if (!view) {
-			view = {ref, cached: false, status: "idle", fraction: 0, error: null};
-			this.views.set(ref.id, view);
+			view = {ref, device, cached: false, status: "idle", fraction: 0, error: null};
+			this.views.set(key, view);
 		}
 
 		return view;
 	}
 
+	/** One row per copy, in catalog order, a model's GPU copy first. */
 	private snapshot(): ModelView[] {
-		return catalogModels(this.options.catalog).map((ref) => {
-			const view: ModelView = this.views.get(ref.id) ?? {
-				ref,
-				cached: false,
-				status: "idle",
-				fraction: 0,
-				error: null,
-			};
+		return catalogModels(this.options.catalog).flatMap((ref) =>
+			copyDevices(ref).map((device) => {
+				const view: ModelView = this.views.get(copyKey(ref, device)) ?? {
+					ref,
+					device,
+					cached: false,
+					status: "idle",
+					fraction: 0,
+					error: null,
+				};
 
-			return {...view};
-		});
+				return {...view};
+			})
+		);
 	}
 
 	private publish(): void {

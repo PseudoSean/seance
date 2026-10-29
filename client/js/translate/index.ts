@@ -11,13 +11,13 @@ import {getBranding} from "../branding";
 import {BUILD} from "../build";
 import {store} from "../store";
 import {probeOnce} from "./capability";
-import {emptyContext, type ModelRef} from "./engine";
+import {emptyContext, type Device, type ModelRef} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {buildCatalog} from "./models";
+import {buildCatalog, listedSize, nativeDevice, normalizeDeviceChoice} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
-import {ServiceDeps, TranslateService} from "./service";
+import {ServiceDeps, ServiceSettings, TranslateService} from "./service";
 import {storedConsent} from "./consent";
 import eventbus from "../eventbus";
 import storage from "../localStorage";
@@ -56,6 +56,28 @@ export function translateService(): TranslateService {
 	return service;
 }
 
+/**
+ * The store's engine switches and device settings, as the service and the
+ * router read them: a stored device value that is none of the three (an
+ * older backup, a hand edit) reads as Auto.
+ */
+export function serviceSettings(): ServiceSettings {
+	const settings = store.state.settings;
+
+	return {
+		switches: {
+			llm: !!settings.translateLlm,
+			opus: !!settings.translateCpu,
+			nllb: !!settings.translateNllb,
+		},
+		devices: {
+			llm: normalizeDeviceChoice(settings.translateLlmDevice),
+			opus: normalizeDeviceChoice(settings.translateOpusDevice),
+			nllb: normalizeDeviceChoice(settings.translateNllbDevice),
+		},
+	};
+}
+
 function useFake(): boolean {
 	return BUILD === "dev" && new URLSearchParams(initialSearch).has("fakeTranslate");
 }
@@ -75,16 +97,43 @@ function meteredConnection(): boolean {
 	return !!connection && (connection.saveData === true || connection.type === "cellular");
 }
 
-/** The download question, in the app's confirm dialog (ConfirmDialog.vue). */
-function askDownload(ref: ModelRef): Promise<boolean> {
+/**
+ * The question's title, a whole sentence per device: the model's usual
+ * copy (the GPU's for the language model, the CPU's for the others) asks
+ * with the plain title, the other device's names its device.
+ */
+function consentTitle(model: string, device: Device, usual: Device): string {
+	if (device === usual) {
+		return t("translate.consent.title", {model});
+	}
+
+	return device === "cpu"
+		? t("translate.consent.titleCpu", {model})
+		: t("translate.consent.titleGpu", {model});
+}
+
+function consentText(model: string, device: Device, usual: Device, size: string): string {
+	if (device === usual) {
+		return t("translate.consent.text", {model, size});
+	}
+
+	return device === "cpu"
+		? t("translate.consent.textCpu", {model, size})
+		: t("translate.consent.textGpu", {model, size});
+}
+
+/** The download question, in the app's confirm dialog (ConfirmDialog.vue): the copy's own size. */
+function askDownload(ref: ModelRef, device: Device): Promise<boolean> {
 	const model = modelDisplayName(ref);
+	const sizeBytes = ref.copies[device]?.sizeBytes ?? listedSize(ref);
+	const usual = nativeDevice(ref);
 
 	return new Promise((resolve) => {
 		eventbus.emit(
 			"confirm-dialog",
 			{
-				title: t("translate.consent.title", {model}),
-				text: t("translate.consent.text", {model, size: friendlysize(ref.sizeBytes)}),
+				title: consentTitle(model, device, usual),
+				text: consentText(model, device, usual, friendlysize(sizeBytes)),
 				note: meteredConnection() ? t("translate.consent.metered") : undefined,
 				button: t("translate.model.download"),
 				cancel: t("translate.consent.notNow"),
@@ -138,7 +187,9 @@ function create(): TranslateService {
 	// device the probe has since measured, both reach everyone who never
 	// picked one. Nothing writes a resolved id back to the settings.
 	const selectedLlm = store.state.settings.translateLlmModel || null;
-	const catalog = buildCatalog(branding, selectedLlm);
+	// `seq2seqGpu` stays off whatever the deploy says (models.ts
+	// CatalogOptions): this build cannot run OPUS-MT or NLLB-200 on the GPU.
+	const catalog = buildCatalog({...branding, seq2seqGpu: false}, selectedLlm);
 	const created = new TranslateService(
 		deps,
 		{
@@ -148,21 +199,24 @@ function create(): TranslateService {
 			ortBase: new URL("js/ort/", document.baseURI).href,
 			enabled: branding.enabled !== false,
 		},
-		{
-			llm: store.state.settings.translateLlm,
-			cpu: store.state.settings.translateCpu,
-			nllb: !!store.state.settings.translateNllb,
-		}
+		serviceSettings()
 	);
 
+	// A switch or a device setting changed: the service gets the whole set.
 	store.watch(
-		() =>
-			[
-				store.state.settings.translateLlm,
-				store.state.settings.translateCpu,
-				!!store.state.settings.translateNllb,
-			] as [boolean, boolean, boolean],
-		([llm, cpu, nllb]) => created.setSettings({llm, cpu, nllb})
+		() => {
+			const {switches, devices} = serviceSettings();
+
+			return [
+				switches.llm,
+				switches.opus,
+				switches.nllb,
+				devices.llm,
+				devices.opus,
+				devices.nllb,
+			];
+		},
+		() => created.setSettings(serviceSettings())
 	);
 	// A switch takes effect at once (service.ts `setLlmModel`): the old model
 	// unloads once its running requests are done, later requests route anew.

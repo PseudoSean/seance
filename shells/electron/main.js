@@ -62,7 +62,9 @@ const MIME = {
 // on-device translation worker compile WebAssembly (ONNX Runtime, WebLLM's
 // model library and tokenizer) and nothing else: no eval, no inline script —
 // the pre-paint language script is js/prepaint.js for that reason. Model
-// weights and libraries come over https:. Everything else is denied.
+// weights and libraries come over https:. blob: in worker-src is for the
+// CPU language model's library, wllama, which starts its worker (and its
+// thread workers) from blob: URLs. Everything else is denied.
 const CSP = [
 	"default-src 'self'",
 	"script-src 'self' 'wasm-unsafe-eval'",
@@ -71,7 +73,7 @@ const CSP = [
 	"media-src 'self' data: blob: https:",
 	"font-src 'self' data:",
 	"connect-src 'self' ws: wss: https:",
-	"worker-src 'self'",
+	"worker-src 'self' blob:",
 	"manifest-src 'self'",
 	"object-src 'none'",
 	"frame-src 'none'",

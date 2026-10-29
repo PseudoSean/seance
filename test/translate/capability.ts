@@ -1,6 +1,8 @@
 import {expect} from "chai";
 import {
 	GPU_MIN_BUFFER_BYTES,
+	hasMemory64,
+	isAppleMobile,
 	probe,
 	probeOnce,
 	resetProbe,
@@ -25,6 +27,7 @@ function env(overrides: Partial<ProbeEnv> = {}): ProbeEnv {
 		deviceMemory: 8,
 		storage: {estimate: () => Promise.resolve({quota: 50 * 1024 * 1024 * 1024})},
 		wasmSimd: true,
+		memory64: true,
 		...overrides,
 	};
 }
@@ -120,7 +123,7 @@ describe("translate/capability", () => {
 			expect(cap.tier).to.equal("cpu");
 			expect(cap.reasons).to.deep.equal(["GPU_LIMITS"]);
 			expect(
-				modelBlock(buildCatalog().llm, cap, {llm: true, cpu: true, nllb: true})
+				modelBlock(buildCatalog().llm, "gpu", cap, {llm: true, opus: true, nllb: true})
 			).to.deep.equal({
 				kind: "device",
 				reason: "GPU_LIMITS",
@@ -185,6 +188,32 @@ describe("translate/capability", () => {
 		expect((await probe(env({mobile: true}))).mobile).to.equal(true);
 	});
 
+	it("passes appleMobile on, and reads it from an iPhone or an iPad with touch points, not Android", async () => {
+		expect((await probe(env())).appleMobile).to.equal(false);
+		expect((await probe(env({appleMobile: true}))).appleMobile).to.equal(true);
+		expect(
+			isAppleMobile({userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"})
+		).to.equal(true);
+		expect(
+			isAppleMobile({
+				userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+				maxTouchPoints: 5,
+			})
+		).to.equal(true);
+		expect(
+			isAppleMobile({
+				userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+				maxTouchPoints: 0,
+			})
+		).to.equal(false);
+		expect(
+			isAppleMobile({
+				userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile",
+				maxTouchPoints: 5,
+			})
+		).to.equal(false);
+	});
+
 	it("rates gpu an adapter whose binding limit is 2 GiB minus the alignment slack", async () => {
 		// Chrome reports maxStorageBufferBindingSize as 2147483644 on most desktop GPUs.
 		const cap = await probe(
@@ -200,6 +229,40 @@ describe("translate/capability", () => {
 
 		expect(cap.tier).to.equal("none");
 		expect(cap.reasons).to.deep.equal(["NO_WEBGPU", "NO_WASM_SIMD"]);
+	});
+
+	it("names a missing WebAssembly Memory64, and the tier does not change", async () => {
+		const cap = await probe(env({memory64: false}));
+
+		expect(cap.tier).to.equal("gpu");
+		expect(cap.reasons).to.deep.equal(["NO_MEMORY64"]);
+		expect((await probe(env({memory64: true}))).reasons).to.deep.equal([]);
+		expect((await probe(env({gpu: null, memory64: false}))).tier).to.equal("cpu");
+	});
+
+	it("probes Memory64 by making a 64-bit memory, and no WebAssembly is no", () => {
+		const seen: unknown[] = [];
+
+		class Memory64 {
+			constructor(descriptor: unknown) {
+				seen.push(descriptor);
+			}
+		}
+
+		class Memory32 {
+			constructor(descriptor: {initial: unknown}) {
+				// An engine without Memory64 reads `initial` as a number.
+				if (typeof descriptor.initial === "bigint") {
+					throw new TypeError("Cannot convert a BigInt value to a number");
+				}
+			}
+		}
+
+		expect(hasMemory64({Memory: Memory64})).to.equal(true);
+		expect(seen).to.deep.equal([{address: "i64", initial: BigInt(1)}]);
+		expect(hasMemory64({Memory: Memory32})).to.equal(false);
+		expect(hasMemory64({})).to.equal(false);
+		expect(hasMemory64(undefined)).to.equal(false);
 	});
 
 	it("survives a throwing adapter request and missing optional APIs", async () => {

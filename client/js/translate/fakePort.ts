@@ -11,6 +11,7 @@
 // `public/js/*.js` for `__seanceTranslateFake` to check).
 
 import {
+	Device,
 	Engine,
 	EngineCapabilities,
 	EngineName,
@@ -132,6 +133,8 @@ class ScriptedEngine implements Engine {
 	readonly name: "llm" | "seq2seq";
 	private stepMs: number;
 	private loaded: string[] = [];
+	/** The device `loaded` is on: a slot holds one device's models (engines/onDevice.ts). */
+	private device: Device | null = null;
 	private state: EngineStatus = "cold";
 	/** Texts this engine has already failed once, so a retry succeeds. */
 	private failedOnce = new Set<string>();
@@ -143,8 +146,17 @@ class ScriptedEngine implements Engine {
 		this.stepMs = stepMs;
 	}
 
-	async load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void> {
+	async load(
+		ref: ModelRef,
+		device: Device,
+		onProgress: (p: LoadProgress) => void
+	): Promise<void> {
 		this.state = "loading";
+
+		if (this.device !== device) {
+			this.loaded = [];
+			this.device = device;
+		}
 
 		for (let i = 1; i <= 10; i++) {
 			await wait(this.stepMs);
@@ -158,6 +170,7 @@ class ScriptedEngine implements Engine {
 
 	unload(): Promise<void> {
 		this.loaded = [];
+		this.device = null;
 		this.state = "cold";
 		publishLoaded(this.name, this.loaded);
 
@@ -172,8 +185,8 @@ class ScriptedEngine implements Engine {
 		return [...this.loaded];
 	}
 
-	isLoaded(id: string): boolean {
-		return this.loaded.includes(id);
+	isLoaded(id: string, device?: Device): boolean {
+		return this.loaded.includes(id) && (device === undefined || device === this.device);
 	}
 
 	capabilities(): EngineCapabilities {
@@ -288,6 +301,7 @@ class ScriptedEngine implements Engine {
 export function fakePort(options: {stepMs?: number} = {}): {port: MainPort; terminate: () => void} {
 	const stepMs = options.stepMs ?? 120;
 	const [mainPort, workerPort] = createPortPair();
+	// One entry per copy: `<id>@<device>`.
 	const cached = new Set<string>();
 	const llm = new ScriptedEngine("llm", stepMs);
 	const seq2seq = new ScriptedEngine("seq2seq", stepMs);
@@ -297,23 +311,28 @@ export function fakePort(options: {stepMs?: number} = {}): {port: MainPort; term
 		{
 			configure() {},
 			cache: {
-				has(ref) {
-					return Promise.resolve(cached.has(ref.id));
+				has(ref, device) {
+					return Promise.resolve(cached.has(`${ref.id}@${device}`));
 				},
-				delete(ref) {
-					cached.delete(ref.id);
+				delete(ref, device) {
+					cached.delete(`${ref.id}@${device}`);
 
 					return Promise.resolve();
 				},
 			},
 		}
 	);
-	// a "downloaded" model is one that was loaded once
+	// a "downloaded" copy is one that was loaded once, on its device; a
+	// request without a device (none from the service) counts as the GPU's
 	const originalOnMessage = workerPort.onmessage;
 
 	workerPort.onmessage = (event) => {
-		if (event.data.type === "load" || event.data.type === "translate") {
-			cached.add(event.data.ref.id);
+		const message = event.data;
+
+		if (message.type === "load") {
+			cached.add(`${message.ref.id}@${message.device}`);
+		} else if (message.type === "translate") {
+			cached.add(`${message.ref.id}@${message.req.device ?? "gpu"}`);
 		}
 
 		originalOnMessage?.(event);

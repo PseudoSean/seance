@@ -14,7 +14,7 @@ import type {UploadProgress} from "./upload";
 import type {Capability} from "./translate/capability";
 import type {ModelView} from "./translate/service";
 import type {ChannelTranslation} from "./translate/channelStore";
-import type {EngineName} from "./translate/engine";
+import type {Device, EngineName} from "./translate/engine";
 import {conversationKey} from "./helpers/inbox";
 
 enum DesktopNotificationState {
@@ -91,11 +91,16 @@ export interface OutgoingTranslation {
 	retried: boolean;
 	to: string;
 	/**
-	 * The route that produced it (`writer.ts` `engineFor`): the strip's chip
-	 * names the model in its title and says whether it ran on the GPU. Both
-	 * null until the route has answered.
+	 * The route that produced it (`writer.ts` `engineFor`): the engine and
+	 * the model, both null until the route has answered.
 	 */
 	engine: EngineName | null;
+	/**
+	 * The device the route runs its model on: the strip's chip says GPU or
+	 * CPU by it, and its download note follows that copy. Unset until the
+	 * route has answered.
+	 */
+	device?: Device;
 	model: string | null;
 	error: string | null;
 	/**

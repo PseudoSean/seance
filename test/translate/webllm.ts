@@ -251,7 +251,7 @@ describe("translate/engines/webllm", () => {
 		const progress: number[] = [];
 
 		engine.configure(catalog);
-		await engine.load(catalog.llm, (p) => progress.push(p.fraction));
+		await engine.load(catalog.llm, "gpu", (p) => progress.push(p.fraction));
 
 		expect(d.created[0].appConfig.model_list[0].model_id).to.equal(catalog.llm.id);
 		expect(d.calls.reload).to.deep.equal([catalog.llm.id]);
@@ -295,7 +295,7 @@ describe("translate/engines/webllm", () => {
 			const engine = new WebLlmEngine(d.deps, name);
 
 			engine.configure(catalog, {maxBufferBytes: 128 * MiB, capBytes: null});
-			await engine.load(catalog.llm, () => {});
+			await engine.load(catalog.llm, "gpu", () => {});
 
 			expect(d.order).to.deep.equal(["seed", "create"]);
 			expect(d.seeded).to.deep.equal([catalog.llm.smallBuffer]);
@@ -327,7 +327,7 @@ describe("translate/engines/webllm", () => {
 				const engine = new WebLlmEngine(d.deps, name);
 
 				engine.configure(catalog, gpu);
-				await engine.load(catalog.llm, () => {});
+				await engine.load(catalog.llm, "gpu", () => {});
 
 				expect(d.seeded).to.deep.equal([]);
 				expect(d.calls.reload).to.deep.equal([catalog.llm.id]);
@@ -346,7 +346,7 @@ describe("translate/engines/webllm", () => {
 			let error: unknown = null;
 
 			engine.configure(catalog, {maxBufferBytes: 128 * MiB, capBytes: null});
-			await engine.load(catalog.llm, () => {}).catch((e: unknown) => (error = e));
+			await engine.load(catalog.llm, "gpu", () => {}).catch((e: unknown) => (error = e));
 
 			expect((error as Error).message).to.contain("the library expects [151936, 256]");
 			expect(d.created).to.have.length(0);
@@ -364,7 +364,7 @@ describe("translate/engines/webllm", () => {
 			engine.configure(catalog, {maxBufferBytes: 128 * MiB, capBytes: null});
 			let error: unknown = null;
 
-			await engine.load(catalog.llm, () => {}).catch((e: unknown) => (error = e));
+			await engine.load(catalog.llm, "gpu", () => {}).catch((e: unknown) => (error = e));
 			expect((error as Error).message).to.contain("needs its manifest seeded");
 			expect(noSeed.created).to.have.length(0);
 		});
@@ -374,7 +374,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["you're going to love this\n"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const polish = request({
 			text: "your going to love this",
 			from: "en",
@@ -393,7 +393,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["I'll", " send", " you the log", " shortly.\n"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -429,7 +429,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["1. one\n2. two\nEND"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const chunks: string[] = [];
 
 		for await (const chunk of engine.translate(
@@ -447,7 +447,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["<think>", "\n\n</think>", "\n\n", "Hallo", " Welt"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -470,7 +470,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["<think>\n\n</think>\n\n", "Hallo", "\nWelt", " mehr"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -496,7 +496,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["A\nB", "\n\nNote: ", "B is an idiom here."]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -517,7 +517,7 @@ describe("translate/engines/webllm", () => {
 		]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -541,7 +541,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(['"""\n', "Hallo Welt", "\n"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -561,7 +561,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["Ich schick dir", " gleich das Log."]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -579,7 +579,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["\n", "Hallo", "\nWelt"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -598,7 +598,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(['Translation: "Hallo Welt"']);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -612,7 +612,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["<think>\n\n</think>\n\n", "1. Hallo\n", "2. Welt\nEND"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const chunks: string[] = [];
 
 		for await (const chunk of engine.translate(
@@ -631,7 +631,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps([`${EXAMPLES.de}\n`, "I'll send you the log shortly."]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: {text: string; done: boolean}[] = [];
 
 		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
@@ -650,7 +650,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps([EXAMPLES.es]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const req = request({text: "hey, how's it going?", from: "en", to: "es"});
 		let last = "";
 
@@ -665,7 +665,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps([EXAMPLES.de]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const req = request({text: "hey, how's it going?", from: "en", to: "es"});
 		let error: Error | null = null;
 
@@ -684,7 +684,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps([`${EXAMPLES.de.toUpperCase()} `]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		let error: Error | null = null;
 
 		try {
@@ -712,7 +712,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["Hallo, wie geht es dir?"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const seen: string[] = [];
 
 		for await (const chunk of engine.translate(
@@ -735,7 +735,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["a", "b", "c"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const controller = new AbortController();
 
 		for await (const _chunk of engine.translate(request(), controller.signal)) {
@@ -751,7 +751,7 @@ describe("translate/engines/webllm", () => {
 		const engine = new WebLlmEngine(d.deps, name);
 
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 
 		const controller = new AbortController();
 		const seen: string[] = [];
@@ -776,7 +776,7 @@ describe("translate/engines/webllm", () => {
 		const engine = new WebLlmEngine(d.deps, name);
 
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 
 		const controller = new AbortController();
 		const stream = engine.translate(request(), controller.signal)[Symbol.asyncIterator]();
@@ -797,7 +797,7 @@ describe("translate/engines/webllm", () => {
 		const engine = new WebLlmEngine(d.deps, name);
 
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 
 		const waiting = new AbortController();
 		const running = engine
@@ -837,7 +837,7 @@ describe("translate/engines/webllm", () => {
 		const engine = new WebLlmEngine(d.deps, name);
 
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 
 		const controller = new AbortController();
 		const stream = engine.translate(request(), controller.signal)[Symbol.asyncIterator]();
@@ -857,7 +857,7 @@ describe("translate/engines/webllm", () => {
 		const engine = new WebLlmEngine(d.deps, name);
 
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 
 		const controller = new AbortController();
 		const stream = engine.translate(request(), controller.signal)[Symbol.asyncIterator]();
@@ -887,7 +887,7 @@ describe("translate/engines/webllm", () => {
 		}
 
 		expect(message).to.equal(`model not loaded: ${catalog.llm.id}`);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		await engine.unload();
 		expect(d.calls.unload).to.equal(1);
 		expect(engine.status()).to.equal("cold");
@@ -899,7 +899,10 @@ describe("translate/engines/webllm", () => {
 		const engine = new WebLlmEngine(d.deps, name);
 
 		engine.configure(catalog);
-		await Promise.all([engine.load(catalog.llm, () => {}), engine.load(catalog.llm, () => {})]);
+		await Promise.all([
+			engine.load(catalog.llm, "gpu", () => {}),
+			engine.load(catalog.llm, "gpu", () => {}),
+		]);
 
 		expect(d.created.length).to.equal(1);
 		expect(d.calls.reload).to.deep.equal([catalog.llm.id]);
@@ -920,7 +923,7 @@ describe("translate/engines/webllm", () => {
 		let message = "";
 
 		try {
-			await engine.load(catalog.llm, () => {});
+			await engine.load(catalog.llm, "gpu", () => {});
 		} catch (e) {
 			message = (e as Error).message;
 		}
@@ -949,7 +952,7 @@ describe("translate/engines/webllm", () => {
 		let message = "";
 
 		try {
-			await engine.load(catalog.llm, () => {});
+			await engine.load(catalog.llm, "gpu", () => {});
 		} catch (e) {
 			message = (e as Error).message;
 		}
@@ -963,13 +966,13 @@ describe("translate/engines/webllm", () => {
 		const d = deps([]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		const original = d.calls;
 		const mlc = d.deps.create({model_list: []}, () => {});
 		mlc.chat.completions.create = () => Promise.reject(new Error("Device lost"));
 		d.deps.create = () => mlc;
 		await engine.unload();
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		let error: Error | null = null;
 
 		try {
@@ -989,7 +992,7 @@ describe("translate/engines/webllm", () => {
 
 	it("a generation failure on a lost GPU says why the GPU stopped", async () => {
 		const d = deps([]);
-		const engine = new WebLlmEngine(d.deps, name);
+		const engine = new WebLlmEngine({...d.deps, takeDeviceLoss}, name);
 		engine.configure(catalog);
 		const mlc = d.deps.create({model_list: []}, () => {});
 		const mapAsync =
@@ -1006,7 +1009,7 @@ describe("translate/engines/webllm", () => {
 
 		d.deps.create = () => mlc;
 		takeDeviceLoss();
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 		let error: Error | null = null;
 
 		try {
@@ -1025,6 +1028,59 @@ describe("translate/engines/webllm", () => {
 		expect(takeDeviceLoss(), "the loss is spent").to.equal(null);
 	});
 
+	it("a GPU failure without the loss dependency does not read the GPU's loss", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		const mlc = d.deps.create({model_list: []}, () => {});
+		mlc.chat.completions.create = () => Promise.reject(new Error("boom"));
+		d.deps.create = () => mlc;
+		takeDeviceLoss();
+		noteDeviceLoss({reason: "unknown", message: "GPU process terminated"});
+		await engine.load(catalog.llm, "gpu", () => {});
+		let error: Error | null = null;
+
+		try {
+			for await (const _c of engine.translate(request(), new AbortController().signal)) {
+				// consume
+			}
+		} catch (e) {
+			error = e as Error;
+		}
+
+		expect(error?.message).to.equal("boom");
+		expect(takeDeviceLoss(), "left for whoever owns it").to.deep.equal({
+			reason: "unknown",
+			message: "GPU process terminated",
+		});
+	});
+
+	it("a contextWindow option is the window every reload asks for", async () => {
+		const reloads: (number | undefined)[] = [];
+		const d = deps([]);
+		const mlc = d.deps.create({model_list: []}, () => {});
+		const reload = mlc.reload.bind(mlc);
+
+		mlc.reload = (id, opts) => {
+			reloads.push(opts?.context_window_size);
+			return reload(id, opts);
+		};
+
+		d.deps.create = () => mlc;
+		const engine = new WebLlmEngine(d.deps, name, {contextWindow: 1024});
+
+		// Even on a phone, whose GPU window would be 2048.
+		engine.configure(catalog, {
+			maxBufferBytes: 1024 * 1024 * 1024,
+			capBytes: null,
+			mobile: true,
+		});
+		await engine.load(catalog.llm, "gpu", () => {});
+
+		expect(reloads).to.deep.equal([1024]);
+		expect(engine.contextWindow).to.equal(1024);
+	});
+
 	it("the second generation failure in a row is a load-class failure", async () => {
 		const d = deps([]);
 		const engine = new WebLlmEngine(d.deps, name);
@@ -1035,7 +1091,7 @@ describe("translate/engines/webllm", () => {
 		const causes: string[] = [];
 
 		for (let i = 0; i < 2; i++) {
-			await engine.load(catalog.llm, () => {});
+			await engine.load(catalog.llm, "gpu", () => {});
 
 			try {
 				for await (const _c of engine.translate(request(), new AbortController().signal)) {
@@ -1065,7 +1121,7 @@ describe("translate/engines/webllm", () => {
 		const causes: string[] = [];
 
 		for (const ref of [catalog.llm, other]) {
-			await engine.load(ref, () => {});
+			await engine.load(ref, "gpu", () => {});
 
 			try {
 				for await (const _c of engine.translate(
@@ -1086,7 +1142,7 @@ describe("translate/engines/webllm", () => {
 		const d = deps(["ok"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 
 		for await (const _c of engine.translate(request(), new AbortController().signal)) {
 			// consume
@@ -1122,7 +1178,7 @@ describe("translate/engines/webllm", () => {
 		const large = catalog.llmChoices.find((ref) => ref.id === QWEN3_4B_ID);
 
 		engine.configure(catalog);
-		await engine.load(large as ModelRef, () => {});
+		await engine.load(large as ModelRef, "gpu", () => {});
 
 		for await (const _c of engine.translate(
 			request({model: QWEN3_4B_ID}),
@@ -1143,7 +1199,7 @@ describe("translate/engines/webllm", () => {
 		const engine = new WebLlmEngine(d.deps, name);
 
 		engine.configure(catalog);
-		await engine.load(catalog.llm, () => {});
+		await engine.load(catalog.llm, "gpu", () => {});
 
 		for await (const _c of engine.translate(request(), new AbortController().signal)) {
 			// consume

@@ -34,8 +34,9 @@ describe("translate/engine", () => {
 				family: "llm",
 				id: "fake-model",
 				label: {kind: "llm", name: "Fake"},
-				sizeBytes: 0,
+				copies: {gpu: {sizeBytes: 0, source: "fake-model"}},
 			},
+			"gpu",
 			() => {}
 		);
 		const seen: {text: string; done: boolean}[] = [];
@@ -63,8 +64,9 @@ describe("translate/engine", () => {
 				family: "llm",
 				id: "fake-model",
 				label: {kind: "llm", name: "Fake"},
-				sizeBytes: 0,
+				copies: {gpu: {sizeBytes: 0, source: "fake-model"}},
 			},
+			"gpu",
 			() => {}
 		);
 		const controller = new AbortController();

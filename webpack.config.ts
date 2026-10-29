@@ -172,7 +172,8 @@ function brandManifest(content: string): string {
 // flourite's build carries nothing at all — so state both, in a `/*!` banner
 // that ends up in the chunk's `.LICENSE.txt`. The markdown chunks are MIT (see
 // docs/projects/markdown-messages.md); so is franc, and the translation worker
-// is Apache-2.0 (docs/resources/translation.md § Licences).
+// carries two Apache-2.0 libraries and three MIT ones (docs/resources/
+// translation.md § Licences).
 const chunkNotices: Record<string, string> = {
 	"js/highlighter.js":
 		"/*! prismjs 1.30.0 (and the js/prism-*.js grammar chunks) | MIT | " +
@@ -189,13 +190,26 @@ const chunkNotices: Record<string, string> = {
 	// The translation worker (third configuration). ONNX Runtime Web's own
 	// `/*!` notice survives by itself; the two Apache-2.0 libraries ship
 	// their builds without one, and Apache-2.0 § 4 asks a redistribution to
-	// carry the licence.
+	// carry the licence. wllama (MIT) neither, nor llama.cpp/ggml (MIT),
+	// which it compiles into js/wllama.wasm, a file that can carry no
+	// comment: the MIT notice asks for the copyright line in every copy.
+	// One `/*!` block per licence, the packages it covers inside it: terser
+	// sorts the extracted comments, so separate ones would not stay together.
 	"js/translate-worker.js":
-		"/*! @huggingface/transformers 4.2.0 | Apache-2.0 | Copyright Hugging Face | " +
-		"https://github.com/huggingface/transformers.js */\n" +
-		"/*! @mlc-ai/web-llm 0.2.85 | Apache-2.0 | https://github.com/mlc-ai/web-llm */\n" +
-		"/*! Licensed under the Apache License, Version 2.0: " +
-		"https://www.apache.org/licenses/LICENSE-2.0 */\n",
+		"/*!\n" +
+		" * @huggingface/transformers 4.2.0 | Copyright Hugging Face | " +
+		"https://github.com/huggingface/transformers.js\n" +
+		" * @mlc-ai/web-llm 0.2.85 | https://github.com/mlc-ai/web-llm\n" +
+		" * Both licensed under the Apache License, Version 2.0: " +
+		"https://www.apache.org/licenses/LICENSE-2.0\n" +
+		" */\n" +
+		"/*!\n" +
+		" * @wllama/wllama 3.8.1 | Copyright (c) 2024 Xuan Son NGUYEN | " +
+		"https://github.com/ngxson/wllama\n" +
+		" * llama.cpp and ggml, compiled into js/wllama.wasm | " +
+		"Copyright (c) 2023-2024 The ggml authors | https://github.com/ggml-org/llama.cpp\n" +
+		" * Both licensed under the MIT License: https://opensource.org/licenses/MIT\n" +
+		" */\n",
 };
 
 const noticePlugin = new webpack.BannerPlugin({
@@ -261,7 +275,7 @@ const config: webpack.Configuration = {
 		// push chunk, which the second configuration below emits into the same
 		// tree (and runs after this one; see `dependencies`).
 		clean: {
-			keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\/|^models\//,
+			keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\/|^js\/wllama\.wasm$|^models\//,
 		},
 		path: path.resolve(__dirname, "public"),
 		filename: "[name]",
@@ -575,10 +589,14 @@ const translateConfig: webpack.Configuration = {
 		// transformers.js references Node modules behind its `browser` field;
 		// the webworker target honours that field, these are belt and braces.
 		fallback: {fs: false, path: false, url: false, crypto: false},
-		// transformers.js imports the WebGPU ORT bundle unconditionally, but
-		// seq2seq.real.ts always requests `device: "wasm"`; alias it to the
-		// smaller wasm-only bundle so the WebGPU backend (and the wasm/mjs
-		// pair only it references) never enters the worker bundle.
+		// transformers.js imports the WebGPU ORT bundle unconditionally;
+		// alias it to the smaller wasm-only bundle so the WebGPU backend (and
+		// the jsep wasm/mjs pair only it references) never enters the worker
+		// bundle. The alias stays: this build has no WebGPU backend for
+		// OPUS-MT and NLLB-200, so the shipped catalog gives them no GPU copy
+		// (models.ts CatalogOptions `seq2seqGpu`). Shipping one means dropping
+		// this alias and shipping the jsep wasm, which changes the CPU path
+		// too (docs/projects/translation-devices.md § Not in this build).
 		alias: {
 			"onnxruntime-web/webgpu": "onnxruntime-web/wasm",
 		},
@@ -623,6 +641,17 @@ const translateConfig: webpack.Configuration = {
 					from: "ort-wasm-simd-threaded.wasm",
 					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
 					to: "js/ort/[name][ext]",
+				},
+				// The CPU language model's library (engines/cpuLlm.real.ts):
+				// wllama's wasm, next to the worker, which resolves it against
+				// its own location. Since 3.x it is one build for one thread
+				// and for many (the library starts pthreads from a blob worker
+				// when the worker is cross-origin isolated and asked for more
+				// than one thread), so there is no multi-thread file to copy.
+				{
+					from: "wllama.wasm",
+					context: path.resolve(__dirname, "node_modules/@wllama/wllama/esm/wasm"),
+					to: "js/[name][ext]",
 				},
 				// The GPU models' libraries of our own (tools/translate-split/):
 				// the 1.7B's small-buffer build, which WebLLM fetches from

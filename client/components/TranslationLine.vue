@@ -104,6 +104,7 @@ import eventbus from "../js/eventbus";
 import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
 import {
+	liveLlmName,
 	pairVerdict,
 	readingLanguage,
 	retranslate,
@@ -160,7 +161,9 @@ export default defineComponent({
 				const line = entry.value;
 				const verdict = line ? pairVerdict(line.from || null, line.to) : null;
 
-				return verdict && !verdict.route ? translateWhyText(verdict.why) : "";
+				return verdict && !verdict.route
+					? translateWhyText(verdict.why, liveLlmName())
+					: "";
 			});
 		});
 		// Every language the line names is named in the language its reader

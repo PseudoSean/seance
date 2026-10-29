@@ -7,6 +7,7 @@
 import {env, pipeline} from "@huggingface/transformers";
 import {CacheApi} from "../models";
 import {PipelineLike, Seq2seqDeps} from "./seq2seq";
+import {seq2seqCacheApi} from "./seq2seqCache";
 
 const CACHE_NAME = "transformers-cache";
 
@@ -28,10 +29,11 @@ export function configureTransformers(options: {modelBase?: string; ortBase: str
 }
 
 export const realSeq2seqDeps: Seq2seqDeps = {
-	async pipeline(modelId, onProgress) {
-		const pipe = await pipeline("translation", modelId, {
-			dtype: "q8",
-			device: "wasm",
+	async pipeline(copy, device, onProgress) {
+		const wasm = device === "cpu";
+		const pipe = await pipeline("translation", copy.source, {
+			dtype: copy.dtype as "q8",
+			device: wasm ? "wasm" : "webgpu",
 			// The q8 weights are QDQ graphs, and ONNX Runtime's *extended*
 			// optimizer level (the library's default) runs a MatMulNBits
 			// transform that rejects them outright: "Can't create a session.
@@ -41,7 +43,7 @@ export const realSeq2seqDeps: Seq2seqDeps = {
 			// model.shared.weight_transposed_DequantizeLinear" — so every CPU
 			// model failed to load and the tier looked broken. `basic` stops
 			// short of that transform and the same weights load and run.
-			session_options: {graphOptimizationLevel: "basic"},
+			...(wasm ? {session_options: {graphOptimizationLevel: "basic"}} : {}),
 			progress_callback(report: {
 				status: string;
 				file?: string;
@@ -63,23 +65,21 @@ export const realSeq2seqDeps: Seq2seqDeps = {
 	threads: () => typeof SharedArrayBuffer !== "undefined",
 };
 
-/** The library caches every file under a URL containing the repo id. */
+/**
+ * The library caches every file under a URL containing the repo id; a copy
+ * is its dtype's weights among them (seq2seqCache.ts).
+ */
 export function seq2seqCache(): CacheApi {
-	const keysFor = async (id: string) => {
-		const cache = await caches.open(CACHE_NAME);
-		const keys = await cache.keys();
+	return seq2seqCacheApi({
+		async keys() {
+			const cache = await caches.open(CACHE_NAME);
 
-		return {cache, keys: keys.filter((request) => request.url.includes(`/${id}/`))};
-	};
-
-	return {
-		has: async (ref) => (await keysFor(ref.id)).keys.length > 0,
-		async delete(ref) {
-			const {cache, keys} = await keysFor(ref.id);
-
-			for (const key of keys) {
-				await cache.delete(key);
-			}
+			return (await cache.keys()).map((request) => request.url);
 		},
-	};
+		async delete(url) {
+			const cache = await caches.open(CACHE_NAME);
+
+			await cache.delete(url);
+		},
+	});
 }

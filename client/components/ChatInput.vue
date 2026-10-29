@@ -297,6 +297,7 @@ import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
 import {draftGate, onceTargetDefault, sendableTranslation} from "../js/translate/outgoing";
 import {
 	channelTranslation,
+	liveLlmName,
 	pairVerdict,
 	readingLanguage,
 	setChannelOptions,
@@ -688,7 +689,7 @@ export default defineComponent({
 			const from = entry.requestFrom
 				? readerName(entry.requestFrom)
 				: t("translate.strip.sourceAuto");
-			const gpu = entry.engine === "llm";
+			const gpu = entry.device === "gpu";
 			// One whole phrase per shape (device × retried): no translated
 			// fragment is ever glued onto another, and every key is a literal
 			// the pot check can see.
@@ -713,9 +714,15 @@ export default defineComponent({
 				return "";
 			}
 
-			const view = store.state.translation.models.find((v) => v.ref.id === entry.model);
+			// One view per copy: the route's own, on the device it runs on.
+			const view = store.state.translation.models.find(
+				(v) =>
+					v.ref.id === entry.model &&
+					(!entry.device || v.device === entry.device) &&
+					v.status === "downloading"
+			);
 
-			return view && view.status === "downloading" ? loadNoteText(loadNote(view)) : "";
+			return view ? loadNoteText(loadNote(view)) : "";
 		});
 
 		// Why it failed, beside "couldn't translate": an ORT session error or
@@ -730,7 +737,9 @@ export default defineComponent({
 				const entry = outgoing.value;
 				const verdict = entry ? pairVerdict(entry.from, entry.to) : null;
 
-				return verdict && !verdict.route ? translateWhyText(verdict.why) : "";
+				return verdict && !verdict.route
+					? translateWhyText(verdict.why, liveLlmName())
+					: "";
 			})
 				.replace(/\s+/g, " ")
 				.trim();

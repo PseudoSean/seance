@@ -110,18 +110,18 @@ export default async function run(page) {
 	// 1. Settings' Download is the user's yes: no question.
 	await page.evaluate(`location.hash = "#/settings/translation"`);
 	await page.waitFor(
-		`!!document.querySelector('.translate-model[data-model="${OPUS_IT}"] .translate-model-download')`,
-		{label: "the Italian pair's row"}
+		`!!document.querySelector('.translate-model[data-model="${OPUS_IT}"] .translate-copy[data-device="cpu"] .translate-copy-download')`,
+		{label: "the Italian pair's CPU copy"}
 	);
 	await page.evaluate(
 		`document.querySelector('.translate-model[data-model="${OPUS_IT}"]').scrollIntoView({block: "center"})`
 	);
 	await page.sleep(200);
-	await page.click(`.translate-model[data-model="${OPUS_IT}"] .translate-model-download`);
+	await page.click(
+		`.translate-model[data-model="${OPUS_IT}"] .translate-copy[data-device="cpu"] .translate-copy-download`
+	);
 	await page.waitFor(
-		`document.querySelector('.translate-model[data-model="${OPUS_IT}"] .translate-model-state').textContent.trim() === ${JSON.stringify(
-			EN["translate.model.downloaded"]
-		)}`,
+		`document.querySelector('.translate-model[data-model="${OPUS_IT}"] .translate-copy[data-device="cpu"]').dataset.cached === "true"`,
 		{label: "the pair downloaded"}
 	);
 
@@ -181,8 +181,11 @@ export default async function run(page) {
 	const model = /^Download (.+)\?$/.exec(question.title)?.[1] ?? "";
 
 	page.check(
-		`one question for the channel's lines, about the GPU model (${question.count}: ${question.title})`,
-		question.count === 1 && /\(GPU, all languages\)$/.test(model)
+		`one question for the channel's lines, about the language model (${question.count}: ${question.title})`,
+		question.count === 1 &&
+			["Qwen3 1.7B", "Qwen3 4B"].some(
+				(name) => model === EN["translate.model.llm"].replace("{name}", name)
+			)
 	);
 	page.check(
 		`the question says the connection saves data (${question.note})`,

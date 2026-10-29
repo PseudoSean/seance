@@ -17,6 +17,8 @@ import {
 } from "../../client/js/translate/outgoing";
 import {
 	BATCH_MAX_LINES,
+	CPU_BATCH_MAX_LINES,
+	CPU_REQUEST_TIMEOUT_MS,
 	DROP_AFTER_LINES,
 	PAUSE_AFTER_FAILURES,
 	PAUSE_RESUME_MS,
@@ -39,8 +41,13 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 	const resumed: string[] = [];
 	const arrivals = new Map<number, number>();
 	let engineFor: (from: string | null, to: string) => "llm" | "seq2seq" | null = () => "llm";
+	let deviceFor: (engine: string) => "gpu" | "cpu" = () => "gpu";
 	const deps: QueueDeps = {
-		route: (from, to, _hint) => Promise.resolve(engineFor(from, to)),
+		route(from, to, _hint) {
+			const engine = engineFor(from, to);
+
+			return Promise.resolve(engine ? {engine, device: deviceFor(engine)} : null);
+		},
 		translate(req, _signal) {
 			requests.push(req);
 			return (async function* (): AsyncIterable<TranslateChunk> {
@@ -77,6 +84,9 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 		arrivals,
 		setEngine(fn: typeof engineFor) {
 			engineFor = fn;
+		},
+		setDevice(fn: typeof deviceFor) {
+			deviceFor = fn;
 		},
 	};
 }
@@ -344,6 +354,102 @@ describe("translate/queue", () => {
 
 		expect(done.length).to.equal(BATCH_MAX_LINES + 2);
 		expect(done[0][1].text).to.equal("[en] zeile 1 hier");
+	});
+
+	it("a CPU language model batches at most CPU_BATCH_MAX_LINES lines", async () => {
+		const r = rig((req) =>
+			req.lines
+				? [req.lines.map((line, i) => `${i + 1}. [en] ${line}`).join("\n") + "\nEND"]
+				: [`[en] ${req.text}`]
+		);
+		clock = r.clock;
+		r.setDevice(() => "cpu");
+		r.queue.pauseForTest();
+
+		for (let i = 1; i <= CPU_BATCH_MAX_LINES + 1; i++) {
+			r.queue.enqueue(item(i, `zeile ${i} hier`));
+		}
+
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests.length).to.equal(2);
+		expect(r.requests[0].lines?.length).to.equal(CPU_BATCH_MAX_LINES);
+	});
+
+	it("a batch never mixes devices", async () => {
+		const r = rig((req) =>
+			req.lines
+				? [req.lines.map((line, i) => `${i + 1}. [en] ${line}`).join("\n") + "\nEND"]
+				: [`[en] ${req.text}`]
+		);
+		clock = r.clock;
+		let n = 0;
+
+		r.setDevice(() => (n++ === 0 ? "gpu" : "cpu"));
+		r.queue.pauseForTest();
+		r.queue.enqueue(item(1, "zeile eins hier"));
+		r.queue.enqueue(item(2, "zeile zwei hier"));
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests.length).to.equal(2);
+		expect(r.requests.every((q) => !q.lines)).to.equal(true);
+	});
+
+	describe("the deadline", () => {
+		const run = async (
+			engine: "llm" | "seq2seq",
+			device: "gpu" | "cpu",
+			text = "eins zwei drei"
+		) => {
+			const r = rig();
+			const c = r.clock;
+
+			r.setEngine(() => engine);
+			r.setDevice(() => device);
+			r.deps.translate = (_req, _signal) =>
+				(async function* () {
+					await new Promise<void>(() => {});
+					yield {id: 0, text: "never", done: true};
+				})();
+			r.queue.enqueue(item(1, text, {single: true}));
+			await settle(c, 3);
+			await c.tickAsync(REQUEST_TIMEOUT_MS + 1);
+			await settle(c);
+			const after = r.updates.filter(([id]) => id === 1).map(([, u]) => u.status);
+
+			await c.tickAsync(CPU_REQUEST_TIMEOUT_MS - REQUEST_TIMEOUT_MS);
+			await settle(c);
+			const end = r.updates.filter(([id]) => id === 1).map(([, u]) => u.status);
+
+			c.restore();
+
+			return {after, end};
+		};
+
+		it("is CPU_REQUEST_TIMEOUT_MS for the language model on the CPU, REQUEST_TIMEOUT_MS on the GPU", async () => {
+			expect((await run("llm", "gpu")).after).to.deep.equal(["pending", "failed"]);
+			const cpu = await run("llm", "cpu");
+
+			expect(cpu.after).to.deep.equal(["pending"]);
+			expect(cpu.end).to.deep.equal(["pending", "failed"]);
+		});
+
+		it("stays REQUEST_TIMEOUT_MS for OPUS-MT or NLLB-200 on the CPU", async () => {
+			expect((await run("seq2seq", "cpu")).after).to.deep.equal(["pending", "failed"]);
+			// A multi-line message goes through translateDraft: the same rule.
+			expect((await run("seq2seq", "cpu", "zeile eins\nzeile zwei")).after).to.deep.equal([
+				"pending",
+				"failed",
+			]);
+			const llm = await run("llm", "cpu", "zeile eins\nzeile zwei");
+
+			expect(llm.after).to.deep.equal(["pending"]);
+			expect(llm.end).to.deep.equal(["pending", "failed"]);
+		});
 	});
 
 	it("a batch whose numbering does not match is redone one line at a time", async () => {

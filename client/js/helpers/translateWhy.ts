@@ -2,12 +2,14 @@
 // Vue-free and reports codes (translate/models.ts `modelBlock`,
 // translate/router.ts `explainRoute` and `translationBlock`); the phrase
 // lives here, each reason a whole sentence of its own, so a caller shows it
-// beside a lead sentence ("Correcting a message needs the GPU model.")
+// beside a lead sentence ("Correcting a message needs the language model.")
 // rather than splicing one into the other.
 
-import {activeLocale, t} from "../i18n/core";
+import {activeLocale, t, tCount} from "../i18n/core";
 import friendlysize from "./friendlysize";
-import type {ModelRef} from "../translate/engine";
+import type {Device, ModelRef} from "../translate/engine";
+import {DEFAULT_LLM_ID, LLM_CHOICES, QWEN3_1_7B_ID, listedSize, llmName} from "../translate/models";
+import type {Isolation} from "../translate/threads";
 import {languageName} from "../translate/languages";
 import type {RouteBlock} from "../translate/router";
 
@@ -32,15 +34,62 @@ export function modelDisplayName(ref: Pick<ModelRef, "label">): string {
 	}
 }
 
-/** "Needs downloading <model> (<size>)", with the way to do it. */
-export function needsDownloadText(ref: Pick<ModelRef, "label" | "sizeBytes">): string {
-	return t("translate.why.needsDownload", {
-		model: modelDisplayName(ref),
-		size: friendlysize(ref.sizeBytes),
-	});
+/**
+ * "Needs downloading <model> (<size>)", with the way to do it; `device`
+ * names the copy it is about (a whole sentence per device, never a device
+ * word spliced in), absent for a reason that does not know it.
+ */
+export function needsDownloadText(
+	ref: Pick<ModelRef, "label"> & {sizeBytes: number},
+	device?: Device
+): string {
+	const vars = {model: modelDisplayName(ref), size: friendlysize(ref.sizeBytes)};
+
+	switch (device) {
+		case "gpu":
+			return t("translate.why.downloadGpu", vars);
+		case "cpu":
+			return t("translate.why.downloadCpu", vars);
+		default:
+			return t("translate.why.needsDownload", vars);
+	}
 }
 
-export function translateWhyText(block: RouteBlock): string {
+/** The shipped language model's product name, for a caller that has no store. */
+function defaultLlmName(): string {
+	const ref = LLM_CHOICES.find((choice) => choice.id === DEFAULT_LLM_ID) ?? LLM_CHOICES[0];
+
+	return llmName(ref);
+}
+
+/** The Qwen3 1.7B product name: the model a CPU request is told to choose. */
+function cpuLlmName(): string {
+	const ref = LLM_CHOICES.find((choice) => choice.id === QWEN3_1_7B_ID) ?? LLM_CHOICES[0];
+
+	return llmName(ref);
+}
+
+/**
+ * The CPU threads line in Settings' device line (reader.ts
+ * `cpuThreadsLine`): how many threads the language model takes, or that a
+ * reload brings them; nothing where the page can never be isolated.
+ */
+export function threadsText(isolation: Isolation, count: number): string {
+	switch (isolation) {
+		case "isolated":
+			return tCount("translate.threads.using", count);
+		case "reload":
+			return tCount("translate.threads.reload", count);
+		default:
+			return "";
+	}
+}
+
+/**
+ * `llm` is the language model's product name where the caller knows the
+ * model in use (reader.ts `liveLlmName`); without it the shipped default's.
+ */
+export function translateWhyText(block: RouteBlock, llm: string = defaultLlmName()): string {
 	switch (block.kind) {
 		case "disabled":
 			return t("translate.settings.disabled");
@@ -59,6 +108,8 @@ export function translateWhyText(block: RouteBlock): string {
 					return t("translate.why.gpuLimits");
 				case "NO_WASM_SIMD":
 					return t("translate.why.noWasmSimd");
+				case "NO_MEMORY64":
+					return t("translate.why.noMemory64");
 				case "PROBE_FAILED":
 					return t("translate.why.probeFailed");
 				default:
@@ -79,21 +130,36 @@ export function translateWhyText(block: RouteBlock): string {
 		case "off":
 			switch (block.engine) {
 				case "llm":
-					return t("translate.why.llmOff");
-				case "seq2seq":
+					return t("translate.why.llmOff", {model: llm});
+				case "opus":
 					return t("translate.why.cpuOff");
 				case "nllb":
 					return t("translate.why.nllbOff");
 				case "llmOrNllb":
-					return t("translate.why.llmOrNllbOff");
+					return t("translate.why.llmOrNllbOff", {model: llm});
 				default:
 					return t("translate.why.allOff");
 			}
 
+		// The model has no copy for the pinned device. On the CPU that is the
+		// 4B, and the way out is the 1.7B, which has one; on the GPU it is
+		// OPUS-MT and NLLB-200, which this build runs on the CPU alone
+		// (models.ts CatalogOptions `seq2seqGpu`).
+		case "noCopy":
+			return block.device === "cpu"
+				? t("translate.why.noCpuCopy", {model: llm, choice: cpuLlmName()})
+				: t("translate.why.noGpuCopy");
+
 		case "down":
 			return t("translate.why.down");
 		case "download":
-			return needsDownloadText(block.ref);
+			return needsDownloadText(
+				{
+					label: block.ref.label,
+					sizeBytes: block.ref.copies[block.device]?.sizeBytes ?? listedSize(block.ref),
+				},
+				block.device
+			);
 		default:
 			// "source" never reaches the UI (its questions pass a null source
 			// as one the detector will name) and "unserved" is a pair no model

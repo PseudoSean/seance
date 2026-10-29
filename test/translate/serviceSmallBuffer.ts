@@ -13,6 +13,7 @@ import {
 	QWEN3_1_7B_ID,
 	QWEN3_1_7B_SPLIT_ID,
 	buildCatalog,
+	type DeviceChoices,
 } from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
 import {TranslateClient} from "../../client/js/translate/client";
@@ -21,6 +22,8 @@ import {serveEngines} from "../../client/js/translate/worker";
 import {memoryConsent} from "../../client/js/translate/consent";
 import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
 import {FakeEngine} from "./fakeEngine";
+
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
 
 const MiB = 1024 * 1024;
 
@@ -95,7 +98,7 @@ function rig(capability: Capability, consent?: {ask: (ref: ModelRef) => Promise<
 			ortBase: "https://app.test/js/ort/",
 			enabled: true,
 		},
-		{llm: true, cpu: true, nllb: true}
+		{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 	);
 
 	return {service, configured, asked, modelsAsked, store, releaseProbe: () => release()};
@@ -185,11 +188,11 @@ describe("translate/service and the small-buffer build", () => {
 
 		r.releaseProbe();
 		await r.service.capabilities();
-		await r.service.download(r.service.catalog.llm).catch(() => undefined);
+		await r.service.download(r.service.catalog.llm, "gpu").catch(() => undefined);
 		expect(r.store.has(QWEN3_1_7B_SPLIT_ID)).to.equal(true);
 		expect(r.store.has(QWEN3_1_7B_ID)).to.equal(false);
 
-		await r.service.deleteModel(r.service.catalog.llm);
+		await r.service.remove(r.service.catalog.llm, "gpu");
 		expect(r.store.has(QWEN3_1_7B_SPLIT_ID)).to.equal(false);
 		r.service.dispose();
 	});

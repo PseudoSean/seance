@@ -24,6 +24,7 @@ import {parseNeedsDownload} from "./consent";
 import {
 	BATCH_REFUSED,
 	CONTEXT_OVERFLOW,
+	Device,
 	EngineName,
 	type LineContext,
 	PromptContext,
@@ -80,6 +81,30 @@ export const PAUSE_RESUME_MS = 60 * 1000;
  */
 export const REQUEUE_WAIT_MS = 1000;
 export const REQUEST_TIMEOUT_MS = 2 * 60 * 1000;
+
+/**
+ * The language model on the CPU (wllama, one thread): about 94 s for a cold
+ * request and 16 s warm, so a batch is two lines, not six, and the deadline
+ * is six minutes (translation-devices.md § The CPU context window). OPUS-MT
+ * and NLLB-200 on the CPU are as quick as they always were: theirs stays
+ * REQUEST_TIMEOUT_MS.
+ */
+export const CPU_BATCH_MAX_LINES = 2;
+export const CPU_REQUEST_TIMEOUT_MS = 6 * 60 * 1000;
+
+/** The language model on the CPU: the one route the longer figures are for. */
+function slowLlm(engine: EngineName, device: Device): boolean {
+	return engine === "llm" && device === "cpu";
+}
+
+function batchCapFor(engine: EngineName, device: Device): number {
+	return slowLlm(engine, device) ? CPU_BATCH_MAX_LINES : BATCH_MAX_LINES;
+}
+
+function timeoutFor(engine: EngineName, device: Device): number {
+	return slowLlm(engine, device) ? CPU_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+}
+
 export const NO_ROUTE = "no translation engine can take this request";
 export const TIMED_OUT = "timed out";
 
@@ -134,7 +159,11 @@ export interface QueueDeps {
 	 * source. A rejection fails the line with its message and counts toward
 	 * no pause (a download the user declined, consent.ts).
 	 */
-	route(from: string | null, to: string, hint: string | null): Promise<EngineName | null>;
+	route(
+		from: string | null,
+		to: string,
+		hint: string | null
+	): Promise<{engine: EngineName; device: Device} | null>;
 	translate(
 		req: Omit<TranslateRequest, "id" | "model">,
 		signal: AbortSignal
@@ -162,6 +191,8 @@ export interface QueueDeps {
 interface Queued {
 	item: QueueItem;
 	engine: EngineName;
+	/** The device the route runs on: the batch cap and the deadline follow it. */
+	device: Device;
 	seq: number;
 	/**
 	 * The item's protected text in the marker form `engine` reads (spans.ts
@@ -383,7 +414,7 @@ export class TranslateQueue {
 		const globalGeneration = this.globalGeneration;
 
 		void this.deps.route(item.from, item.to, routeHintOf(item)).then(
-			(engine) => {
+			(routed) => {
 				if (
 					this.generation(item.chanId) !== generation ||
 					this.globalGeneration !== globalGeneration
@@ -392,14 +423,17 @@ export class TranslateQueue {
 					return;
 				}
 
-				if (!engine) {
+				if (!routed) {
 					this.deps.onUpdate(item.id, {status: "failed", error: noRouteError});
 					return;
 				}
 
+				const {engine, device} = routed;
+
 				const queued: Queued = {
 					item,
 					engine,
+					device,
 					seq: seq ?? (front ? -++this.seq : ++this.seq),
 					info: renderMarkers(
 						protectedOf(item),
@@ -500,12 +534,13 @@ export class TranslateQueue {
 		const batch = [head];
 
 		for (const q of [...this.waiting]) {
-			if (batch.length >= BATCH_MAX_LINES) {
+			if (batch.length >= batchCapFor(engine, head.device)) {
 				break;
 			}
 
 			if (
 				q.engine === engine &&
+				q.device === head.device &&
 				!q.item.single &&
 				!isMultiline(q.item) &&
 				q.item.chanId === head.item.chanId &&
@@ -599,7 +634,7 @@ export class TranslateQueue {
 			this.deps.onUpdate(q.item.id, {status: "pending", text: "", engine});
 		}
 
-		const timer = armDeadline(this.timers(), REQUEST_TIMEOUT_MS, () => {
+		const timer = armDeadline(this.timers(), timeoutFor(head.engine, head.device), () => {
 			timedOut = true;
 			running.abort();
 		});
@@ -745,7 +780,7 @@ export class TranslateQueue {
 		this.inFlight.set(engine, running);
 		this.deps.onUpdate(item.id, {status: "pending", text: "", engine});
 
-		const timer = armDeadline(this.timers(), REQUEST_TIMEOUT_MS, () => {
+		const timer = armDeadline(this.timers(), timeoutFor(queued.engine, queued.device), () => {
 			timedOut = true;
 			running.abort();
 		});
@@ -763,6 +798,8 @@ export class TranslateQueue {
 					context: item.context,
 					batches: engine === "llm",
 					markers: info.markers,
+					device: queued.device,
+					engine,
 				},
 				controller.signal,
 				(partial) => {

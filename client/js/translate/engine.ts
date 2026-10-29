@@ -8,7 +8,16 @@
 import type {MarkerForm} from "./spans";
 import type {EmbeddingSplit} from "./engines/splitManifest";
 
+/**
+ * The service's slot for a model: `llm` is the language model's, `seq2seq`
+ * is OPUS-MT's and NLLB-200's. It names a slot, not a device: every model
+ * can run on either device its `copies` list (models.ts).
+ */
 export type EngineName = "llm" | "seq2seq";
+/** Where a model runs: WebGPU, or the CPU (WASM). */
+export type Device = "gpu" | "cpu";
+/** A device setting: let the router pick, or pin one. */
+export type DeviceChoice = "auto" | Device;
 export type ModelFamily = "llm" | "nllb" | "opus";
 export type EngineStatus = "cold" | "loading" | "ready" | "failed";
 
@@ -45,6 +54,27 @@ export interface SmallBufferBuild {
 	largestBufferBytes: number;
 }
 
+/**
+ * One device's copy of a model: its own weights, so its own download,
+ * size and (on the GPU) largest binding.
+ */
+export interface DeviceCopy {
+	/** Approximate download size for Settings; 0 when unknown. */
+	sizeBytes: number;
+	/** The library's own id for this copy: a WebLLM `model_id`, a Hugging Face repo, a GGUF repo. */
+	source: string;
+	/** The weights' dtype where the library takes one (transformers.js). */
+	dtype?: string;
+	/** The single file to fetch, where the copy is one (a GGUF). */
+	file?: string;
+	/**
+	 * The largest single buffer the copy binds on the GPU: every weight
+	 * tensor is one storage binding, so a device below this cannot load it.
+	 * Unknown (a deploy's own model): trusted to fit. CPU copies have none.
+	 */
+	largestBufferBytes?: number;
+}
+
 export interface ModelRef {
 	engine: EngineName;
 	family: ModelFamily;
@@ -56,22 +86,17 @@ export interface ModelRef {
 	 * the component renders it (helpers/modelLabel.ts).
 	 */
 	label: ModelLabel;
-	/** Approximate download size for Settings; 0 when unknown. */
-	sizeBytes: number;
 	/**
-	 * The graphics memory the model needs at runtime (GPU models only):
+	 * The copies of this model by device; a device missing from the record
+	 * has no copy (the 4B has no CPU one). Sizes and buffers live here.
+	 */
+	copies: Partial<Record<Device, DeviceCopy>>;
+	/**
+	 * The graphics memory the model needs at runtime (GPU copy only):
 	 * what the capability probe's adapter limit is checked against when
 	 * the default model is picked (models.ts `defaultLlmForAdapter`).
 	 */
 	vramBytes?: number;
-	/**
-	 * The largest single buffer the model binds on the GPU (GPU models
-	 * only): every weight tensor is one storage binding, so a device whose
-	 * binding limit is below this cannot load the model however it is
-	 * downloaded (models.ts `llmFits`). Unknown (a deploy's own model):
-	 * trusted to fit.
-	 */
-	largestBufferBytes?: number;
 	/**
 	 * A GPU model's small-buffer build (models.ts `smallBufferBuildFor`):
 	 * the same published weights read by a library of our own that splits
@@ -133,6 +158,11 @@ export function emptyContext(): PromptContext {
 export interface TranslateRequest {
 	/** Request id, for cancellation and for matching chunks. */
 	id: number;
+	/**
+	 * The device to run on: set by the service on every request it posts;
+	 * an engine without it uses the device its model is loaded on.
+	 */
+	device?: Device;
 	/** `ModelRef.id` the router chose. */
 	model: string;
 	/** After span protection: placeholders are already in place. */
@@ -193,11 +223,13 @@ export interface EngineCapabilities {
 
 export interface Engine {
 	readonly name: EngineName;
-	load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void>;
+	/** Load `ref`'s copy for `device`; an engine that serves one device only checks it is its own. */
+	load(ref: ModelRef, device: Device, onProgress: (p: LoadProgress) => void): Promise<void>;
 	unload(): Promise<void>;
 	status(): EngineStatus;
 	loadedModels(): string[];
-	isLoaded(id: string): boolean;
+	/** Whether `id` is loaded, on `device` when one is named. */
+	isLoaded(id: string, device?: Device): boolean;
 	capabilities(): EngineCapabilities;
 	translate(req: TranslateRequest, signal: AbortSignal): AsyncIterable<TranslateChunk>;
 }

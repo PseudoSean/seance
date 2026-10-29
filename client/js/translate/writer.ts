@@ -390,6 +390,7 @@ export async function translateOutgoing(
 					from,
 					requestFrom: from,
 					engine: engineFor(route),
+					device: route?.device,
 					model: route?.ref.id ?? null,
 				},
 			});
@@ -403,6 +404,8 @@ export async function translateOutgoing(
 			purpose: polish ? "polish" : "write",
 			context,
 			batches: route?.candidate === "llm",
+			device: route?.device,
+			engine: engineFor(route),
 			markers: markersFor(route?.candidate),
 			nicks,
 		};
@@ -659,6 +662,8 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			purpose: "read",
 			context,
 			batches: route?.candidate === "llm",
+			device: route?.device,
+			engine: engineFor(route),
 			markers: markersFor(route?.candidate),
 			nicks,
 		};

@@ -24,7 +24,7 @@ describe("translate/models", () => {
 		const catalog = buildCatalog();
 
 		expect(catalog.llm).to.include({engine: "llm", family: "llm", id: DEFAULT_LLM_ID});
-		expect(catalog.llm.sizeBytes).to.be.greaterThan(0);
+		expect(catalog.llm.copies.gpu?.sizeBytes).to.be.greaterThan(0);
 		expect(catalog.nllb).to.include({engine: "seq2seq", family: "nllb", id: DEFAULT_NLLB_ID});
 		expect(catalog.opus["de-en"]).to.deep.include({
 			engine: "seq2seq",
@@ -56,6 +56,68 @@ describe("translate/models", () => {
 		expect(catalog.opus["de-en"].id).to.equal("Xenova/opus-mt-de-en");
 	});
 
+	it("lists each model's copies by device", () => {
+		const catalog = buildCatalog({seq2seqGpu: true});
+		const [small, large] = catalog.llmChoices;
+
+		expect(small.copies.gpu?.largestBufferBytes).to.equal(155_582_464);
+		expect(small.copies.cpu).to.deep.equal({
+			sizeBytes: 1_107_409_472,
+			source: "unsloth/Qwen3-1.7B-GGUF",
+			file: "Qwen3-1.7B-Q4_K_M.gguf",
+		});
+		expect(large.copies.cpu).to.equal(undefined);
+		expect(catalog.nllb.copies.gpu).to.include({
+			dtype: "q4f16",
+			largestBufferBytes: 524_709_888,
+		});
+		expect(catalog.nllb.copies.cpu).to.include({dtype: "q8", sizeBytes: 912_000_000});
+		expect(catalog.opus["de-en"].copies.cpu).to.include({dtype: "q8", sizeBytes: 113_000_000});
+		expect(catalog.opus["de-en"].copies.gpu).to.include({
+			dtype: "fp16",
+			largestBufferBytes: 59_495_424,
+		});
+	});
+
+	it("gives OPUS-MT and NLLB-200 no GPU copy unless asked", () => {
+		// This build has no WebGPU backend for them (webpack.config.ts's
+		// onnxruntime-web alias): a GPU copy would download and fail to start.
+		const catalog = buildCatalog();
+
+		expect(Object.keys(catalog.nllb.copies)).to.deep.equal(["cpu"]);
+
+		for (const ref of Object.values(catalog.opus)) {
+			expect(Object.keys(ref.copies), ref.id).to.deep.equal(["cpu"]);
+		}
+
+		// The language models keep theirs.
+		expect(catalog.llmChoices.every((ref) => ref.copies.gpu)).to.equal(true);
+		// A deploy's config cannot turn it on: BrandingTranslation has no such
+		// field and index.ts passes it as false.
+		expect(Object.keys(buildCatalog({seq2seqGpu: false}).nllb.copies)).to.deep.equal(["cpu"]);
+		expect(buildCatalog({seq2seqGpu: true}).nllb.copies.gpu?.sizeBytes).to.equal(1_260_000_000);
+	});
+
+	it("gives a deploy's own language model a GPU copy alone, and its seq2seq ids the shipped ones' copies", () => {
+		const options = {
+			llm: {model: "gemma-3-1b-it-q4f16_1-MLC"},
+			cpu: {nllb: "mirror/nllb-small", opus: {"fi-en": "mirror/opus-fi-en"}},
+		};
+		const catalog = buildCatalog(options);
+
+		expect(Object.keys(catalog.llm.copies)).to.deep.equal(["gpu"]);
+		expect(catalog.nllb.copies.cpu?.source).to.equal("mirror/nllb-small");
+		expect(catalog.opus["fi-en"].copies.cpu?.source).to.equal("mirror/opus-fi-en");
+		expect(catalog.nllb.copies.gpu).to.equal(undefined);
+		expect(catalog.opus["fi-en"].copies.gpu).to.equal(undefined);
+
+		// With the GPU copies on, both from the deploy's repos.
+		const withGpu = buildCatalog({...options, seq2seqGpu: true});
+
+		expect(withGpu.nllb.copies.gpu?.source).to.equal("mirror/nllb-small");
+		expect(withGpu.opus["fi-en"].copies.gpu?.source).to.equal("mirror/opus-fi-en");
+	});
+
 	it("resolves a candidate to its model", () => {
 		const catalog = buildCatalog();
 
@@ -85,16 +147,16 @@ describe("translate/models", () => {
 
 		const [small, large] = catalog.llmChoices;
 
-		expect(small).to.include({
-			engine: "llm",
-			family: "llm",
+		expect(small).to.include({engine: "llm", family: "llm"});
+		expect(small.copies.gpu).to.deep.equal({
 			sizeBytes: 984_000_000,
+			source: QWEN3_1_7B_ID,
 			largestBufferBytes: 155_582_464,
 		});
-		expect(large).to.include({
-			engine: "llm",
-			family: "llm",
+		expect(large).to.include({engine: "llm", family: "llm"});
+		expect(large.copies.gpu).to.deep.equal({
 			sizeBytes: 2_280_000_000,
+			source: QWEN3_4B_ID,
 			largestBufferBytes: 194_478_080,
 		});
 		expect(llmName(small)).to.equal("Qwen3 1.7B");
@@ -293,8 +355,13 @@ describe("translate/models", () => {
 			},
 		};
 		const states = await cacheStates(buildCatalog(), api);
+		const copyCount = catalogModels(buildCatalog()).reduce(
+			(n, ref) => n + Object.keys(ref.copies).length,
+			0
+		);
 
-		expect(states.length).to.equal(catalogModels(buildCatalog()).length);
+		// One entry per copy.
+		expect(states.length).to.equal(copyCount);
 		expect(states.find((s) => s.ref.id === DEFAULT_LLM_ID)?.cached).to.equal(false);
 		expect(states.filter((s) => s.ref.id !== DEFAULT_LLM_ID).every((s) => s.cached)).to.equal(
 			true
@@ -304,18 +371,35 @@ describe("translate/models", () => {
 	it("asks the cache api about every model", async () => {
 		const asked: string[] = [];
 		const api: CacheApi = {
-			has(ref) {
-				asked.push(ref.id);
-				return Promise.resolve(ref.id === DEFAULT_NLLB_ID);
+			has(ref, device) {
+				asked.push(`${ref.id}@${device}`);
+				return Promise.resolve(ref.id === DEFAULT_NLLB_ID && device === "cpu");
 			},
 			delete() {
 				return Promise.resolve();
 			},
 		};
-		const states = await cacheStates(buildCatalog(), api);
+		const states = await cacheStates(buildCatalog({seq2seqGpu: true}), api);
 
 		expect(asked.length).to.equal(states.length);
-		expect(states.find((s) => s.ref.id === DEFAULT_NLLB_ID)?.cached).to.equal(true);
+		// Each copy asked for by its own device, the GPU copy first.
+		expect(asked.filter((a) => a.startsWith(`${DEFAULT_NLLB_ID}@`))).to.deep.equal([
+			`${DEFAULT_NLLB_ID}@gpu`,
+			`${DEFAULT_NLLB_ID}@cpu`,
+		]);
+		expect(
+			states.filter((s) => s.ref.id === DEFAULT_NLLB_ID).map((s) => [s.device, s.cached])
+		).to.deep.equal([
+			["gpu", false],
+			["cpu", true],
+		]);
 		expect(states.find((s) => s.ref.id === DEFAULT_LLM_ID)?.cached).to.equal(false);
+
+		// The shipped catalog has no GPU copy of NLLB-200 to ask about.
+		asked.length = 0;
+		await cacheStates(buildCatalog(), api);
+		expect(asked.filter((a) => a.startsWith(`${DEFAULT_NLLB_ID}@`))).to.deep.equal([
+			`${DEFAULT_NLLB_ID}@cpu`,
+		]);
 	});
 });

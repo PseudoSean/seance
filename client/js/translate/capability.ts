@@ -26,6 +26,12 @@ export type CapabilityReason =
 	| "GPU_LIMITS"
 	| "SMALL_BUFFER"
 	| "NO_WASM_SIMD"
+	/**
+	 * No WebAssembly Memory64: the language model's CPU library (wllama's
+	 * standard build, engines/cpuLlm.real.ts) is a Memory64 module and
+	 * cannot instantiate (desktop Safari). The seq2seq models do not need it.
+	 */
+	| "NO_MEMORY64"
 	/** The probe itself threw: nothing could be measured (service.ts). */
 	| "PROBE_FAILED";
 
@@ -43,6 +49,12 @@ export interface Capability {
 	 * time (service.ts).
 	 */
 	mobile: boolean;
+	/**
+	 * An iPhone or iPad (`isAppleMobile`; absent = false): WebKit ends a page
+	 * past ~1.8 GB, which the language model's CPU copy cannot stay under
+	 * (models.ts `APPLE_PAGE_BUDGET_BYTES`).
+	 */
+	appleMobile?: boolean;
 	/**
 	 * The test switch's cap (gpuTestLimit.ts), when set: `maxBufferBytes` is
 	 * already held to it, and the worker holds WebLLM's device to it too.
@@ -66,6 +78,8 @@ export interface ProbeEnv {
 	deviceMemory: number | null;
 	storage: {estimate(): Promise<{quota?: number}>} | null;
 	wasmSimd: boolean;
+	/** WebAssembly Memory64 (`hasMemory64`): what the CPU language model's library needs. */
+	memory64: boolean;
 	/**
 	 * Whether the page is a secure context (`window.isSecureContext`), when
 	 * that is known. A plain-HTTP origin away from localhost is the usual
@@ -76,6 +90,8 @@ export interface ProbeEnv {
 	secureContext?: boolean;
 	/** A phone or tablet (`browserEnv`); absent means a computer. */
 	mobile?: boolean;
+	/** An iPhone or iPad (`browserEnv`); absent means neither. */
+	appleMobile?: boolean;
 	/** The test switch (gpuTestLimit.ts): bind no more than this; absent or null, no cap. */
 	bufferCapBytes?: number | null;
 }
@@ -143,6 +159,10 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 		reasons.push("NO_WASM_SIMD");
 	}
 
+	if (!env.memory64) {
+		reasons.push("NO_MEMORY64");
+	}
+
 	let storageQuotaBytes: number | null = null;
 
 	if (env.storage) {
@@ -163,6 +183,7 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 		deviceMemoryGiB: env.deviceMemory,
 		storageQuotaBytes,
 		mobile: env.mobile === true,
+		appleMobile: env.appleMobile === true,
 		bufferCapBytes: env.bufferCapBytes ?? null,
 	};
 }
@@ -197,10 +218,36 @@ export function browserEnv(): ProbeEnv {
 		deviceMemory: typeof nav.deviceMemory === "number" ? nav.deviceMemory : null,
 		storage: nav.storage && typeof nav.storage.estimate === "function" ? nav.storage : null,
 		wasmSimd,
+		memory64: hasMemory64(),
 		secureContext: typeof window !== "undefined" ? window.isSecureContext : undefined,
 		mobile: isMobile(nav),
+		appleMobile: isAppleMobile(nav),
 		bufferCapBytes: readGpuTestLimit(),
 	};
+}
+
+/**
+ * Whether a 64-bit WebAssembly memory can be made: an engine without
+ * Memory64 throws on the `address` descriptor's BigInt `initial` (it reads
+ * the field as a number), one with it returns a memory of one page.
+ * `WebAssembly` missing, or a constructor that throws, is no.
+ */
+export function hasMemory64(
+	wasm: {Memory?: unknown} | undefined = typeof WebAssembly !== "undefined"
+		? WebAssembly
+		: undefined
+): boolean {
+	const Memory = wasm?.Memory as (new (descriptor: unknown) => unknown) | undefined;
+
+	if (typeof Memory !== "function") {
+		return false;
+	}
+
+	try {
+		return !!new Memory({address: "i64", initial: BigInt(1)});
+	} catch {
+		return false;
+	}
 }
 
 /** The slice of `navigator` `isMobile` reads. */
@@ -231,6 +278,13 @@ export function isMobile(nav: MobileNavigator): boolean {
 		/Android|iPhone|iPad|iPod|Mobi/i.test(ua) ||
 		(/Macintosh/.test(ua) && (nav.maxTouchPoints ?? 0) > 1)
 	);
+}
+
+/** An iPhone or iPod, or an iPad (one that asks for desktop sites reads as a Mac with a touch screen). */
+export function isAppleMobile(nav: MobileNavigator): boolean {
+	const ua = nav.userAgent ?? "";
+
+	return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && (nav.maxTouchPoints ?? 0) > 1);
 }
 
 let cached: Promise<Capability> | null = null;

@@ -9,13 +9,20 @@ import {expect} from "chai";
 import sinon from "ts-sinon";
 import type {Capability} from "../../client/js/translate/capability";
 import {emptyContext} from "../../client/js/translate/engine";
-import {QWEN3_1_7B_ID, buildCatalog, type CacheApi} from "../../client/js/translate/models";
+import {
+	QWEN3_1_7B_ID,
+	buildCatalog,
+	type CacheApi,
+	type DeviceChoices,
+} from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
 import type {RouteTable} from "../../client/js/translate/router";
 import {TranslateClient} from "../../client/js/translate/client";
 import {TranslateService, type ServiceDeps} from "../../client/js/translate/service";
 import {serveEngines} from "../../client/js/translate/worker";
 import {FakeEngine} from "./fakeEngine";
+
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
 
 const catalog = buildCatalog();
 
@@ -48,9 +55,9 @@ function rig(mobile: boolean) {
 		const unload = engine.unload.bind(engine);
 		const translate = engine.translate.bind(engine);
 
-		engine.load = (ref, onProgress) => {
+		engine.load = (ref, device, onProgress) => {
 			log.push(`w${workers.length - 1} load ${engine.name}`);
-			return load(ref, onProgress);
+			return load(ref, device, onProgress);
 		};
 
 		engine.unload = () => {
@@ -95,7 +102,7 @@ function rig(mobile: boolean) {
 			ortBase: "https://app.test/js/ort/",
 			enabled: true,
 		},
-		{llm: true, cpu: true, nllb: true}
+		{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 	);
 
 	return {service, workers, log, clock, llm, seq2seq};
@@ -196,7 +203,7 @@ describe("translate/service: one engine at a time on a phone", () => {
 		r = rig(true);
 
 		expect(await text(r.service.translate(request("fr")))).to.equal("llm:hello");
-		await r.service.download(catalog.nllb);
+		await r.service.download(catalog.nllb, "cpu");
 
 		expect(r.log).to.include("w0 unload llm");
 		expect(r.log.indexOf("w0 unload llm")).to.be.lessThan(r.log.indexOf("w0 load seq2seq"));
@@ -206,8 +213,8 @@ describe("translate/service: one engine at a time on a phone", () => {
 		r = rig(true);
 
 		const both = Promise.all([
-			r.service.download(catalog.llm),
-			r.service.download(catalog.opus["de-en"]),
+			r.service.download(catalog.llm, "gpu"),
+			r.service.download(catalog.opus["de-en"], "cpu"),
 		]);
 
 		await r.clock.tickAsync(100);
@@ -236,7 +243,7 @@ describe("translate/service: one engine at a time on a phone", () => {
 
 			const before = r.service.loadTicks();
 
-			await r.service.download(catalog.llm);
+			await r.service.download(catalog.llm, "gpu");
 			expect(r.service.loadTicks() - before, mobile ? "phone" : "computer").to.equal(
 				mobile ? 4 : 0
 			);

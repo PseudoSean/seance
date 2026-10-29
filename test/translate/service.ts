@@ -1,12 +1,19 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
 import type {Capability} from "../../client/js/translate/capability";
-import {BATCH_REFUSED, emptyContext, type ModelRef} from "../../client/js/translate/engine";
+import {
+	BATCH_REFUSED,
+	emptyContext,
+	type Device,
+	type ModelRef,
+} from "../../client/js/translate/engine";
 import {
 	QWEN3_1_7B_ID,
 	QWEN3_4B_ID,
 	buildCatalog,
 	type CacheApi,
+	type DeviceChoices,
+	type ModelCatalog,
 } from "../../client/js/translate/models";
 import {ABORTED} from "../../client/js/translate/outgoing";
 import {createPortPair} from "../../client/js/translate/protocol";
@@ -36,7 +43,11 @@ import {
 } from "../../client/js/translate/consent";
 import {FakeEngine} from "./fakeEngine";
 
-const catalog = buildCatalog();
+const AUTO: DeviceChoices = {llm: "auto", opus: "auto", nllb: "auto"};
+
+// OPUS-MT and NLLB-200 with their GPU copies (off in the shipped catalog,
+// models.ts CatalogOptions `seq2seqGpu`), so the per-device logic is covered.
+const catalog = buildCatalog({seq2seqGpu: true});
 
 /**
  * A service whose workers never answer: `dies` fires each one's `error`
@@ -89,7 +100,7 @@ function deadWorkerRig(dies: boolean, healthyFrom = Infinity) {
 			clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
 		},
 		{catalog, selectedLlm: QWEN3_1_7B_ID, ortBase: "https://app.test/js/ort/", enabled: true},
-		{llm: true, cpu: true, nllb: true}
+		{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 	);
 
 	service.onWorkerError((message) => errors.push(message));
@@ -114,7 +125,8 @@ function rig(
 	tier: Capability["tier"] = "gpu",
 	enabled = true,
 	routes: RouteTable = DEFAULT_ROUTES,
-	consent: Pick<ServiceDeps, "askDownload" | "consent"> = {}
+	consent: Pick<ServiceDeps, "askDownload" | "consent"> = {},
+	shape: {catalog?: ModelCatalog; maxBufferBytes?: number} = {}
 ) {
 	const clock = sinon.useFakeTimers();
 	const workers: {terminated: boolean}[] = [];
@@ -123,11 +135,17 @@ function rig(
 	let failConfigure: Error | null = null;
 	let hangDelete = false;
 	let probes = 0;
+	/** Every copy delete the worker was asked for, as `<id>@<device>`. */
+	const deleted: string[] = [];
+	// `cached` holds a plain id (every copy of the model is on the device)
+	// or `<id>@<device>` (that copy alone).
 	const cache: CacheApi = {
-		has(ref) {
-			return Promise.resolve(cached.has(ref.id));
+		has(ref, device) {
+			return Promise.resolve(cached.has(ref.id) || cached.has(`${ref.id}@${device}`));
 		},
-		delete(ref) {
+		delete(ref, device) {
+			deleted.push(`${ref.id}@${device}`);
+
 			if (hangDelete) {
 				return new Promise<void>(() => {});
 			}
@@ -140,7 +158,15 @@ function rig(
 				return Promise.reject(error);
 			}
 
-			cached.delete(ref.id);
+			if (cached.delete(ref.id)) {
+				for (const other of ["gpu", "cpu"] as const) {
+					if (other !== device && ref.copies[other]) {
+						cached.add(`${ref.id}@${other}`);
+					}
+				}
+			}
+
+			cached.delete(`${ref.id}@${device}`);
 
 			return Promise.resolve();
 		},
@@ -180,7 +206,13 @@ function rig(
 		},
 		probe() {
 			probes += 1;
-			return Promise.resolve(capability(tier));
+			const probed = capability(tier);
+
+			return Promise.resolve(
+				shape.maxBufferBytes === undefined
+					? probed
+					: {...probed, maxBufferBytes: shape.maxBufferBytes}
+			);
 		},
 		setTimeout: (fn, ms) => setTimeout(fn, ms),
 		clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
@@ -189,7 +221,7 @@ function rig(
 	const service = new TranslateService(
 		deps,
 		{
-			catalog,
+			catalog: shape.catalog ?? catalog,
 			// A chosen model, so the probe's own default (an unset choice
 			// resolves against the device) leaves these rigs alone.
 			selectedLlm: QWEN3_1_7B_ID,
@@ -197,13 +229,14 @@ function rig(
 			ortBase: "https://app.test/js/ort/",
 			enabled,
 		},
-		{llm: true, cpu: true, nllb: true}
+		{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 	);
 
 	return {
 		service,
 		workers,
 		cached,
+		deleted,
 		clock,
 		llm,
 		seq2seq,
@@ -271,14 +304,14 @@ function gateLlmLoad(
 	const original = r.llm.load.bind(r.llm);
 	const asked: string[] = [];
 
-	r.llm.load = async (ref, onProgress) => {
+	r.llm.load = async (ref, device, onProgress) => {
 		asked.push(ref.id);
 
 		if (ref.id === id) {
 			await gate;
 		}
 
-		return original(ref, onProgress);
+		return original(ref, device, onProgress);
 	};
 
 	return {release: () => release(), asked};
@@ -366,7 +399,7 @@ describe("translate/service", () => {
 		clock = r.clock;
 		const ticks = r.service.loadTicks();
 
-		await r.service.download(catalog.nllb);
+		await r.service.download(catalog.nllb, "gpu");
 
 		expect(r.service.loadTicks()).to.equal(ticks);
 		r.service.dispose();
@@ -409,14 +442,20 @@ describe("translate/service", () => {
 	it("a better class whose download fails falls to the next class, the reason kept", async () => {
 		const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
 		clock = r.clock;
+		// NLLB-200 on one device: its one copy failing takes it out.
+		r.service.setSettings({
+			switches: {llm: true, opus: true, nllb: true},
+			devices: {...AUTO, nllb: "cpu"},
+		});
 		r.seq2seq.failLoad = new Error("quota exceeded");
 
 		expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
 		expect((await r.service.route("sw", "en"))?.candidate).to.equal("llm");
 
 		const views = await r.service.models();
+		const cpu = views.find((v) => v.ref.id === catalog.nllb.id && v.device === "cpu");
 
-		expect(views.find((v) => v.ref.id === catalog.nllb.id)?.error).to.equal("quota exceeded");
+		expect(cpu?.error).to.equal("quota exceeded");
 		r.service.dispose();
 	});
 
@@ -536,7 +575,7 @@ describe("translate/service", () => {
 		expect(r.seq2seq.calls.load).to.deep.equal([]);
 		expect(r.seq2seq.calls.translate).to.deep.equal([]);
 
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		message = "";
 
 		try {
@@ -558,7 +597,7 @@ describe("translate/service", () => {
 		expect(await text(r.service.translate(base))).to.equal("seq:Hallo");
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
 
-		await r.service.download(catalog.llm);
+		await r.service.download(catalog.llm, "gpu");
 
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
 		r.service.dispose();
@@ -572,7 +611,7 @@ describe("translate/service", () => {
 		r.llm.loadTicks = 50;
 
 		const [, translated] = await Promise.all([
-			r.service.download(catalog.llm),
+			r.service.download(catalog.llm, "gpu"),
 			text(r.service.translate(base)),
 		]);
 
@@ -596,12 +635,39 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
+	it("a copy whose load fails is down alone: Auto goes on to the model's other copy", async () => {
+		const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
+		clock = r.clock;
+		// A computer: NLLB-200's GPU copy first under Auto.
+		expect(await r.service.route("sw", "en")).to.deep.include({
+			candidate: "nllb",
+			device: "gpu",
+		});
+		r.seq2seq.failLoad = new Error("device lost");
+
+		expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("seq:Hallo");
+		expect(r.seq2seq.calls.load.map((ref) => ref.id)).to.deep.equal([
+			catalog.nllb.id,
+			catalog.nllb.id,
+		]);
+		// The GPU copy, then the CPU copy: loads are keyed by device.
+		expect(r.seq2seq.calls.devices).to.deep.equal(["gpu", "cpu"]);
+		expect(await r.service.route("sw", "en")).to.deep.include({
+			candidate: "nllb",
+			device: "cpu",
+		});
+		r.service.dispose();
+	});
+
 	it("the engine settings narrow the route", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
-		r.service.setSettings({llm: false, cpu: false, nllb: true});
+		// NLLB-200 has its own switch: OPUS-MT's off leaves it serving.
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: true}, devices: AUTO});
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("nllb");
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: false}, devices: AUTO});
 		expect(await r.service.route("de", "en")).to.equal(null);
 		r.service.dispose();
 	});
@@ -721,13 +787,33 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
+	it("an unset choice resolves to a model with a CPU copy while the language model is pinned to the CPU", async () => {
+		const r = rig("gpu");
+		const on = {llm: true, opus: true, nllb: true};
+
+		clock = r.clock;
+		r.service.setLlmModel("");
+		await r.service.capabilities();
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
+		// The 4B has no CPU copy: pinned there, the unset choice is the 1.7B.
+		r.service.setSettings({switches: on, devices: {...AUTO, llm: "cpu"}});
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_1_7B_ID);
+		r.service.setSettings({switches: on, devices: AUTO});
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
+		// A chosen 4B stands: the router says it cannot run there.
+		r.service.setLlmModel(QWEN3_4B_ID);
+		r.service.setSettings({switches: on, devices: {...AUTO, llm: "cpu"}});
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
+		r.service.dispose();
+	});
+
 	it("a Settings download of the other GPU model holds a request for the selected one until it is done", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
 		const large = catalog.llmChoices.find((ref) => ref.id === QWEN3_4B_ID) as ModelRef;
 		const load = gateLlmLoad(r, QWEN3_4B_ID);
 		const jaFr = {...base, from: "ja", to: "fr"};
-		const downloading = r.service.download(large);
+		const downloading = r.service.download(large, "gpu");
 
 		await r.clock.tickAsync(0);
 		expect(load.asked).to.deep.equal([QWEN3_4B_ID]);
@@ -755,7 +841,7 @@ describe("translate/service", () => {
 		const small = catalog.llmChoices.find((ref) => ref.id === QWEN3_1_7B_ID) as ModelRef;
 		const load = gateLlmLoad(r, QWEN3_1_7B_ID);
 		const jaFr = {...base, from: "ja", to: "fr"};
-		const downloading = r.service.download(small);
+		const downloading = r.service.download(small, "gpu");
 
 		await r.clock.tickAsync(0);
 		expect(load.asked).to.deep.equal([QWEN3_1_7B_ID]);
@@ -786,7 +872,7 @@ describe("translate/service", () => {
 		const running = text(r.service.translate(base));
 
 		await r.clock.tickAsync(0);
-		await r.service.deleteModel(large);
+		await r.service.remove(large, "gpu");
 		expect(r.llm.calls.unload).to.equal(0);
 
 		release();
@@ -810,7 +896,7 @@ describe("translate/service", () => {
 
 		await r.clock.tickAsync(0);
 
-		const deleting = r.service.deleteModel(small);
+		const deleting = r.service.remove(small, "gpu");
 
 		await r.clock.tickAsync(0);
 		expect(r.llm.calls.unload).to.equal(0);
@@ -836,7 +922,7 @@ describe("translate/service", () => {
 
 		await r.clock.tickAsync(0);
 
-		const deleting = r.service.deleteModel(catalog.nllb);
+		const deleting = r.service.remove(catalog.nllb, "cpu");
 
 		await r.clock.tickAsync(0);
 		expect(r.seq2seq.calls.unload).to.equal(0);
@@ -897,7 +983,7 @@ describe("translate/service", () => {
 				ortBase: "",
 				enabled: true,
 			},
-			{llm: true, cpu: true, nllb: true}
+			{switches: {llm: true, opus: true, nllb: true}, devices: AUTO}
 		);
 
 		expect((await service.route("fr", "ja"))?.candidate).to.equal("llm");
@@ -914,6 +1000,11 @@ describe("translate/service", () => {
 	it("a GPU model unloads after three idle minutes and a CPU model after five", async () => {
 		const r = rig("gpu", true, {en: {de: ["llm"], fr: ["nllb"]}});
 		clock = r.clock;
+		// The idle wait follows the device: NLLB-200 on the CPU copy.
+		r.service.setSettings({
+			switches: {llm: true, opus: true, nllb: true},
+			devices: {...AUTO, nllb: "cpu"},
+		});
 		expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
 		expect(await text(r.service.translate({...base, from: "fr"}))).to.equal("seq:Hallo");
 
@@ -1006,16 +1097,54 @@ describe("translate/service", () => {
 		await text(r.service.translate(base));
 		await text(r.service.translate({...base, from: "fr"}));
 
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		await r.clock.tickAsync(0);
 		expect(r.llm.calls.unload).to.equal(1);
 		expect(r.seq2seq.calls.unload).to.equal(0);
 		expect(r.workers[0].terminated).to.equal(false);
 
-		r.service.setSettings({llm: false, cpu: false, nllb: true});
+		// OPUS-MT's switch is not NLLB-200's: the loaded NLLB stays.
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: true}, devices: AUTO});
+		await r.clock.tickAsync(0);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		r.service.setSettings({switches: {llm: false, opus: false, nllb: false}, devices: AUTO});
 		await r.clock.tickAsync(0);
 		// The last loaded tier going takes the worker with it.
 		expect(r.workers[0].terminated).to.equal(true);
+		r.service.dispose();
+	});
+
+	it("a loaded OPUS-MT pair unloads with OPUS-MT's switch, not NLLB-200's", async () => {
+		const r = rig("gpu", true, {en: {fr: ["opus:fr-en"]}});
+		clock = r.clock;
+		await text(r.service.translate({...base, from: "fr"}));
+
+		r.service.setSettings({switches: {llm: true, opus: true, nllb: false}, devices: AUTO});
+		await r.clock.tickAsync(0);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		r.service.setSettings({switches: {llm: true, opus: false, nllb: false}, devices: AUTO});
+		await r.clock.tickAsync(0);
+		// The only engine loaded: the worker goes with it.
+		expect(r.workers[0].terminated).to.equal(true);
+		r.service.dispose();
+	});
+
+	it("an NLLB-200 request with OPUS-MT switched off keeps NLLB-200 loaded", async () => {
+		const r = rig("gpu", true, {en: {fr: ["nllb"]}});
+		clock = r.clock;
+		r.service.setSettings({switches: {llm: true, opus: false, nllb: true}, devices: AUTO});
+
+		expect(await text(r.service.translate({...base, from: "fr"}))).to.equal("seq:Hallo");
+		await r.clock.tickAsync(0);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+		expect(await text(r.service.translate({...base, from: "fr"}))).to.equal("seq:Hallo");
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers).to.have.length(1);
 		r.service.dispose();
 	});
 
@@ -1026,7 +1155,7 @@ describe("translate/service", () => {
 		const running = text(r.service.translate(base));
 
 		await r.clock.tickAsync(0);
-		r.service.setSettings({llm: false, cpu: true, nllb: true});
+		r.service.setSettings({switches: {llm: false, opus: true, nllb: true}, devices: AUTO});
 		await r.clock.tickAsync(0);
 		// Not under the running request.
 		expect(r.llm.calls.unload).to.equal(0);
@@ -1054,26 +1183,31 @@ describe("translate/service", () => {
 		const seen: string[][] = [];
 
 		r.service.onModels((views) =>
-			seen.push(views.map((v) => `${v.ref.id}:${v.status}:${v.cached}`))
+			seen.push(views.map((v) => `${v.ref.id}@${v.device}:${v.status}:${v.cached}`))
 		);
 		const views = await r.service.models();
+		// One row per copy, the GPU copy first.
+		const copies = (ref: ModelRef) =>
+			(["gpu", "cpu"] as const).filter((d) => ref.copies[d]).map((d) => `${ref.id}@${d}`);
 
-		expect(views.map((v) => v.ref.id)).to.deep.equal([
-			...catalog.llmChoices.map((c) => c.id),
-			catalog.nllb.id,
-			...Object.values(catalog.opus).map((o) => o.id),
+		expect(views.map((v) => `${v.ref.id}@${v.device}`)).to.deep.equal([
+			...catalog.llmChoices.flatMap(copies),
+			...copies(catalog.nllb),
+			...Object.values(catalog.opus).flatMap(copies),
 		]);
 		expect(views.every((v) => !v.cached && v.status === "idle")).to.equal(true);
 
-		await r.service.download(catalog.nllb);
+		await r.service.download(catalog.nllb, "gpu");
 		r.cached.add(catalog.nllb.id);
 		const after = await r.service.models();
 		const nllb = after.find((v) => v.ref.id === catalog.nllb.id);
 
 		expect(nllb).to.include({cached: true, status: "ready", fraction: 1});
-		expect(seen.some((s) => s.includes(`${catalog.nllb.id}:downloading:false`))).to.equal(true);
+		expect(seen.some((s) => s.includes(`${catalog.nllb.id}@gpu:downloading:false`))).to.equal(
+			true
+		);
 
-		await r.service.deleteModel(catalog.nllb);
+		await r.service.remove(catalog.nllb, "gpu");
 		const gone = (await r.service.models()).find((v) => v.ref.id === catalog.nllb.id);
 
 		expect(gone).to.include({cached: false, status: "idle"});
@@ -1088,7 +1222,7 @@ describe("translate/service", () => {
 		let message = "";
 
 		try {
-			await r.service.download(catalog.llm);
+			await r.service.download(catalog.llm, "gpu");
 		} catch (e) {
 			message = (e as Error).message;
 		}
@@ -1110,8 +1244,11 @@ describe("translate/service", () => {
 		expect(seen.length).to.equal(1);
 		expect(seen[0][0]).to.equal(`${catalog.llm.id}:idle`);
 		expect(seen[0].length).to.equal(
-			// every GPU choice + nllb + the pairs
-			catalog.llmChoices.length + 1 + Object.keys(catalog.opus).length
+			// one row per copy: every language model choice, nllb and the pairs
+			[...catalog.llmChoices, catalog.nllb, ...Object.values(catalog.opus)].reduce(
+				(n, ref) => n + Object.keys(ref.copies).length,
+				0
+			)
 		);
 		r.service.dispose();
 	});
@@ -1141,7 +1278,11 @@ describe("translate/service", () => {
 		const paused: string[] = [];
 		const queue = new TranslateQueue({
 			route: (from, to, hint) =>
-				r.service.route(from, to, hint).then((route) => route?.ref.engine ?? null),
+				r.service
+					.route(from, to, hint)
+					.then((route) =>
+						route ? {engine: route.ref.engine, device: route.device} : null
+					),
 			translate: (req, signal) => r.service.translate(req, signal),
 			priority: () => 0,
 			arrivals: () => 0,
@@ -1295,7 +1436,7 @@ describe("translate/service", () => {
 		let message = "";
 
 		try {
-			await r.service.download(catalog.nllb);
+			await r.service.download(catalog.nllb, "gpu");
 		} catch (e) {
 			message = (e as Error).message;
 		}
@@ -1315,7 +1456,7 @@ describe("translate/service", () => {
 		let message = "";
 
 		try {
-			await r.service.deleteModel(catalog.nllb);
+			await r.service.remove(catalog.nllb, "gpu");
 		} catch (e) {
 			message = (e as Error).message;
 		}
@@ -1352,7 +1493,7 @@ describe("translate/service", () => {
 		r.hangNextDelete();
 
 		let message = "";
-		const pending = r.service.deleteModel(catalog.nllb).catch((e: Error) => {
+		const pending = r.service.remove(catalog.nllb, "gpu").catch((e: Error) => {
 			message = e.message;
 		});
 
@@ -1399,7 +1540,7 @@ describe("translate/service", () => {
 
 		// A load that reports progress and then hangs: the view is
 		// "downloading" when the abort arrives.
-		r.llm.load = async (ref, onProgress) => {
+		r.llm.load = async (ref, device, onProgress) => {
 			onProgress({fraction: 0.4, text: "part 1"});
 			await gate;
 		};
@@ -1611,10 +1752,12 @@ describe("translate/service", () => {
 		/** A dialog the test answers: every question it was asked, and how to answer the next. */
 		function dialog() {
 			const asked: string[] = [];
+			const devices: Device[] = [];
 			const answers: ((yes: boolean) => void)[] = [];
 
-			const askDownload = (ref: ModelRef) => {
+			const askDownload = (ref: ModelRef, device: Device) => {
 				asked.push(ref.id);
+				devices.push(device);
 
 				return new Promise<boolean>((resolve) => answers.push(resolve));
 			};
@@ -1628,6 +1771,7 @@ describe("translate/service", () => {
 
 			return {
 				asked,
+				devices,
 				askDownload,
 				answer,
 				get open() {
@@ -1664,7 +1808,7 @@ describe("translate/service", () => {
 							throw new Error(needsDownloadError(refused));
 						}
 
-						return route?.ref.engine ?? null;
+						return route ? {engine: route.ref.engine, device: route.device} : null;
 					}),
 				translate: (req, signal) => service.translate(req, signal),
 				priority: () => 0,
@@ -1735,7 +1879,10 @@ describe("translate/service", () => {
 
 			expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
 			// The GPU model switched off: English to French falls to the OPUS pair.
-			r.service.setSettings({llm: false, cpu: true, nllb: true});
+			r.service.setSettings({
+				switches: {llm: false, opus: true, nllb: true},
+				devices: {...AUTO, opus: "cpu"},
+			});
 			expect((await r.service.route("en", "fr"))?.candidate).to.equal("opus:en-fr");
 			expect(ask.asked).to.deep.equal([]);
 			r.service.dispose();
@@ -1775,8 +1922,9 @@ describe("translate/service", () => {
 
 			expect(parseNeedsDownload(message)).to.deep.equal({
 				id: catalog.llm.id,
-				sizeBytes: catalog.llm.sizeBytes,
+				sizeBytes: catalog.llm.copies.gpu!.sizeBytes,
 				label: catalog.llm.label,
+				device: "gpu",
 			});
 			// The rest of the session: no question, the same answer, for any pair.
 			expect(await r.service.resolve("fr", "en")).to.deep.include({route: null});
@@ -1793,7 +1941,7 @@ describe("translate/service", () => {
 			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
 			clock = r.clock;
 			// NLLB-200 off, as it ships: the walk's own last reason is that switch.
-			r.service.setSettings({llm: true, cpu: true, nllb: false});
+			r.service.setSettings({switches: {llm: true, opus: true, nllb: false}, devices: AUTO});
 
 			const resolved = r.service.resolve("de", "en");
 
@@ -1841,7 +1989,7 @@ describe("translate/service", () => {
 			const paused: string[] = [];
 			const refusal = needsDownloadError(catalog.llm);
 			const queue = new TranslateQueue({
-				route: () => Promise.resolve("llm"),
+				route: () => Promise.resolve({engine: "llm" as const, device: "gpu" as const}),
 				async *translate() {
 					await Promise.resolve();
 
@@ -1912,10 +2060,114 @@ describe("translate/service", () => {
 			await again;
 
 			// Settings' Download: agreed to, downloaded, and the decline is over.
-			await r.service.download(catalog.nllb);
+			await r.service.download(catalog.nllb, "cpu");
 			expect(store.has(catalog.nllb.id)).to.equal(true);
-			await r.service.deleteModel(catalog.nllb);
+			expect(store.has(`${catalog.nllb.id}@gpu`)).to.equal(false);
+			await r.service.remove(catalog.nllb, "cpu");
 			expect(store.has(catalog.nllb.id)).to.equal(false);
+			r.service.dispose();
+		});
+
+		it("the CPU copy is asked about under <id>@cpu, and its yes does not cover the GPU copy", async () => {
+			const ask = dialog();
+			const store = memoryConsent();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {
+				askDownload: ask.askDownload,
+				consent: store,
+			});
+			clock = r.clock;
+			r.service.setSettings({
+				switches: {llm: true, opus: true, nllb: true},
+				devices: {...AUTO, llm: "cpu"},
+			});
+			const cpu = r.service.route("de", "en");
+
+			await r.clock.tickAsync(10);
+			expect(ask.asked).to.deep.equal([`${catalog.llm.id}@cpu`]);
+			expect(ask.devices).to.deep.equal(["cpu"]);
+			ask.answer(true);
+			expect(await cpu).to.deep.include({candidate: "llm", device: "cpu"});
+			expect(store.has(`${catalog.llm.id}@cpu`)).to.equal(true);
+			expect(store.has(catalog.llm.id)).to.equal(false);
+
+			r.service.setSettings({switches: {llm: true, opus: true, nllb: true}, devices: AUTO});
+			const gpu = r.service.route("de", "en");
+
+			await r.clock.tickAsync(10);
+			// A GPU copy keeps the id it always had: existing yeses stand.
+			expect(ask.asked).to.deep.equal([`${catalog.llm.id}@cpu`, catalog.llm.id]);
+			ask.answer(true);
+			expect(await gpu).to.deep.include({candidate: "llm", device: "gpu"});
+
+			// Deleting the CPU copy takes back its yes alone.
+			await r.service.remove(catalog.llm, "cpu");
+			expect(store.has(`${catalog.llm.id}@cpu`)).to.equal(false);
+			expect(store.has(catalog.llm.id)).to.equal(true);
+			r.service.dispose();
+		});
+
+		it("a yes given before devices covers the seq2seq copy it was for, not the GPU copy", async () => {
+			const ask = dialog();
+			const store = memoryConsent();
+
+			// NLLB-200 downloaded (and agreed to) when it ran on the CPU alone.
+			store.grant(catalog.nllb.id);
+
+			const r = rig(
+				"gpu",
+				true,
+				{en: {sw: ["nllb", "llm"]}},
+				{
+					askDownload: ask.askDownload,
+					consent: store,
+				}
+			);
+			clock = r.clock;
+			r.cached.add(`${catalog.nllb.id}@cpu`);
+			const routed = r.service.route("sw", "en");
+
+			await r.clock.tickAsync(10);
+			// Auto on a computer wants the GPU copy first: a new download, asked about.
+			expect(ask.asked).to.deep.equal([`${catalog.nllb.id}@gpu`]);
+			expect(ask.devices).to.deep.equal(["gpu"]);
+			ask.answer(false);
+			// Not now: the CPU copy on the device serves.
+			expect(await routed).to.deep.include({candidate: "nllb", device: "cpu"});
+
+			await r.service.remove(catalog.nllb, "cpu");
+			expect(store.has(catalog.nllb.id)).to.equal(false);
+			r.service.dispose();
+		});
+
+		it("the shipped catalog runs OPUS-MT and NLLB-200 on the CPU under Auto, never asking for a GPU copy", async () => {
+			const ask = dialog();
+			const shipped = buildCatalog();
+			// A computer whose GPU binds 1 GiB with f16: either GPU copy would
+			// fit it, were there one (translation-devices.md § Not in this build).
+			const r = rig(
+				"gpu",
+				true,
+				{en: {de: ["opus:de-en"], sw: ["nllb"]}},
+				{askDownload: ask.askDownload},
+				{catalog: shipped, maxBufferBytes: 1024 * 1024 * 1024}
+			);
+			clock = r.clock;
+
+			const opus = r.service.route("de", "en");
+
+			await r.clock.tickAsync(10);
+			expect(ask.devices).to.deep.equal(["cpu"]);
+			expect(ask.asked).to.deep.equal([shipped.opus["de-en"].id]);
+			ask.answer(true);
+			expect(await opus).to.deep.include({candidate: "opus:de-en", device: "cpu"});
+
+			const nllb = r.service.route("sw", "en");
+
+			await r.clock.tickAsync(10);
+			expect(ask.devices).to.deep.equal(["cpu", "cpu"]);
+			expect(ask.asked).to.deep.equal([shipped.opus["de-en"].id, shipped.nllb.id]);
+			ask.answer(true);
+			expect(await nllb).to.deep.include({candidate: "nllb", device: "cpu"});
 			r.service.dispose();
 		});
 
@@ -1928,17 +2180,184 @@ describe("translate/service", () => {
 		});
 	});
 
+	describe("per device", () => {
+		const ON = {llm: true, opus: true, nllb: true};
+
+		it("a request routed to the CPU copy loads that copy and carries the device", async () => {
+			const r = rig("gpu");
+			clock = r.clock;
+			r.service.setSettings({switches: ON, devices: {...AUTO, llm: "cpu"}});
+
+			expect(await r.service.route("de", "en")).to.deep.include({
+				candidate: "llm",
+				device: "cpu",
+			});
+			expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+			expect(r.llm.calls.devices).to.deep.equal(["cpu"]);
+			expect(r.llm.calls.translate[0].device).to.equal("cpu");
+
+			// Settings' Download of the GPU copy posts that copy's load.
+			await r.service.download(catalog.llm, "gpu");
+			expect(r.llm.calls.devices).to.deep.equal(["cpu", "gpu"]);
+			r.service.dispose();
+		});
+
+		it("deleting the CPU copy leaves the GPU copy", async () => {
+			const r = rig("gpu");
+			clock = r.clock;
+			r.cached.add(catalog.llm.id);
+			r.service.setSettings({switches: ON, devices: {...AUTO, llm: "cpu"}});
+			expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+			expect(r.llm.loadedOn()).to.equal("cpu");
+
+			await r.service.remove(catalog.llm, "cpu");
+
+			expect(r.deleted).to.deep.equal([`${catalog.llm.id}@cpu`]);
+			// Loaded on the CPU: unloaded before its files went.
+			expect(r.llm.calls.unload).to.equal(1);
+
+			const views = await r.service.models();
+			const copy = (device: string) =>
+				views.find((v) => v.ref.id === catalog.llm.id && v.device === device);
+
+			expect(copy("gpu")).to.include({cached: true, status: "ready"});
+			expect(copy("cpu")).to.include({cached: false, status: "idle"});
+			r.service.dispose();
+		});
+
+		it("deleting the CPU copy does not unload the GPU copy in memory", async () => {
+			const r = rig("gpu");
+			clock = r.clock;
+			r.cached.add(catalog.llm.id);
+			expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+			expect(r.llm.loadedOn()).to.equal("gpu");
+
+			await r.service.remove(catalog.llm, "cpu");
+
+			expect(r.deleted).to.deep.equal([`${catalog.llm.id}@cpu`]);
+			expect(r.llm.calls.unload).to.equal(0);
+			expect(r.llm.isLoaded(catalog.llm.id, "gpu")).to.equal(true);
+			r.service.dispose();
+		});
+
+		it("a GPU load failure marks llm@gpu down; a CPU-pinned request still routes", async () => {
+			// Two classes: a downloaded OPUS pair does not win over the language model's CPU copy.
+			const r = rig("gpu", true, {en: {de: ["llm", "opus:de-en"]}});
+			clock = r.clock;
+			r.llm.failLoad = new Error("device lost");
+
+			expect(await text(r.service.translate(base))).to.equal("seq:Hallo");
+			expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+
+			r.service.setSettings({switches: ON, devices: {...AUTO, llm: "cpu"}});
+			expect(await r.service.route("de", "en")).to.deep.include({
+				candidate: "llm",
+				device: "cpu",
+			});
+			expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+			expect(r.llm.calls.devices).to.deep.equal(["gpu", "cpu"]);
+
+			// Back on Auto the GPU copy is still down for the session.
+			r.service.setSettings({switches: ON, devices: AUTO});
+			expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+			r.service.dispose();
+		});
+
+		it("Settings' download of one copy lifts that copy's down-mark alone", async () => {
+			const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
+			clock = r.clock;
+			const original = r.seq2seq.load.bind(r.seq2seq);
+
+			r.seq2seq.load = (ref, device, onProgress) =>
+				ref.id === catalog.nllb.id
+					? Promise.reject(new Error(`no ${device}`))
+					: original(ref, device, onProgress);
+
+			// Both copies fail: the next class takes it.
+			expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
+			r.seq2seq.load = original;
+
+			await r.service.download(catalog.nllb, "cpu");
+
+			// The CPU copy is back; the GPU copy's loss stands.
+			expect(await r.service.route("sw", "en")).to.deep.include({
+				candidate: "nllb",
+				device: "cpu",
+			});
+			r.service.dispose();
+		});
+
+		it("a better class whose download fails on both copies under Auto falls to the next class", async () => {
+			const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
+			clock = r.clock;
+			const devices: string[] = [];
+
+			r.seq2seq.load = (ref, device) => {
+				devices.push(device);
+
+				return Promise.reject(new Error(`quota exceeded on ${device}`));
+			};
+
+			expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
+			// The GPU copy, then the other device's copy, then the next class.
+			expect(devices).to.deep.equal(["gpu", "cpu"]);
+			expect((await r.service.route("sw", "en"))?.candidate).to.equal("llm");
+
+			const views = await r.service.models();
+			const copy = (device: string) =>
+				views.find((v) => v.ref.id === catalog.nllb.id && v.device === device);
+
+			expect(copy("gpu")?.error).to.equal("quota exceeded on gpu");
+			expect(copy("cpu")?.error).to.equal("quota exceeded on cpu");
+			r.service.dispose();
+		});
+
+		it("an idle CPU-loaded language model unloads after CPU_IDLE_UNLOAD_MS", async () => {
+			const r = rig("gpu", true, {en: {de: ["llm"]}});
+			clock = r.clock;
+			r.service.setSettings({switches: ON, devices: {...AUTO, llm: "cpu"}});
+			expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+
+			await r.clock.tickAsync(GPU_IDLE_UNLOAD_MS);
+			expect(r.workers[0].terminated).to.equal(false);
+			expect(r.llm.calls.unload).to.equal(0);
+			await r.clock.tickAsync(CPU_IDLE_UNLOAD_MS - GPU_IDLE_UNLOAD_MS - 1);
+			expect(r.workers[0].terminated).to.equal(false);
+			await r.clock.tickAsync(1);
+			expect(r.workers[0].terminated).to.equal(true);
+			r.service.dispose();
+		});
+
+		it("the model views list one row per copy", async () => {
+			const r = rig("gpu");
+			clock = r.clock;
+			r.cached.add(`${catalog.nllb.id}@cpu`);
+			const views = await r.service.models();
+			const nllb = views.filter((v) => v.ref.id === catalog.nllb.id);
+
+			expect(nllb.map((v) => [v.device, v.cached])).to.deep.equal([
+				["gpu", false],
+				["cpu", true],
+			]);
+			// The 4B has no CPU copy, so no CPU row.
+			expect(
+				views.filter((v) => v.ref.id === QWEN3_4B_ID).map((v) => v.device)
+			).to.deep.equal(["gpu"]);
+			r.service.dispose();
+		});
+	});
+
 	describe("NLLB-200 opt-in", () => {
 		it("off: a pair NLLB would lead goes to the GPU model, and none goes to NLLB", async () => {
 			const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}, "*": {"*": ["nllb"]}});
 			clock = r.clock;
-			r.service.setSettings({llm: true, cpu: true, nllb: false});
+			r.service.setSettings({switches: {llm: true, opus: true, nllb: false}, devices: AUTO});
 
 			expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
 			expect((await r.service.route("ja", "ko"))?.candidate ?? null).to.equal(null);
 			expect(r.seq2seq.calls.load).to.deep.equal([]);
 
-			r.service.setSettings({llm: true, cpu: true, nllb: true});
+			r.service.setSettings({switches: {llm: true, opus: true, nllb: true}, devices: AUTO});
 			expect((await r.service.route("sw", "en"))?.candidate).to.equal("nllb");
 			r.service.dispose();
 		});

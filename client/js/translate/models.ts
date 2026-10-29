@@ -3,7 +3,7 @@
 // and the cache API the worker answers "is it downloaded" / "delete it"
 // with. A router candidate names a catalog entry, never a URL.
 
-import {EngineName, ModelRef, SmallBufferBuild} from "./engine";
+import {Device, DeviceChoice, DeviceCopy, EngineName, ModelRef, SmallBufferBuild} from "./engine";
 import type {Capability, CapabilityReason, Tier} from "./capability";
 
 /** What the route table lists: the LLM, NLLB, or an OPUS-MT pair. */
@@ -14,6 +14,15 @@ export interface CatalogOptions {
 	modelBase?: string;
 	llm?: {model?: string; lib?: string};
 	cpu?: {nllb?: string; opus?: Record<string, string>};
+	/**
+	 * Give OPUS-MT and NLLB-200 their GPU copies. Off in the shipped app,
+	 * and never read from a deploy's `config.json`: this build has no WebGPU
+	 * backend for them (webpack.config.ts aliases `onnxruntime-web/webgpu`
+	 * to the wasm bundle, which registers only the CPU), so a GPU copy would
+	 * download its weights and then fail to start (translation-devices.md
+	 * § Not in this build). Tests turn it on to keep the GPU logic covered.
+	 */
+	seq2seqGpu?: boolean;
 }
 
 export interface ModelCatalog {
@@ -75,8 +84,49 @@ export const DEFAULT_OPUS_PAIRS: Record<string, string> = {
 const LLM_SIZE_BYTES = 984_000_000;
 const NLLB_SIZE_BYTES = 912_000_000;
 const OPUS_SIZE_BYTES = 113_000_000;
+// The GPU copies (spec translation-devices.md): NLLB's q4f16 encoder and
+// merged decoder; an OPUS pair's fp16 pair of files.
+const NLLB_GPU_SIZE_BYTES = 1_260_000_000; // 584 + 612 MiB and the tokenizer
+const OPUS_GPU_SIZE_BYTES = 210_000_000;
+const NLLB_GPU_LARGEST_BYTES = 524_709_888;
 
-function opusRef(pairKey: string, id: string): ModelRef {
+/**
+ * An OPUS-MT pair's largest GPU binding: its shared embedding in fp16 (en-de
+ * measured, 59,495,424 bytes). Every pair takes this constant; the real
+ * figure varies a little with the pair's vocabulary, so it is approximate.
+ */
+export const OPUS_GPU_LARGEST_BYTES = 59_495_424;
+
+/**
+ * The 1.7B's CPU copy: the Q4_K_M GGUF wllama runs (the spike,
+ * tools/translate-eval/results/2026-10-29-cpu-llm.md).
+ */
+export const CPU_LLM_COPY: DeviceCopy = {
+	sizeBytes: 1_107_409_472,
+	source: "unsloth/Qwen3-1.7B-GGUF",
+	file: "Qwen3-1.7B-Q4_K_M.gguf",
+};
+
+/**
+ * The commit of `CPU_LLM_COPY.source` its file is fetched at (the repo's
+ * head on 2026-10-29, `x-repo-commit` of the file, 1,107,409,472 bytes).
+ * Pinned, as `QWEN3_1_7B_PINNED_MODEL` is: the file's cache key is its URL
+ * (engines/cpuLlm.ts `cpuLlmUrl`), so a moving `main` would never change
+ * what is cached under it.
+ */
+export const CPU_LLM_REVISION = "d7f544eead698dbd1f15126ef60b45a1e1933222";
+
+/**
+ * The context window the language model loads with on the CPU, in tokens
+ * (tools/translate-eval/results/2026-10-29-cpu-llm.md § The 15 s rule): it
+ * holds the 700-token context budget, the prompt and a 160-token answer.
+ * The prompt costs what it costs on the CPU whatever the window — the
+ * system prompt alone is past the spec's 15 s on the sandbox's core — so a
+ * smaller window would only cut context, not time.
+ */
+export const CPU_CONTEXT_WINDOW = 1024;
+
+function opusRef(pairKey: string, id: string, gpu: boolean): ModelRef {
 	const [from, to] = pairKey.split("-");
 
 	return {
@@ -84,7 +134,17 @@ function opusRef(pairKey: string, id: string): ModelRef {
 		family: "opus",
 		id,
 		label: {kind: "opus", from, to},
-		sizeBytes: OPUS_SIZE_BYTES,
+		copies: {
+			cpu: {sizeBytes: OPUS_SIZE_BYTES, source: id, dtype: "q8"},
+			...(gpu && {
+				gpu: {
+					sizeBytes: OPUS_GPU_SIZE_BYTES,
+					source: id,
+					dtype: "fp16",
+					largestBufferBytes: OPUS_GPU_LARGEST_BYTES,
+				},
+			}),
+		},
 		pair: [from, to],
 	};
 }
@@ -139,9 +199,15 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		family: "llm",
 		id: QWEN3_1_7B_ID,
 		label: {kind: "llm", name: "Qwen3 1.7B"},
-		sizeBytes: LLM_SIZE_BYTES,
+		copies: {
+			gpu: {
+				sizeBytes: LLM_SIZE_BYTES,
+				source: QWEN3_1_7B_ID,
+				largestBufferBytes: 155_582_464,
+			},
+			cpu: CPU_LLM_COPY,
+		},
 		vramBytes: 2_000_000_000,
-		largestBufferBytes: 155_582_464,
 		smallBuffer: {
 			id: QWEN3_1_7B_SPLIT_ID,
 			model: QWEN3_1_7B_PINNED_MODEL,
@@ -160,9 +226,14 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		family: "llm",
 		id: QWEN3_4B_ID,
 		label: {kind: "llm", name: "Qwen3 4B"},
-		sizeBytes: 2_280_000_000,
+		copies: {
+			gpu: {
+				sizeBytes: 2_280_000_000,
+				source: QWEN3_4B_ID,
+				largestBufferBytes: 194_478_080,
+			},
+		},
 		vramBytes: 3_400_000_000,
-		largestBufferBytes: 194_478_080,
 	},
 ];
 
@@ -251,7 +322,7 @@ export function smallBufferBuildFor(
 		return null;
 	}
 
-	if ((ref.largestBufferBytes ?? 0) <= maxBufferBytes) {
+	if ((ref.copies.gpu?.largestBufferBytes ?? 0) <= maxBufferBytes) {
 		return null;
 	}
 
@@ -268,7 +339,7 @@ export function buildIdFor(ref: ModelRef, maxBufferBytes: number | null | undefi
  * when it has one. Undefined for a model of unknown size (a deploy's own).
  */
 export function minBufferNeed(ref: ModelRef): number | undefined {
-	const own = ref.largestBufferBytes;
+	const own = ref.copies.gpu?.largestBufferBytes;
 	const small = ref.smallBuffer?.largestBufferBytes;
 
 	if (own === undefined) {
@@ -297,6 +368,12 @@ export function llmFits(ref: ModelRef, maxBufferBytes: number): boolean {
 	return ref.engine !== "llm" || (minBufferNeed(ref) ?? 0) <= maxBufferBytes;
 }
 
+/** The language model's CPU copy's measured peak page memory (tools/translate-eval/results/2026-10-29-cpu-llm.md). */
+export const CPU_LLM_PEAK_BYTES = 2_921_910_272;
+
+/** What WebKit lets an iPhone or iPad page use before it ends it. */
+export const APPLE_PAGE_BUDGET_BYTES = 1_800_000_000;
+
 /**
  * The device codes that keep a model from running: everything the probe can
  * report but SMALL_BUFFER, which is per model and becomes a `buffer` block
@@ -322,22 +399,25 @@ export type ModelBlock =
 	 * `needed` is its graphics memory (`ModelRef.vramBytes`).
 	 */
 	| {kind: "memory"; needed: number}
+	/** The model has no copy for the device asked about (the 4B on the CPU). */
+	| {kind: "noCopy"; device: Device}
 	/**
 	 * `all`: both engine switches (router.ts `translationBlock`; never one
 	 * model's). `nllb`: NLLB-200 alone, which is off until the user opts in
 	 * (its licence is non-commercial, CC-BY-NC-4.0).
 	 */
 	// "llmOrNllb": the pair has the GPU model or NLLB-200, and both are off.
-	| {kind: "off"; engine: EngineName | "nllb" | "llmOrNllb" | "all"};
+	| {kind: "off"; engine: "llm" | "opus" | "nllb" | "llmOrNllb" | "all"};
 
 /**
  * The user's engine switches (`translateLlm`, `translateCpu`,
  * `translateNllb`; service.ts `ServiceSettings`). `nllb` is NLLB-200's own
- * opt-in under the CPU switch: the OPUS-MT pairs run with `cpu` alone.
+ * opt-in; the OPUS-MT pairs run with `opus` alone.
  */
 export interface EngineSwitches {
 	llm: boolean;
-	cpu: boolean;
+	/** OPUS-MT's switch (the setting `translateCpu`, kept under its old name). */
+	opus: boolean;
 	nllb: boolean;
 }
 
@@ -360,6 +440,7 @@ const GPU_REASONS: readonly DeviceReason[] = [
  */
 export function modelBlock(
 	ref: ModelRef,
+	device: Device,
 	capability: Capability | null,
 	switches: EngineSwitches,
 	enabled = true
@@ -372,11 +453,38 @@ export function modelBlock(
 		return {kind: "probing"};
 	}
 
+	return device === "gpu"
+		? gpuBlock(ref, capability, switches)
+		: cpuBlock(ref, capability, switches);
+}
+
+/** The user's switch for `ref`: its block when off, else null. */
+function switchBlock(ref: ModelRef, switches: EngineSwitches): ModelBlock | null {
+	if (ref.family === "llm") {
+		return switches.llm ? null : {kind: "off", engine: "llm"};
+	}
+
+	if (ref.family === "nllb") {
+		return switches.nllb ? null : {kind: "off", engine: "nllb"};
+	}
+
+	return switches.opus ? null : {kind: "off", engine: "opus"};
+}
+
+function gpuBlock(
+	ref: ModelRef,
+	capability: Capability,
+	switches: EngineSwitches
+): ModelBlock | null {
 	if (ref.engine === "llm") {
 		const reason = GPU_REASONS.find((code) => capability.reasons.includes(code));
 
 		if (reason) {
 			return {kind: "device", reason};
+		}
+
+		if (!ref.copies.gpu) {
+			return {kind: "noCopy", device: "gpu"};
 		}
 
 		// The gpu tier's floor is the smallest shipped model's need, so a
@@ -394,9 +502,48 @@ export function modelBlock(
 			return {kind: "memory", needed: ref.vramBytes ?? 0};
 		}
 
-		return switches.llm ? null : {kind: "off", engine: "llm"};
+		return switchBlock(ref, switches);
 	}
 
+	// OPUS-MT and NLLB-200 on the GPU: any WebGPU device with f16 whose
+	// largest binding holds the copy's biggest tensor; WebLLM's shader
+	// floors (GPU_LIMITS) and the language model's buffer rule do not apply.
+	for (const code of ["PROBE_FAILED", "INSECURE_ORIGIN", "NO_WEBGPU", "NO_ADAPTER"] as const) {
+		if (capability.reasons.includes(code)) {
+			return {kind: "device", reason: code};
+		}
+	}
+
+	// onnxruntime-web's WebGPU execution provider runs inside its SIMD wasm build.
+	if (capability.reasons.includes("NO_WASM_SIMD")) {
+		return {kind: "device", reason: "NO_WASM_SIMD"};
+	}
+
+	if (!capability.f16) {
+		return {kind: "device", reason: "NO_F16"};
+	}
+
+	const copy = ref.copies.gpu;
+
+	if (!copy) {
+		return {kind: "noCopy", device: "gpu"};
+	}
+
+	if (
+		copy.largestBufferBytes !== undefined &&
+		copy.largestBufferBytes > capability.maxBufferBytes
+	) {
+		return {kind: "buffer", needed: copy.largestBufferBytes, limit: capability.maxBufferBytes};
+	}
+
+	return switchBlock(ref, switches);
+}
+
+function cpuBlock(
+	ref: ModelRef,
+	capability: Capability,
+	switches: EngineSwitches
+): ModelBlock | null {
 	if (capability.reasons.includes("PROBE_FAILED")) {
 		return {kind: "device", reason: "PROBE_FAILED"};
 	}
@@ -405,11 +552,76 @@ export function modelBlock(
 		return {kind: "device", reason: "NO_WASM_SIMD"};
 	}
 
-	if (!switches.cpu) {
-		return {kind: "off", engine: "seq2seq"};
+	// The language model's CPU library is a Memory64 module (wllama's
+	// standard build); OPUS-MT and NLLB-200 run on ONNX Runtime's 32-bit one.
+	if (ref.family === "llm" && capability.reasons.includes("NO_MEMORY64")) {
+		return {kind: "device", reason: "NO_MEMORY64"};
 	}
 
-	return ref.family === "nllb" && !switches.nllb ? {kind: "off", engine: "nllb"} : null;
+	if (!ref.copies.cpu) {
+		return {kind: "noCopy", device: "cpu"};
+	}
+
+	// WebKit ends a page past its budget: the language model's CPU copy
+	// peaks above it, so an iPhone or iPad cannot run it however it is set.
+	if (
+		capability.appleMobile &&
+		ref.family === "llm" &&
+		CPU_LLM_PEAK_BYTES > APPLE_PAGE_BUDGET_BYTES
+	) {
+		return {kind: "memory", needed: CPU_LLM_PEAK_BYTES};
+	}
+
+	return switchBlock(ref, switches);
+}
+
+/**
+ * The device `ref`'s slot ran on before models ran on either (the language
+ * model on the GPU, OPUS-MT and NLLB-200 on the CPU): the copy the download
+ * question asks about with its plain title (index.ts), the other device's
+ * naming its device.
+ */
+export function nativeDevice(ref: ModelRef): Device {
+	return ref.engine === "llm" ? "gpu" : "cpu";
+}
+
+const ALL_ON: EngineSwitches = {llm: true, opus: true, nllb: true};
+
+/**
+ * The devices to try `ref` on, best first (spec translation-devices.md
+ * § Auto). A pinned choice is that device alone. Auto, a placeholder until
+ * measured on real GPUs: the language model on the GPU alone (the CPU runs
+ * it only when the user pins it there); NLLB-200 on the GPU, then the CPU,
+ * where its GPU copy fits, else the CPU alone; OPUS-MT on the CPU, then the
+ * GPU, on a phone (its GPU memory is kept for the language model), the GPU
+ * first on a computer; a device the model has no copy for is left out.
+ * What the walk does with each device -- blocked, down, a declined
+ * download -- is the router's (router.ts `explainRoute`).
+ */
+export function deviceOrder(
+	ref: ModelRef,
+	choice: DeviceChoice,
+	capability: Capability | null
+): Device[] {
+	if (choice !== "auto") {
+		return [choice];
+	}
+
+	if (ref.family === "llm") {
+		return ["gpu"];
+	}
+
+	if (ref.family === "nllb") {
+		return modelBlock(ref, "gpu", capability, ALL_ON) === null ? ["gpu", "cpu"] : ["cpu"];
+	}
+
+	// Auto tries only the devices the model has a copy for: a catalog without
+	// OPUS-MT's GPU copies (CatalogOptions `seq2seqGpu`) runs it on the CPU,
+	// and its reasons are the CPU's, never the missing copy's.
+	const order: Device[] = capability?.mobile ? ["cpu", "gpu"] : ["gpu", "cpu"];
+	const copied = order.filter((device) => ref.copies[device] !== undefined);
+
+	return copied.length ? copied : order;
 }
 
 /** What the default GPU model is decided from (capability.ts `Capability`). */
@@ -482,7 +694,7 @@ function deployLlmRef(id: string, lib: string | undefined): ModelRef {
 		family: "llm",
 		id,
 		label: {kind: "llm", name: id.replace(/-q4f16_1-MLC$/, "").replace(/-/g, " ")},
-		sizeBytes: LLM_SIZE_BYTES,
+		copies: {gpu: {sizeBytes: LLM_SIZE_BYTES, source: id}},
 	};
 
 	if (lib) {
@@ -500,15 +712,40 @@ function deployLlmRef(id: string, lib: string | undefined): ModelRef {
  * catalog default. `memory` is the device probe (store `translationCapability`),
  * null while it is still running — the catalog default serves until it lands
  * and this answers anew once it has.
+ *
+ * `llmDevice` is the language model's device setting (`translateLlmDevice`).
+ * Pinned to the CPU, a choice stands as made — a chosen 4B, which has no
+ * CPU copy, is the router's to block (`noCopy`), never quietly swapped —
+ * and an unresolved one lands on a model that has a CPU copy (the 1.7B,
+ * where the adapter would have picked the 4B).
  */
 export function llmChoice(
 	catalog: ModelCatalog,
 	selected: string | null | undefined,
-	memory?: AdapterMemory | null
+	memory?: AdapterMemory | null,
+	llmDevice: DeviceChoice = "auto"
 ): ModelRef {
+	const chosen = catalog.llmChoices.find((ref) => ref.id === selected);
+
+	if (llmDevice === "cpu") {
+		if (chosen) {
+			return chosen;
+		}
+
+		const onCpu = (ref: ModelRef | undefined): ref is ModelRef => !!ref?.copies.cpu;
+		const deployed = catalog.llmChoices.find((ref) => ref.id === catalog.llmDeploy);
+		const fallback = llmChoice(catalog, selected, memory);
+
+		return (
+			[deployed, fallback].find(onCpu) ??
+			catalog.llmChoices.find((ref) => ref.id === catalog.llmDefault && onCpu(ref)) ??
+			catalog.llmChoices.find(onCpu) ??
+			fallback
+		);
+	}
+
 	// A probe that found no GPU names no GPU model (see AdapterMemory.tier).
 	const device = memory && (memory.tier ?? "gpu") === "gpu" ? memory : null;
-	const chosen = catalog.llmChoices.find((ref) => ref.id === selected);
 
 	// A choice this GPU cannot bind (llmFits), or a phone cannot hold
 	// (tooLargeForPhone), runs the default instead, so a gpu tier always
@@ -541,9 +778,10 @@ export function llmChoice(
 export function selectLlm(
 	catalog: ModelCatalog,
 	selected: string | null | undefined,
-	memory?: AdapterMemory | null
+	memory?: AdapterMemory | null,
+	llmDevice: DeviceChoice = "auto"
 ): ModelCatalog {
-	const llm = llmChoice(catalog, selected, memory);
+	const llm = llmChoice(catalog, selected, memory, llmDevice);
 
 	return llm === catalog.llm ? catalog : {...catalog, llm};
 }
@@ -577,13 +815,17 @@ export function buildCatalog(
 		llmChoices.push(deployLlmRef(llmId, lib));
 	}
 
+	// A deploy's own NLLB/OPUS ids get the same copies as the shipped ones:
+	// the same repo layout (q8 and q4f16/fp16 files side by side) is
+	// assumed. The GPU copies only with `seq2seqGpu` (CatalogOptions).
+	const seq2seqGpu = options.seq2seqGpu === true;
 	const nllbId = options.cpu?.nllb ?? DEFAULT_NLLB_ID;
 	const pairs = {...DEFAULT_OPUS_PAIRS, ...(options.cpu?.opus ?? {})};
 	const opus: Record<string, ModelRef> = {};
 
 	for (const [pairKey, id] of Object.entries(pairs)) {
 		if (/^[a-z]{2,3}-[a-z]{2,3}$/.test(pairKey)) {
-			opus[pairKey] = opusRef(pairKey, id);
+			opus[pairKey] = opusRef(pairKey, id, seq2seqGpu);
 		}
 	}
 
@@ -596,7 +838,17 @@ export function buildCatalog(
 			family: "nllb",
 			id: nllbId,
 			label: {kind: "nllb"},
-			sizeBytes: NLLB_SIZE_BYTES,
+			copies: {
+				cpu: {sizeBytes: NLLB_SIZE_BYTES, source: nllbId, dtype: "q8"},
+				...(seq2seqGpu && {
+					gpu: {
+						sizeBytes: NLLB_GPU_SIZE_BYTES,
+						source: nllbId,
+						dtype: "q4f16",
+						largestBufferBytes: NLLB_GPU_LARGEST_BYTES,
+					},
+				}),
+			},
 		},
 		opus,
 	};
@@ -648,18 +900,30 @@ export function candidateOf(ref: ModelRef): Candidate {
 	return `opus:${from}-${to}`;
 }
 
-/** Answered by the worker, where Cache Storage and the libraries' cache helpers live. */
+/**
+ * Answered by the worker, where Cache Storage and the libraries' cache
+ * helpers live: per copy, the model's copy for `device`. An engine's own
+ * helper, which only ever holds one device's copies, may ignore it.
+ */
 export interface CacheApi {
-	has(ref: ModelRef): Promise<boolean>;
-	delete(ref: ModelRef): Promise<void>;
+	has(ref: ModelRef, device: Device): Promise<boolean>;
+	delete(ref: ModelRef, device: Device): Promise<void>;
 }
 
+/** Whether one copy of a model is on the device: one entry per copy. */
 export interface ModelCacheState {
 	ref: ModelRef;
+	device: Device;
 	cached: boolean;
 }
 
-// One entry that cannot answer is that entry's problem — it counts as not
+/** The devices `ref` has a copy for, the GPU copy first. */
+export function copyDevices(ref: Pick<ModelRef, "copies">): Device[] {
+	return (["gpu", "cpu"] as const).filter((device) => ref.copies[device] !== undefined);
+}
+
+// One entry per copy, in catalog order, a model's GPU copy before its CPU
+// copy. One entry that cannot answer is that entry's problem — it counts as not
 // downloaded and Settings still lists every other model (an LLM id the
 // library does not know throws in `webllm.real.ts`'s `has`). A cache api
 // that throws synchronously is the whole of Cache Storage being unusable,
@@ -670,9 +934,42 @@ export async function cacheStates(
 	api: CacheApi
 ): Promise<ModelCacheState[]> {
 	return Promise.all(
-		catalogModels(catalog).map(async (ref) => ({
-			ref,
-			cached: await api.has(ref).catch(() => false),
-		}))
+		catalogModels(catalog).flatMap((ref) =>
+			copyDevices(ref).map(async (device) => ({
+				ref,
+				device,
+				cached: await api.has(ref, device).catch(() => false),
+			}))
+		)
 	);
+}
+
+/** A device setting as stored: anything but the three values reads as "auto". */
+export function normalizeDeviceChoice(value: unknown): DeviceChoice {
+	return value === "gpu" || value === "cpu" || value === "auto" ? value : "auto";
+}
+
+/** The user's three device settings, by the model each governs. */
+export interface DeviceChoices {
+	llm: DeviceChoice;
+	opus: DeviceChoice;
+	nllb: DeviceChoice;
+}
+
+/** The device setting that governs `ref`'s family. */
+export function choiceFor(ref: ModelRef, choices: DeviceChoices): DeviceChoice {
+	return choices[ref.family];
+}
+
+/**
+ * The download size a plain listing shows for `ref`: the copy of the device
+ * its engine slot runs on today (the language model's GPU copy, the CPU
+ * copy of OPUS-MT and NLLB-200), else the other's; 0 when it lists none.
+ * The language model select's sizes and a download question that names no
+ * device read it; Settings' copy lines show each copy's own size.
+ */
+export function listedSize(ref: Pick<ModelRef, "engine" | "copies">): number {
+	const {gpu, cpu} = ref.copies;
+
+	return (ref.engine === "llm" ? gpu ?? cpu : cpu ?? gpu)?.sizeBytes ?? 0;
 }

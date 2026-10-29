@@ -35,9 +35,21 @@ import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} f
 import {namesFor} from "./names";
 import {fromLocaleTag} from "./languages";
 import {needsDownloadError} from "./consent";
-import {type EngineSwitches, type ModelBlock, selectLlm} from "./models";
+import {
+	type ModelBlock,
+	choiceFor,
+	deviceOrder,
+	llmChoice,
+	llmName,
+	modelBlock,
+	selectLlm,
+} from "./models";
+import type {Device, DeviceChoice, ModelRef} from "./engine";
+import {type IsolationEnv, cpuThreads, isolationState} from "./threads";
+import {threadsText} from "../helpers/translateWhy";
+import {serviceWorkerCanServe} from "../pwa";
 import {type RouteVerdict, explainRoute, routeInput, translationBlock} from "./router";
-import {setTranslationUsage, translateService} from "./index";
+import {serviceSettings, setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
@@ -168,21 +180,95 @@ export function translationAvailable(): boolean {
 	return translateService().enabled && tier !== undefined && tier !== "none";
 }
 
-/** The catalog as the service runs it: the GPU model the setting and the probe resolve to. */
+/**
+ * The catalog as the service runs it: the language model the setting, the
+ * probe and its device setting resolve to.
+ */
 function liveCatalog() {
 	return selectLlm(
 		translateService().catalog,
 		store.state.settings.translateLlmModel,
-		store.state.translation.capability
+		store.state.translation.capability,
+		serviceSettings().devices.llm
 	);
 }
 
-function switches(): EngineSwitches {
+/** The language model in use, by its product name (the words of a reason that names it). */
+export function liveLlmName(): string {
+	return llmName(liveCatalog().llm);
+}
+
+/** Where a model runs here: its device setting, Auto's order, and each device's block. */
+export interface ModelDevices {
+	choice: DeviceChoice;
+	/** The devices to try, best first (models.ts `deviceOrder`). */
+	order: Device[];
+	/** What keeps it off each device (models.ts `modelBlock`), with the user's switches. */
+	blocks: Record<Device, ModelBlock | null>;
+}
+
+/**
+ * `ref` on each device, for Settings' Run on and copy lines: the store glue
+ * over `choiceFor`, `deviceOrder` and `modelBlock`. Reactive through the
+ * store reads. A language model is judged on each device with the model
+ * that device would run: an Automatic choice (the setting "") the adapter
+ * resolves to the 4B runs the 1.7B on the CPU (models.ts `llmChoice`), so
+ * its CPU is not blocked by the 4B's missing CPU copy. Pass `exact` to
+ * judge `ref` itself on both (a copy line of a model that is not in use).
+ */
+export function modelDevices(ref: ModelRef, exact = false): ModelDevices {
+	const service = translateService();
+	const capability = store.state.translation.capability;
+	const {switches, devices} = serviceSettings();
+	const choice = choiceFor(ref, devices);
+	const on = (device: Device): ModelRef =>
+		ref.family === "llm" && !exact
+			? llmChoice(
+					service.catalog,
+					store.state.settings.translateLlmModel,
+					capability,
+					device === "cpu" ? "cpu" : "auto"
+			  )
+			: ref;
+	const block = (device: Device) =>
+		modelBlock(on(device), device, capability, switches, service.enabled);
+
 	return {
-		llm: !!store.state.settings.translateLlm,
-		cpu: !!store.state.settings.translateCpu,
-		nllb: !!store.state.settings.translateNllb,
+		choice,
+		order: deviceOrder(ref, choice, capability),
+		blocks: {gpu: block("gpu"), cpu: block("cpu")},
 	};
+}
+
+/**
+ * What decides whether the CPU models can run multithreaded on this page
+ * (threads.ts `isolationState`): whether it is isolated, whether the
+ * service worker served this document (its navigation timing's
+ * `workerStart`), WebKit by the same rule the worker uses
+ * (service-worker.js), and whether a worker is ever registered here.
+ */
+export function isolationEnv(): IsolationEnv {
+	const ua = navigator.userAgent;
+	const nav = performance.getEntriesByType?.("navigation")[0] as
+		| PerformanceNavigationTiming
+		| undefined;
+
+	return {
+		crossOriginIsolated: !!self.crossOriginIsolated,
+		controlled: (nav?.workerStart ?? 0) > 0,
+		webkit: /AppleWebKit\//.test(ua) && !/Chrome\//.test(ua),
+		workerCanServe: serviceWorkerCanServe(),
+	};
+}
+
+/** Settings' CPU threads line (helpers/translateWhy.ts `threadsText`); "" when there is none. */
+export function cpuThreadsLine(): string {
+	const mobile = !!store.state.translation.capability?.mobile;
+
+	return threadsText(
+		isolationState(isolationEnv()),
+		cpuThreads(navigator.hardwareConcurrency, mobile)
+	);
 }
 
 /**
@@ -192,10 +278,13 @@ function switches(): EngineSwitches {
  * a component's computed follows the switches and the probe.
  */
 export function currentTranslationBlock(): ModelBlock | null {
+	const {switches, devices} = serviceSettings();
+
 	return translationBlock(
 		liveCatalog(),
 		store.state.translation.capability,
-		switches(),
+		switches,
+		devices,
 		translateService().enabled
 	);
 }
@@ -209,7 +298,12 @@ export function currentTranslationBlock(): ModelBlock | null {
 export function pairVerdict(from: string | null, to: string): RouteVerdict {
 	const service = translateService();
 	const capability = store.state.translation.capability;
-	const input = routeInput(capability, switches(), {from, to, sourceLater: from === null});
+	const {switches, devices} = serviceSettings();
+	const input = routeInput(capability, switches, devices, {
+		from,
+		to,
+		sourceLater: from === null,
+	});
 
 	if (!service.enabled || !capability) {
 		return {
@@ -295,12 +389,12 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 			// model named (consent.ts), through the queue's rejection path,
 			// which pauses nothing.
 			route: (from, to, hint) =>
-				service.resolve(from, to, hint).then(({route, refused}) => {
+				service.resolve(from, to, hint).then(({route, refused, refusedDevice}) => {
 					if (!route && refused) {
-						throw new Error(needsDownloadError(refused));
+						throw new Error(needsDownloadError(refused, refusedDevice ?? undefined));
 					}
 
-					return route?.ref.engine ?? null;
+					return route ? {engine: route.ref.engine, device: route.device} : null;
 				}),
 			translate: (req, signal) => service.translate(req, signal),
 			loadTicks: () => service.loadTicks(),
