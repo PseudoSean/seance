@@ -81,7 +81,7 @@ export function translateWhyText(block: RouteBlock): string {
 			switch (block.engine) {
 				case "llm":
 					return t("translate.why.llmOff");
-				case "seq2seq":
+				case "opus":
 					return t("translate.why.cpuOff");
 				case "nllb":
 					return t("translate.why.nllbOff");
@@ -90,6 +90,10 @@ export function translateWhyText(block: RouteBlock): string {
 				default:
 					return t("translate.why.allOff");
 			}
+
+		// Task 9 words this: the model has no copy for the device.
+		case "noCopy":
+			return t("translate.error.unavailable");
 
 		case "down":
 			return t("translate.why.down");

@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {
 	GPU_MIN_BUFFER_BYTES,
+	isAppleMobile,
 	probe,
 	probeOnce,
 	resetProbe,
@@ -120,7 +121,7 @@ describe("translate/capability", () => {
 			expect(cap.tier).to.equal("cpu");
 			expect(cap.reasons).to.deep.equal(["GPU_LIMITS"]);
 			expect(
-				modelBlock(buildCatalog().llm, cap, {llm: true, opus: true, nllb: true})
+				modelBlock(buildCatalog().llm, "gpu", cap, {llm: true, opus: true, nllb: true})
 			).to.deep.equal({
 				kind: "device",
 				reason: "GPU_LIMITS",
@@ -183,6 +184,32 @@ describe("translate/capability", () => {
 	it("passes a phone's mobile flag on, a computer by default", async () => {
 		expect((await probe(env())).mobile).to.equal(false);
 		expect((await probe(env({mobile: true}))).mobile).to.equal(true);
+	});
+
+	it("passes appleMobile on, and reads it from an iPhone or an iPad with touch points, not Android", async () => {
+		expect((await probe(env())).appleMobile).to.equal(false);
+		expect((await probe(env({appleMobile: true}))).appleMobile).to.equal(true);
+		expect(
+			isAppleMobile({userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"})
+		).to.equal(true);
+		expect(
+			isAppleMobile({
+				userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+				maxTouchPoints: 5,
+			})
+		).to.equal(true);
+		expect(
+			isAppleMobile({
+				userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+				maxTouchPoints: 0,
+			})
+		).to.equal(false);
+		expect(
+			isAppleMobile({
+				userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile",
+				maxTouchPoints: 5,
+			})
+		).to.equal(false);
 	});
 
 	it("rates gpu an adapter whose binding limit is 2 GiB minus the alignment slack", async () => {

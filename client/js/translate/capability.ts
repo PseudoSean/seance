@@ -44,6 +44,12 @@ export interface Capability {
 	 */
 	mobile: boolean;
 	/**
+	 * An iPhone or iPad (`isAppleMobile`; absent = false): WebKit ends a page
+	 * past ~1.8 GB, which the language model's CPU copy cannot stay under
+	 * (models.ts `APPLE_PAGE_BUDGET_BYTES`).
+	 */
+	appleMobile?: boolean;
+	/**
 	 * The test switch's cap (gpuTestLimit.ts), when set: `maxBufferBytes` is
 	 * already held to it, and the worker holds WebLLM's device to it too.
 	 */
@@ -76,6 +82,8 @@ export interface ProbeEnv {
 	secureContext?: boolean;
 	/** A phone or tablet (`browserEnv`); absent means a computer. */
 	mobile?: boolean;
+	/** An iPhone or iPad (`browserEnv`); absent means neither. */
+	appleMobile?: boolean;
 	/** The test switch (gpuTestLimit.ts): bind no more than this; absent or null, no cap. */
 	bufferCapBytes?: number | null;
 }
@@ -163,6 +171,7 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 		deviceMemoryGiB: env.deviceMemory,
 		storageQuotaBytes,
 		mobile: env.mobile === true,
+		appleMobile: env.appleMobile === true,
 		bufferCapBytes: env.bufferCapBytes ?? null,
 	};
 }
@@ -199,6 +208,7 @@ export function browserEnv(): ProbeEnv {
 		wasmSimd,
 		secureContext: typeof window !== "undefined" ? window.isSecureContext : undefined,
 		mobile: isMobile(nav),
+		appleMobile: isAppleMobile(nav),
 		bufferCapBytes: readGpuTestLimit(),
 	};
 }
@@ -231,6 +241,13 @@ export function isMobile(nav: MobileNavigator): boolean {
 		/Android|iPhone|iPad|iPod|Mobi/i.test(ua) ||
 		(/Macintosh/.test(ua) && (nav.maxTouchPoints ?? 0) > 1)
 	);
+}
+
+/** An iPhone or iPod, or an iPad (one that asks for desktop sites reads as a Mac with a touch screen). */
+export function isAppleMobile(nav: MobileNavigator): boolean {
+	const ua = nav.userAgent ?? "";
+
+	return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && (nav.maxTouchPoints ?? 0) > 1);
 }
 
 let cached: Promise<Capability> | null = null;

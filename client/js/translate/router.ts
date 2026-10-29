@@ -17,7 +17,15 @@
 
 import {Capability, Tier} from "./capability";
 import {ModelRef} from "./engine";
-import {Candidate, EngineSwitches, ModelBlock, ModelCatalog, modelBlock, refFor} from "./models";
+import {
+	Candidate,
+	EngineSwitches,
+	ModelBlock,
+	ModelCatalog,
+	modelBlock,
+	nativeDevice,
+	refFor,
+} from "./models";
 
 /**
  * One table entry: its elements are quality classes, best first. A bare
@@ -183,7 +191,9 @@ function candidateBlock(
 			// The words: which code, or the buffer numbers. A caller that
 			// passed no probe (tests, a bare tier) gets the generic one.
 			return (
-				(input.capability ? modelBlock(ref, input.capability, switches) : null) ?? {
+				(input.capability
+					? modelBlock(ref, nativeDevice(ref), input.capability, switches)
+					: null) ?? {
 					kind: "device",
 					reason: "NO_WEBGPU",
 				}
@@ -194,7 +204,9 @@ function candidateBlock(
 		// The service never routes it there — its selection resolves to a
 		// model the device runs (`llmChoice`) — but a caller holding another
 		// catalog (Settings' questions, a test) hears the same reason.
-		const memory = input.capability ? modelBlock(ref, input.capability, switches) : null;
+		const memory = input.capability
+			? modelBlock(ref, nativeDevice(ref), input.capability, switches)
+			: null;
 
 		if (memory?.kind === "memory") {
 			return memory;
@@ -206,7 +218,9 @@ function candidateBlock(
 	} else {
 		if (input.wasm === false) {
 			return (
-				(input.capability ? modelBlock(ref, input.capability, switches) : null) ?? {
+				(input.capability
+					? modelBlock(ref, nativeDevice(ref), input.capability, switches)
+					: null) ?? {
 					kind: "device",
 					reason: "NO_WASM_SIMD",
 				}
@@ -214,7 +228,7 @@ function candidateBlock(
 		}
 
 		if (!input.allowCpu) {
-			return {kind: "off", engine: "seq2seq"};
+			return {kind: "off", engine: "opus"};
 		}
 
 		if (candidate === "nllb" && !input.allowNllb) {
@@ -245,7 +259,7 @@ function pickReason(blocks: RouteBlock[]): RouteBlock {
 		blocks.some((block) => block.kind === "off" && block.engine === engine);
 
 	// Either switch would serve: both are named, as translationBlock does.
-	if (off("llm") && off("seq2seq")) {
+	if (off("llm") && off("opus")) {
 		return {kind: "off", engine: "all"};
 	}
 
@@ -284,7 +298,11 @@ export function explainRoute(
 	if (input.tier === "none") {
 		const why =
 			(input.capability
-				? modelBlock(catalog.nllb, input.capability, {llm: true, opus: true, nllb: true})
+				? modelBlock(catalog.nllb, nativeDevice(catalog.nllb), input.capability, {
+						llm: true,
+						opus: true,
+						nllb: true,
+				  })
 				: null) ?? ({kind: "device", reason: "NO_WASM_SIMD"} as const);
 
 		return {route: null, why, polish};
@@ -354,8 +372,20 @@ export function translationBlock(
 	switches: EngineSwitches,
 	enabled = true
 ): ModelBlock | null {
-	const llm = modelBlock(catalog.llm, capability, switches, enabled);
-	const cpu = modelBlock(catalog.nllb, capability, {...switches, nllb: true}, enabled);
+	const llm = modelBlock(catalog.llm, nativeDevice(catalog.llm), capability, switches, enabled);
+	// Interim (until the router walks devices): "the CPU models" are still
+	// OPUS-MT's one switch, and NLLB-200's own no longer stands in for it.
+	let cpu = modelBlock(
+		catalog.nllb,
+		nativeDevice(catalog.nllb),
+		capability,
+		{...switches, nllb: true},
+		enabled
+	);
+
+	if (!cpu && !switches.opus) {
+		cpu = {kind: "off", engine: "opus"};
+	}
 
 	if (!llm || !cpu) {
 		return null;

@@ -453,6 +453,7 @@ import {
 	llmChoice,
 	llmName,
 	modelBlock,
+	nativeDevice,
 	smallBufferBuildFor,
 } from "../../js/translate/models";
 import {GPU_TEST_LIMIT_KEY} from "../../js/translate/gpuTestLimit";
@@ -585,6 +586,7 @@ export default defineComponent({
 		const blockOf = (modelRef: ModelRef) =>
 			modelBlock(
 				modelRef,
+				nativeDevice(modelRef),
 				capability.value,
 				{
 					llm: !!store.state.settings.translateLlm,
@@ -607,7 +609,11 @@ export default defineComponent({
 				return null;
 			}
 
-			const block = modelBlock(choice, capability.value, {llm: true, opus: true, nllb: true});
+			const block = modelBlock(choice, nativeDevice(choice), capability.value, {
+				llm: true,
+				opus: true,
+				nllb: true,
+			});
 
 			return block &&
 				(block.kind === "buffer" || block.kind === "memory" || block.kind === "device")

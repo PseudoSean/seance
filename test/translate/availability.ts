@@ -7,6 +7,9 @@
 import {expect} from "chai";
 import type {Capability} from "../../client/js/translate/capability";
 import {
+	APPLE_PAGE_BUDGET_BYTES,
+	CPU_LLM_PEAK_BYTES,
+	nativeDevice,
 	LLM_CHOICES,
 	LLM_MIN_BUFFER_BYTES,
 	QWEN3_1_7B_ID,
@@ -79,29 +82,33 @@ const table: RouteTable = {
 describe("translate availability", () => {
 	describe("modelBlock", () => {
 		it("is probing until the probe answers, and disabled on a deploy that switched it off", () => {
-			expect(modelBlock(small, null, on)).to.deep.equal({kind: "probing"});
-			expect(modelBlock(nllb, DEVICES.desktop, on, false)).to.deep.equal({kind: "disabled"});
+			expect(modelBlock(small, "gpu", null, on)).to.deep.equal({kind: "probing"});
+			expect(modelBlock(nllb, "cpu", DEVICES.desktop, on, false)).to.deep.equal({
+				kind: "disabled",
+			});
 		});
 
 		it("lets every model run on a desktop GPU with both switches on", () => {
 			for (const ref of [small, large, nllb, base.opus["de-en"]]) {
-				expect(modelBlock(ref, DEVICES.desktop, on), ref.id).to.equal(null);
+				expect(modelBlock(ref, nativeDevice(ref), DEVICES.desktop, on), ref.id).to.equal(
+					null
+				);
 			}
 		});
 
 		it("names the device code for a GPU model, never the buffer when f16 is missing", () => {
-			expect(modelBlock(small, DEVICES.noWebgpu, on)).to.deep.equal({
+			expect(modelBlock(small, "gpu", DEVICES.noWebgpu, on)).to.deep.equal({
 				kind: "device",
 				reason: "NO_WEBGPU",
 			});
-			expect(modelBlock(large, DEVICES.noF16, on)).to.deep.equal({
+			expect(modelBlock(large, "gpu", DEVICES.noF16, on)).to.deep.equal({
 				kind: "device",
 				reason: "NO_F16",
 			});
 			expect(
-				modelBlock(small, cap({tier: "cpu", reasons: ["INSECURE_ORIGIN"]}), on)
+				modelBlock(small, "gpu", cap({tier: "cpu", reasons: ["INSECURE_ORIGIN"]}), on)
 			).to.deep.equal({kind: "device", reason: "INSECURE_ORIGIN"});
-			expect(modelBlock(small, DEVICES.probeFailed, on)).to.deep.equal({
+			expect(modelBlock(small, "gpu", DEVICES.probeFailed, on)).to.deep.equal({
 				kind: "device",
 				reason: "PROBE_FAILED",
 			});
@@ -110,27 +117,27 @@ describe("translate availability", () => {
 		it("gives each GPU model its own buffer numbers, on a cpu-tier device too", () => {
 			// 64 MiB: the tier is cpu (SMALL_BUFFER), and both rows still say
 			// what they need: the 1.7B its small-buffer build's need.
-			expect(modelBlock(small, DEVICES.binds64, on)).to.deep.equal({
+			expect(modelBlock(small, "gpu", DEVICES.binds64, on)).to.deep.equal({
 				kind: "buffer",
 				needed: small.smallBuffer!.largestBufferBytes,
 				limit: 64 * MiB,
 			});
-			expect(modelBlock(large, DEVICES.binds64, on)).to.deep.equal({
+			expect(modelBlock(large, "gpu", DEVICES.binds64, on)).to.deep.equal({
 				kind: "buffer",
 				needed: large.copies.gpu!.largestBufferBytes,
 				limit: 64 * MiB,
 			});
 			// 128 MiB, a phone: the 1.7B runs as its small-buffer build; the
 			// 4B has none and says what it needs.
-			expect(modelBlock(small, DEVICES.binds128, on)).to.equal(null);
-			expect(modelBlock(large, DEVICES.binds128, on)).to.deep.equal({
+			expect(modelBlock(small, "gpu", DEVICES.binds128, on)).to.equal(null);
+			expect(modelBlock(large, "gpu", DEVICES.binds128, on)).to.deep.equal({
 				kind: "buffer",
 				needed: large.copies.gpu!.largestBufferBytes,
 				limit: 128 * MiB,
 			});
 			// 160 MiB: the 1.7B fits, the 4B does not.
-			expect(modelBlock(small, DEVICES.binds160, on)).to.equal(null);
-			expect(modelBlock(large, DEVICES.binds160, on)).to.deep.equal({
+			expect(modelBlock(small, "gpu", DEVICES.binds160, on)).to.equal(null);
+			expect(modelBlock(large, "gpu", DEVICES.binds160, on)).to.deep.equal({
 				kind: "buffer",
 				needed: large.copies.gpu!.largestBufferBytes,
 				limit: 160 * MiB,
@@ -140,8 +147,8 @@ describe("translate availability", () => {
 		it("holds a deploy model of unknown size to the gpu tier's floor", () => {
 			const deploy = buildCatalog({llm: {model: "Custom-q4f16_1-MLC"}}).llm;
 
-			expect(modelBlock(deploy, DEVICES.binds160, on)).to.equal(null);
-			expect(modelBlock(deploy, DEVICES.binds64, on)).to.deep.equal({
+			expect(modelBlock(deploy, "gpu", DEVICES.binds160, on)).to.equal(null);
+			expect(modelBlock(deploy, "gpu", DEVICES.binds64, on)).to.deep.equal({
 				kind: "buffer",
 				needed: LLM_MIN_BUFFER_BYTES,
 				limit: 64 * MiB,
@@ -151,31 +158,120 @@ describe("translate availability", () => {
 		it("says switched off only for a model the device could run", () => {
 			const off = {llm: false, opus: false, nllb: true};
 
-			expect(modelBlock(small, DEVICES.desktop, off)).to.deep.equal({
+			expect(modelBlock(small, "gpu", DEVICES.desktop, off)).to.deep.equal({
 				kind: "off",
 				engine: "llm",
 			});
-			expect(modelBlock(nllb, DEVICES.desktop, off)).to.deep.equal({
+			expect(modelBlock(base.opus["de-en"], "cpu", DEVICES.desktop, off)).to.deep.equal({
 				kind: "off",
-				engine: "seq2seq",
+				engine: "opus",
 			});
 			// Turning the switch on would change nothing: the device is the reason.
-			expect(modelBlock(small, DEVICES.noWebgpu, off).kind).to.equal("device");
-			expect(modelBlock(large, DEVICES.binds160, off).kind).to.equal("buffer");
-			expect(modelBlock(nllb, DEVICES.noSimd, off)).to.deep.equal({
+			expect(modelBlock(small, "gpu", DEVICES.noWebgpu, off).kind).to.equal("device");
+			expect(modelBlock(large, "gpu", DEVICES.binds160, off).kind).to.equal("buffer");
+			expect(modelBlock(nllb, "cpu", DEVICES.noSimd, off)).to.deep.equal({
 				kind: "device",
 				reason: "NO_WASM_SIMD",
+			});
+		});
+
+		describe("per device", () => {
+			const opus = base.opus["de-en"];
+			const all = {llm: true, opus: true, nllb: true};
+
+			it("gives the 4B no CPU copy on any device", () => {
+				for (const device of Object.values(DEVICES)) {
+					if (
+						device.reasons.includes("NO_WASM_SIMD") ||
+						device.reasons.includes("PROBE_FAILED")
+					) {
+						continue;
+					}
+
+					expect(modelBlock(large, "cpu", device, all)).to.deep.equal({
+						kind: "noCopy",
+						device: "cpu",
+					});
+				}
+			});
+
+			it("runs the 1.7B on the CPU with no WebGPU", () => {
+				expect(modelBlock(small, "cpu", DEVICES.noWebgpu, all)).to.equal(null);
+				expect(
+					modelBlock(small, "cpu", DEVICES.noWebgpu, {...all, llm: false})
+				).to.deep.equal({
+					kind: "off",
+					engine: "llm",
+				});
+			});
+
+			it("keeps the 1.7B's CPU copy off an iPhone or iPad", () => {
+				const apple = cap({appleMobile: true, mobile: true});
+
+				expect(modelBlock(small, "cpu", apple, all)).to.deep.equal({
+					kind: "memory",
+					needed: CPU_LLM_PEAK_BYTES,
+				});
+				expect(CPU_LLM_PEAK_BYTES).to.be.above(APPLE_PAGE_BUDGET_BYTES);
+				expect(modelBlock(small, "cpu", cap({mobile: true}), all)).to.equal(null);
+				expect(modelBlock(opus, "cpu", apple, all)).to.equal(null);
+			});
+
+			it("holds NLLB's GPU copy to the binding, an f16 device and the probe's codes", () => {
+				expect(modelBlock(nllb, "gpu", DEVICES.binds128, all)).to.deep.equal({
+					kind: "buffer",
+					needed: 524_709_888,
+					limit: 134_217_728,
+				});
+				expect(
+					modelBlock(nllb, "gpu", cap({f16: false, maxBufferBytes: GiB}), all)
+				).to.deep.equal({
+					kind: "device",
+					reason: "NO_F16",
+				});
+				expect(modelBlock(nllb, "gpu", DEVICES.noWebgpu, all)).to.deep.equal({
+					kind: "device",
+					reason: "NO_WEBGPU",
+				});
+				// WebLLM's shader floors are the language model's rule alone.
+				expect(
+					modelBlock(
+						nllb,
+						"gpu",
+						cap({reasons: ["GPU_LIMITS"], tier: "cpu", maxBufferBytes: GiB}),
+						all
+					)
+				).to.equal(null);
+			});
+
+			it("runs OPUS-MT on a GPU with f16 and a 1 GiB binding", () => {
+				expect(modelBlock(opus, "gpu", cap({maxBufferBytes: GiB}), all)).to.equal(null);
+			});
+
+			it("gates each of OPUS-MT and NLLB by its own switch", () => {
+				expect(
+					modelBlock(opus, "cpu", DEVICES.desktop, {...all, opus: false})
+				).to.deep.equal({
+					kind: "off",
+					engine: "opus",
+				});
+				expect(
+					modelBlock(nllb, "cpu", DEVICES.desktop, {llm: true, opus: false, nllb: true})
+				).to.equal(null);
+				expect(
+					modelBlock(nllb, "cpu", DEVICES.desktop, {llm: true, opus: true, nllb: false})
+				).to.deep.equal({kind: "off", engine: "nllb"});
 			});
 		});
 
 		it("blocks the CPU models without WebAssembly SIMD even on a gpu-tier device", () => {
 			const gpuNoSimd = cap({reasons: ["NO_WASM_SIMD"]});
 
-			expect(modelBlock(nllb, gpuNoSimd, on)).to.deep.equal({
+			expect(modelBlock(nllb, "cpu", gpuNoSimd, on)).to.deep.equal({
 				kind: "device",
 				reason: "NO_WASM_SIMD",
 			});
-			expect(modelBlock(small, gpuNoSimd, on)).to.equal(null);
+			expect(modelBlock(small, "gpu", gpuNoSimd, on)).to.equal(null);
 		});
 	});
 
@@ -310,7 +406,7 @@ describe("translate availability", () => {
 				ask(DEVICES.noWebgpu, {llm: true, opus: false, nllb: true}, "de", "en").why
 			).to.deep.equal({
 				kind: "off",
-				engine: "seq2seq",
+				engine: "opus",
 			});
 		});
 
@@ -364,12 +460,14 @@ describe("translate availability", () => {
 				);
 
 			it("blocks the NLLB row as switched off, and only that one", () => {
-				expect(modelBlock(nllb, DEVICES.desktop, noNllb)).to.deep.equal({
+				expect(modelBlock(nllb, "cpu", DEVICES.desktop, noNllb)).to.deep.equal({
 					kind: "off",
 					engine: "nllb",
 				});
-				expect(modelBlock(base.opus["de-en"], DEVICES.desktop, noNllb)).to.equal(null);
-				expect(modelBlock(small, DEVICES.desktop, noNllb)).to.equal(null);
+				expect(modelBlock(base.opus["de-en"], "cpu", DEVICES.desktop, noNllb)).to.equal(
+					null
+				);
+				expect(modelBlock(small, "gpu", DEVICES.desktop, noNllb)).to.equal(null);
 			});
 
 			it("gives a pair only NLLB serves here the NLLB reason", () => {
@@ -477,11 +575,11 @@ describe("translate availability", () => {
 		it("names the switch that would fix it on a device without the GPU model", () => {
 			expect(block(DEVICES.noWebgpu, {llm: true, opus: false, nllb: true})).to.deep.equal({
 				kind: "off",
-				engine: "seq2seq",
+				engine: "opus",
 			});
 			expect(block(DEVICES.binds64, {llm: false, opus: false, nllb: true})).to.deep.equal({
 				kind: "off",
-				engine: "seq2seq",
+				engine: "opus",
 			});
 			// A phone runs the 1.7B's small-buffer build: either switch would serve.
 			expect(block(DEVICES.binds128, {llm: false, opus: false, nllb: true})).to.deep.equal({

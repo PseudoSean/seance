@@ -29,7 +29,7 @@ describe("translateWhyText", () => {
 		[{kind: "disabled"}, "translate.settings.disabled"],
 		[{kind: "probing"}, "translate.why.probing"],
 		[{kind: "off", engine: "llm"}, "translate.why.llmOff"],
-		[{kind: "off", engine: "seq2seq"}, "translate.why.cpuOff"],
+		[{kind: "off", engine: "opus"}, "translate.why.cpuOff"],
 		[{kind: "off", engine: "all"}, "translate.why.allOff"],
 		[{kind: "down"}, "translate.why.down"],
 		[{kind: "unserved"}, "translate.why.unserved"],

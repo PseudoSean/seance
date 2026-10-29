@@ -128,23 +128,23 @@ describe("translate: a phone's page memory", () => {
 		});
 
 		it("is a memory block on a phone, whatever the GPU binds and the switch says", () => {
-			expect(modelBlock(large, device(), all)).to.deep.equal({
+			expect(modelBlock(large, "gpu", device(), all)).to.deep.equal({
 				kind: "memory",
 				needed: large.vramBytes,
 			});
-			expect(modelBlock(large, device(), {...all, llm: false})).to.deep.include({
+			expect(modelBlock(large, "gpu", device(), {...all, llm: false})).to.deep.include({
 				kind: "memory",
 			});
-			expect(modelBlock(small, device(), all)).to.equal(null);
+			expect(modelBlock(small, "gpu", device(), all)).to.equal(null);
 		});
 
 		it("runs on a computer", () => {
-			expect(modelBlock(large, device({mobile: false}), all)).to.equal(null);
+			expect(modelBlock(large, "gpu", device({mobile: false}), all)).to.equal(null);
 		});
 
 		it("names the device's own reason first: no GPU is no GPU", () => {
 			expect(
-				modelBlock(large, device({tier: "cpu", reasons: ["NO_F16"]}), all)
+				modelBlock(large, "gpu", device({tier: "cpu", reasons: ["NO_F16"]}), all)
 			).to.deep.equal({kind: "device", reason: "NO_F16"});
 		});
 

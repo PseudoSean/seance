@@ -338,6 +338,12 @@ export function llmFits(ref: ModelRef, maxBufferBytes: number): boolean {
 	return ref.engine !== "llm" || (minBufferNeed(ref) ?? 0) <= maxBufferBytes;
 }
 
+/** The language model's CPU copy's measured peak page memory (tools/translate-eval/results/2026-10-29-cpu-llm.md). */
+export const CPU_LLM_PEAK_BYTES = 2_921_910_272;
+
+/** What WebKit lets an iPhone or iPad page use before it ends it. */
+export const APPLE_PAGE_BUDGET_BYTES = 1_800_000_000;
+
 /**
  * The device codes that keep a model from running: everything the probe can
  * report but SMALL_BUFFER, which is per model and becomes a `buffer` block
@@ -363,13 +369,15 @@ export type ModelBlock =
 	 * `needed` is its graphics memory (`ModelRef.vramBytes`).
 	 */
 	| {kind: "memory"; needed: number}
+	/** The model has no copy for the device asked about (the 4B on the CPU). */
+	| {kind: "noCopy"; device: Device}
 	/**
 	 * `all`: both engine switches (router.ts `translationBlock`; never one
 	 * model's). `nllb`: NLLB-200 alone, which is off until the user opts in
 	 * (its licence is non-commercial, CC-BY-NC-4.0).
 	 */
 	// "llmOrNllb": the pair has the GPU model or NLLB-200, and both are off.
-	| {kind: "off"; engine: EngineName | "nllb" | "llmOrNllb" | "all"};
+	| {kind: "off"; engine: "llm" | "opus" | "nllb" | "llmOrNllb" | "all"};
 
 /**
  * The user's engine switches (`translateLlm`, `translateCpu`,
@@ -402,6 +410,7 @@ const GPU_REASONS: readonly DeviceReason[] = [
  */
 export function modelBlock(
 	ref: ModelRef,
+	device: Device,
 	capability: Capability | null,
 	switches: EngineSwitches,
 	enabled = true
@@ -414,11 +423,38 @@ export function modelBlock(
 		return {kind: "probing"};
 	}
 
+	return device === "gpu"
+		? gpuBlock(ref, capability, switches)
+		: cpuBlock(ref, capability, switches);
+}
+
+/** The user's switch for `ref`: its block when off, else null. */
+function switchBlock(ref: ModelRef, switches: EngineSwitches): ModelBlock | null {
+	if (ref.family === "llm") {
+		return switches.llm ? null : {kind: "off", engine: "llm"};
+	}
+
+	if (ref.family === "nllb") {
+		return switches.nllb ? null : {kind: "off", engine: "nllb"};
+	}
+
+	return switches.opus ? null : {kind: "off", engine: "opus"};
+}
+
+function gpuBlock(
+	ref: ModelRef,
+	capability: Capability,
+	switches: EngineSwitches
+): ModelBlock | null {
 	if (ref.engine === "llm") {
 		const reason = GPU_REASONS.find((code) => capability.reasons.includes(code));
 
 		if (reason) {
 			return {kind: "device", reason};
+		}
+
+		if (!ref.copies.gpu) {
+			return {kind: "noCopy", device: "gpu"};
 		}
 
 		// The gpu tier's floor is the smallest shipped model's need, so a
@@ -436,9 +472,43 @@ export function modelBlock(
 			return {kind: "memory", needed: ref.vramBytes ?? 0};
 		}
 
-		return switches.llm ? null : {kind: "off", engine: "llm"};
+		return switchBlock(ref, switches);
 	}
 
+	// OPUS-MT and NLLB-200 on the GPU: any WebGPU device with f16 whose
+	// largest binding holds the copy's biggest tensor; WebLLM's shader
+	// floors (GPU_LIMITS) and the language model's buffer rule do not apply.
+	for (const code of ["PROBE_FAILED", "INSECURE_ORIGIN", "NO_WEBGPU", "NO_ADAPTER"] as const) {
+		if (capability.reasons.includes(code)) {
+			return {kind: "device", reason: code};
+		}
+	}
+
+	if (!capability.f16) {
+		return {kind: "device", reason: "NO_F16"};
+	}
+
+	const copy = ref.copies.gpu;
+
+	if (!copy) {
+		return {kind: "noCopy", device: "gpu"};
+	}
+
+	if (
+		copy.largestBufferBytes !== undefined &&
+		copy.largestBufferBytes > capability.maxBufferBytes
+	) {
+		return {kind: "buffer", needed: copy.largestBufferBytes, limit: capability.maxBufferBytes};
+	}
+
+	return switchBlock(ref, switches);
+}
+
+function cpuBlock(
+	ref: ModelRef,
+	capability: Capability,
+	switches: EngineSwitches
+): ModelBlock | null {
 	if (capability.reasons.includes("PROBE_FAILED")) {
 		return {kind: "device", reason: "PROBE_FAILED"};
 	}
@@ -447,11 +517,31 @@ export function modelBlock(
 		return {kind: "device", reason: "NO_WASM_SIMD"};
 	}
 
-	if (!switches.opus) {
-		return {kind: "off", engine: "seq2seq"};
+	if (!ref.copies.cpu) {
+		return {kind: "noCopy", device: "cpu"};
 	}
 
-	return ref.family === "nllb" && !switches.nllb ? {kind: "off", engine: "nllb"} : null;
+	// WebKit ends a page past its budget: the language model's CPU copy
+	// peaks above it, so an iPhone or iPad cannot run it however it is set.
+	if (
+		capability.appleMobile &&
+		ref.family === "llm" &&
+		CPU_LLM_PEAK_BYTES > APPLE_PAGE_BUDGET_BYTES
+	) {
+		return {kind: "memory", needed: CPU_LLM_PEAK_BYTES};
+	}
+
+	return switchBlock(ref, switches);
+}
+
+/**
+ * The device `ref`'s slot runs on until the router walks devices (the
+ * language model on the GPU, OPUS-MT and NLLB-200 on the CPU). Interim:
+ * callers that have no device of their own pass this; remove with the
+ * router's per-device walk.
+ */
+export function nativeDevice(ref: ModelRef): Device {
+	return ref.engine === "llm" ? "gpu" : "cpu";
 }
 
 /** What the default GPU model is decided from (capability.ts `Capability`). */
