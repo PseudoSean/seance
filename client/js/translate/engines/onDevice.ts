@@ -2,8 +2,10 @@
 // docs/projects/translation-devices.md § Engines and the worker): it holds
 // an engine per device and keeps one device's models in memory at a time.
 // Loading on the other device unloads this one's first, after the requests
-// already running on it have finished. Vue-free and library-free: the
-// engines arrive through the constructor.
+// already running on it have finished and after a load still in flight on it
+// has settled (a language model's reload is not listed in `loadedModels`
+// until it finishes, so an unload before then would leave both resident).
+// Vue-free and library-free: the engines arrive through the constructor.
 
 import {
 	Device,
@@ -23,30 +25,47 @@ export class OnDevice implements Engine {
 	private active: Device = "gpu";
 	/** The requests streaming on each device, settled when their stream ends. */
 	private running: Record<Device, Set<Promise<void>>> = {gpu: new Set(), cpu: new Set()};
+	/** Each device's newest `load`, from its call until it settles. */
+	private loading: Record<Device, Promise<void> | null> = {gpu: null, cpu: null};
 
 	constructor(name: EngineName, engines: Record<Device, Engine>) {
 		this.name = name;
 		this.engines = engines;
 	}
 
-	async load(
-		ref: ModelRef,
-		device: Device,
-		onProgress: (p: LoadProgress) => void
-	): Promise<void> {
+	load(ref: ModelRef, device: Device, onProgress: (p: LoadProgress) => void): Promise<void> {
 		const other: Device = device === "gpu" ? "cpu" : "gpu";
-
-		if (this.engines[other].loadedModels().length > 0) {
-			// The running request finishes on its device first.
-			while (this.running[other].size > 0) {
-				await Promise.allSettled([...this.running[other]]);
+		// Taken at the call, so two loads can never wait for each other.
+		const otherLoad = this.loading[other];
+		const run = (async () => {
+			if (otherLoad) {
+				// Its failure is its caller's to hear.
+				await otherLoad.catch(() => {});
 			}
 
-			await this.engines[other].unload();
-		}
+			if (this.engines[other].loadedModels().length > 0) {
+				// The running request finishes on its device first.
+				while (this.running[other].size > 0) {
+					await Promise.allSettled([...this.running[other]]);
+				}
 
-		this.active = device;
-		await this.engines[device].load(ref, device, onProgress);
+				await this.engines[other].unload();
+			}
+
+			this.active = device;
+			await this.engines[device].load(ref, device, onProgress);
+		})();
+
+		const settle = () => {
+			if (this.loading[device] === run) {
+				this.loading[device] = null;
+			}
+		};
+
+		this.loading[device] = run;
+		run.then(settle, settle);
+
+		return run;
 	}
 
 	async unload(): Promise<void> {

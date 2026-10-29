@@ -573,11 +573,14 @@ under Auto a declined download falls back to the other device's downloaded
 copy for OPUS-MT and NLLB-200 and never for the language model. A GPU loss
 (`GPU_LOST`) marks down that model's GPU copy alone, for the session
 (`DownKey` is `<candidate>@<device>`); in this build that is only ever the
-language model's, since OPUS-MT and NLLB-200 have no GPU copy to lose. A device switch lets the running request
-finish; the next one loads on the new device and the old device's model is
-unloaded. Deleting a copy that is loaded unloads it first and leaves the other
-device's copy untouched. `OnDevice` (`engines/onDevice.ts`) is the seq2seq
-slot's holder of one loaded model on one device at a time.
+language model's, since OPUS-MT and NLLB-200 have no GPU copy to lose. A
+device switch lets the running request finish; the next one loads on the new
+device and the old device's model is unloaded. Deleting a copy that is loaded
+unloads it first and leaves the other device's copy untouched. `OnDevice`
+(`engines/onDevice.ts`) is each slot's holder of one loaded model on one
+device at a time; a load on one device first waits for a load still in flight
+on the other, then unloads it, since a language model's reload is listed as
+loaded only once it finishes.
 
 **The CPU language model's numbers** (`models.ts`): a context window of 1024
 tokens (`CPU_CONTEXT_WINDOW`: it holds the 700-token context budget, the

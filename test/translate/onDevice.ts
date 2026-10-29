@@ -128,4 +128,69 @@ describe("OnDevice", () => {
 		await switching;
 		expect(events).to.deep.equal(["cpu finished", "cpu unload"]);
 	});
+
+	it("a load on one device waits for the other device's load in flight, then unloads it", async () => {
+		// A language model's reload is listed only once it finishes: a CPU
+		// pin while the GPU copy still loads must not leave both resident.
+		const {gpu, cpu, engine} = make();
+		const events: string[] = [];
+
+		let release: () => void = () => {};
+
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const loadGpu = gpu.load.bind(gpu);
+
+		gpu.load = async (r, d, p) => {
+			events.push("gpu load");
+			await gate;
+			await loadGpu(r, d, p);
+			events.push("gpu loaded");
+		};
+
+		const unloadGpu = gpu.unload.bind(gpu);
+
+		gpu.unload = () => {
+			events.push("gpu unload");
+			return unloadGpu();
+		};
+
+		const loadCpu = cpu.load.bind(cpu);
+
+		cpu.load = (r, d, p) => {
+			events.push("cpu load");
+			return loadCpu(r, d, p);
+		};
+
+		const onGpu = engine.load(ref, "gpu", () => {});
+		const onCpu = engine.load(ref, "cpu", () => {});
+
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(events).to.deep.equal(["gpu load"]);
+		release();
+		await onGpu;
+		await onCpu;
+		expect(events).to.deep.equal(["gpu load", "gpu loaded", "gpu unload", "cpu load"]);
+		expect(engine.loadedModels()).to.deep.equal([ref.id]);
+		expect(engine.isLoaded(ref.id, "cpu")).to.equal(true);
+		expect(engine.isLoaded(ref.id, "gpu")).to.equal(false);
+	});
+
+	it("a failed load on the other device does not stop this one", async () => {
+		const {gpu, engine} = make();
+		const failure = new Error("GPU_LOST");
+
+		gpu.load = () => Promise.reject(failure);
+
+		const onGpu = engine.load(ref, "gpu", () => {});
+		const onCpu = engine.load(ref, "cpu", () => {});
+
+		let caught: unknown = null;
+
+		await onGpu.catch((e: unknown) => (caught = e));
+		await onCpu;
+		expect(caught).to.equal(failure);
+		expect(engine.isLoaded(ref.id, "cpu")).to.equal(true);
+	});
 });
