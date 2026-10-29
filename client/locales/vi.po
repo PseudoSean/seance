@@ -12843,6 +12843,12 @@ msgctxt "translate.error.aborted"
 msgid "aborted"
 msgstr "đã bị hủy"
 
+#. Why a translation failed, shown after 'Couldn't translate' (so it reads 'Couldn't translate: the GPU stopped (…): …'): the graphics processor the translation model was running on stopped working in the middle of the translation — on a phone usually because the system ran short of memory or the app went to the background. {reason} is the browser's own untranslated explanation of why the GPU stopped, {detail} the browser's own untranslated error from the step that failed. Lowercase: it follows a colon or a dash.
+#: client/js/helpers/translateErrors.ts
+msgctxt "translate.error.gpuLost"
+msgid "the GPU stopped ({reason}): {detail}"
+msgstr "GPU đã ngừng hoạt động ({reason}): {detail}"
+
 #. Why a translation failed, shown after 'Couldn't translate': the engine did not answer in time. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.timedOut"

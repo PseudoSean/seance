@@ -2176,6 +2176,7 @@
   "translate.consent.text": "Denne oversættelse kræver {model}, en download på {size}. Den gemmes på denne enhed, så den hentes kun én gang.",
   "translate.consent.title": "Hent {model}?",
   "translate.error.aborted": "afbrudt",
+  "translate.error.gpuLost": "GPU'en holdt op med at virke ({reason}): {detail}",
   "translate.error.timedOut": "tidsgrænse overskredet",
   "translate.error.tooLong": "for lang til denne enhed",
   "translate.error.unavailable": "ingen oversættelsesmotor kan tage denne anmodning",

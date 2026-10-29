@@ -2179,6 +2179,7 @@
   "translate.consent.text": "この翻訳には {model}（ダウンロードサイズ {size}）が必要です。このデバイスに保存されるため、ダウンロードは一度だけです。",
   "translate.consent.title": "{model} をダウンロードしますか？",
   "translate.error.aborted": "中止",
+  "translate.error.gpuLost": "GPU が停止しました（{reason}）: {detail}",
   "translate.error.timedOut": "タイムアウト",
   "translate.error.tooLong": "この端末には長すぎます",
   "translate.error.unavailable": "このリクエストを処理できる翻訳エンジンがありません",

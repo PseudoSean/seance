@@ -2475,6 +2475,7 @@
   "translate.consent.text": "تحتاج هذه الترجمة إلى {model}، وحجم تنزيله {size}. يبقى على هذا الجهاز، لذا لا يُنزَّل إلا مرة واحدة.",
   "translate.consent.title": "تنزيل {model}؟",
   "translate.error.aborted": "تم الإلغاء",
+  "translate.error.gpuLost": "توقف معالج الرسوميات عن العمل ({reason}): {detail}",
   "translate.error.timedOut": "انتهت المهلة",
   "translate.error.tooLong": "أطول مما يحتمله هذا الجهاز",
   "translate.error.unavailable": "لا يوجد محرك ترجمة يمكنه تنفيذ هذا الطلب",

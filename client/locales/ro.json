@@ -2236,6 +2236,7 @@
   "translate.consent.text": "Această traducere are nevoie de {model}, o descărcare de {size}. Rămâne pe acest dispozitiv, așa că se descarcă o singură dată.",
   "translate.consent.title": "Descarci {model}?",
   "translate.error.aborted": "anulat",
+  "translate.error.gpuLost": "GPU-ul s-a oprit ({reason}): {detail}",
   "translate.error.timedOut": "timpul a expirat",
   "translate.error.tooLong": "prea lung pentru acest dispozitiv",
   "translate.error.unavailable": "niciun motor de traducere nu poate prelua această cerere",

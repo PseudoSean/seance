@@ -2333,6 +2333,7 @@
   "translate.consent.text": "To tłumaczenie wymaga modelu {model}, do pobrania {size}. Zostaje na tym urządzeniu, więc pobiera się go tylko raz.",
   "translate.consent.title": "Pobrać {model}?",
   "translate.error.aborted": "anulowane",
+  "translate.error.gpuLost": "GPU przestał działać ({reason}): {detail}",
   "translate.error.timedOut": "przekroczono czas",
   "translate.error.tooLong": "za długie dla tego urządzenia",
   "translate.error.unavailable": "żaden silnik tłumaczenia nie może przyjąć tego żądania",

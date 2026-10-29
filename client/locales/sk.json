@@ -2279,6 +2279,7 @@
   "translate.consent.text": "Tento preklad potrebuje {model}, sťahovanie s veľkosťou {size}. Zostane na tomto zariadení, takže sa sťahuje iba raz.",
   "translate.consent.title": "Stiahnuť {model}?",
   "translate.error.aborted": "zrušené",
+  "translate.error.gpuLost": "GPU prestal fungovať ({reason}): {detail}",
   "translate.error.timedOut": "vypršal čas",
   "translate.error.tooLong": "pre toto zariadenie príliš dlhé",
   "translate.error.unavailable": "žiadny prekladový modul nemôže túto požiadavku spracovať",

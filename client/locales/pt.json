@@ -2192,6 +2192,7 @@
   "translate.consent.text": "Esta tradução precisa do {model}, um download de {size}. Ele fica neste dispositivo, então é baixado só uma vez.",
   "translate.consent.title": "Baixar {model}?",
   "translate.error.aborted": "cancelado",
+  "translate.error.gpuLost": "a GPU parou de funcionar ({reason}): {detail}",
   "translate.error.timedOut": "tempo esgotado",
   "translate.error.tooLong": "longo demais para este dispositivo",
   "translate.error.unavailable": "nenhum motor de tradução pode aceitar esse pedido",

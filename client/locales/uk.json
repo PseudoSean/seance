@@ -2353,6 +2353,7 @@
   "translate.consent.text": "Для цього перекладу потрібна модель {model}, завантаження {size}. Вона залишиться на цьому пристрої, тож завантажується лише один раз.",
   "translate.consent.title": "Завантажити {model}?",
   "translate.error.aborted": "скасовано",
+  "translate.error.gpuLost": "графічний процесор перестав працювати ({reason}): {detail}",
   "translate.error.timedOut": "минув час очікування",
   "translate.error.tooLong": "задовге для цього пристрою",
   "translate.error.unavailable": "жоден рушій перекладу не може виконати цей запит",

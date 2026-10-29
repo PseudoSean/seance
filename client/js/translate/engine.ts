@@ -221,6 +221,32 @@ export const BATCH_REFUSED = "seq2seq engines do not batch";
 export const CONTEXT_OVERFLOW = "the request does not fit the model's context window";
 
 /**
+ * The GPU went away under a generation (gpuLimits.ts records why from the
+ * device's `lost`): `gpuLost` puts the platform's reason and the call that
+ * failed on it after this code, and `parseGpuLost` takes them back out for
+ * translateErrors.ts, which words the frame. Both parts are the browser's
+ * own text and stay as they are.
+ */
+export const GPU_LOST = "the GPU device was lost";
+
+export function gpuLost(reason: string, failed: string): string {
+	return `${GPU_LOST}: ${reason.replace(/\n/g, " ")}\n${failed}`;
+}
+
+export function parseGpuLost(error: string): {reason: string; detail: string} | null {
+	if (!error.startsWith(`${GPU_LOST}: `)) {
+		return null;
+	}
+
+	const rest = error.slice(GPU_LOST.length + 2);
+	const cut = rest.indexOf("\n");
+
+	return cut < 0
+		? {reason: rest, detail: ""}
+		: {reason: rest.slice(0, cut), detail: rest.slice(cut + 1)};
+}
+
+/**
  * An engine's own failure classification. `load`: the model is gone or
  * cannot be used (a lost WebGPU device, twice); the service marks the
  * candidate down. `request`: this request failed (a bad pair, an

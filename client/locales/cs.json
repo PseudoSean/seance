@@ -2278,6 +2278,7 @@
   "translate.consent.text": "Tento překlad potřebuje {model}, stažení o velikosti {size}. Zůstane na tomto zařízení, takže se stahuje jen jednou.",
   "translate.consent.title": "Stáhnout {model}?",
   "translate.error.aborted": "přerušeno",
+  "translate.error.gpuLost": "GPU přestal fungovat ({reason}): {detail}",
   "translate.error.timedOut": "vypršel čas",
   "translate.error.tooLong": "pro toto zařízení příliš dlouhé",
   "translate.error.unavailable": "žádný překladový modul nemůže tento požadavek zpracovat",

@@ -2138,6 +2138,7 @@
   "translate.consent.text": "Voor deze vertaling is {model} nodig, een download van {size}. Het blijft op dit apparaat staan en wordt maar één keer gedownload.",
   "translate.consent.title": "{model} downloaden?",
   "translate.error.aborted": "afgebroken",
+  "translate.error.gpuLost": "de GPU is gestopt ({reason}): {detail}",
   "translate.error.timedOut": "time-out",
   "translate.error.tooLong": "te lang voor dit apparaat",
   "translate.error.unavailable": "geen vertaalengine kan dit verzoek afhandelen",

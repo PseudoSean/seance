@@ -2228,6 +2228,7 @@
   "translate.consent.text": "Bu çeviri için {model} gerekiyor; indirme boyutu {size}. Bu cihazda kalır, yani yalnızca bir kez indirilir.",
   "translate.consent.title": "{model} indirilsin mi?",
   "translate.error.aborted": "iptal edildi",
+  "translate.error.gpuLost": "GPU çalışmayı durdurdu ({reason}): {detail}",
   "translate.error.timedOut": "zaman aşımı",
   "translate.error.tooLong": "bu cihaz için fazla uzun",
   "translate.error.unavailable": "bu isteği alabilecek çeviri motoru yok",

@@ -2154,6 +2154,7 @@
   "translate.consent.text": "Für diese Übersetzung wird {model} benötigt, ein Download von {size}. Das Modell bleibt auf diesem Gerät und wird nur einmal heruntergeladen.",
   "translate.consent.title": "{model} herunterladen?",
   "translate.error.aborted": "abgebrochen",
+  "translate.error.gpuLost": "die GPU hat aufgehört zu arbeiten ({reason}): {detail}",
   "translate.error.timedOut": "Zeitüberschreitung",
   "translate.error.tooLong": "zu lang für dieses Gerät",
   "translate.error.unavailable": "keine Übersetzungs-Engine kann diese Anfrage übernehmen",

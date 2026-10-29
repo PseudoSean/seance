@@ -2250,6 +2250,7 @@
   "translate.consent.text": "‫ţŕàñśľàţïñġ ţḣïś ñééḋś {model}, à {size} ḋöẃñľöàḋ. ïţ ïś ķéṗţ öñ ţḣïś ḋéṽïċé, śö ïţ ïś ḋöẃñľöàḋéḋ öñľý öñċé.ţŕàñśľàţïñġ ţḣïś ñééḋś {model}, à {size} ḋöẃñľöàḋ. ïţ ïś ķéṗţ öñ ţḣïś ḋéṽïċé, śö ïţ ïś ḋöẃñľöàḋéḋ öñľý öñċé.‬",
   "translate.consent.title": "‫ḋöẃñľöàḋ {model}?ḋöẃñľöàḋ {model}?‬",
   "translate.error.aborted": "‫àḃöŕţéḋàḃöŕţéḋ‬",
+  "translate.error.gpuLost": "‫ţḣé ġṗü śţöṗṗéḋ ){reason}(: {detail}ţḣé ġṗü śţöṗṗéḋ ){reason}(: {detail}‬",
   "translate.error.timedOut": "‫ţïṁéḋ öüţţïṁéḋ öüţ‬",
   "translate.error.tooLong": "‫ţöö ľöñġ ḟöŕ ţḣïś ḋéṽïċéţöö ľöñġ ḟöŕ ţḣïś ḋéṽïċé‬",
   "translate.error.unavailable": "‫ñö ţŕàñśľàţïöñ éñġïñé ċàñ ţàķé ţḣïś ŕéq́üéśţñö ţŕàñśľàţïöñ éñġïñé ċàñ ţàķé ţḣïś ŕéq́üéśţ‬",
