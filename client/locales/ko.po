@@ -12685,23 +12685,23 @@ msgctxt "translate.action.translate"
 msgid "Translate"
 msgstr "번역"
 
-#. Line under the device verdict in Settings → Translation: the largest buffer this device's graphics processor can bind in one piece, measured by the browser. {size} is a size such as "512 MiB" (binary units, kept as they are). A GPU model loads only if its largest piece fits.
+#. Line under the device verdict in Settings → Translation: the largest buffer this device's graphics processor can bind in one piece, measured by the browser. {size} is a size such as "512 MiB" (binary units, kept as they are). A language model loads only if its largest piece fits.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.bufferLimit"
 msgid "Largest GPU buffer: {size}"
 msgstr "최대 GPU 버퍼: {size}"
 
-#. Verdict of the device check in Settings → Translation: the large graphics-processor model cannot run, the smaller main-processor ones can. Any reasons follow as their own list.
+#. Line at the top of the model list in Settings → Translation on a device whose graphics processor cannot run translation models (or has none): they run on the main processor instead. GPU and CPU are the usual abbreviations for the graphics processor and the main processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.cpu"
-msgid "The GPU model is unavailable here; the CPU models still work."
-msgstr "GPU 모델은 여기서 사용할 수 없으며, CPU 모델은 여전히 작동합니다."
+msgid "This device can't use the GPU, so the models run on the CPU."
+msgstr "이 기기는 GPU를 사용할 수 없어 모델이 CPU에서 실행됩니다."
 
-#. Verdict of the device check in Settings → Translation: the graphics processor is good enough for the large model. GPU is the usual abbreviation for the graphics processor.
+#. Line at the top of the model list in Settings → Translation on a device whose graphics processor can run translation models. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.gpu"
-msgid "This device can run the GPU model."
-msgstr "이 기기에서는 GPU 모델을 실행할 수 있습니다."
+msgid "This device can run models on the GPU."
+msgstr "이 기기는 GPU에서 모델을 실행할 수 있습니다."
 
 #. Verdict of the device check in Settings → Translation: no model can run at all. Any reasons follow as their own list.
 #: client/components/Settings/Translation.vue
@@ -12733,6 +12733,12 @@ msgctxt "translate.capability.reason.noF16"
 msgid "no 16-bit float shaders"
 msgstr "16비트 부동소수점 셰이더 없음"
 
+#. One reason, in a short list under the device verdict in Settings → Translation, that the language model cannot run on the main processor (CPU): the browser's WebAssembly has no 64-bit memory, which the language model needs because it is larger than 4 GB of address space. Keep 'WebAssembly'. Lowercase, a fragment like its siblings.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.capability.reason.noMemory64"
+msgid "no 64-bit WebAssembly memory"
+msgstr "64비트 WebAssembly 메모리 없음"
+
 #. One reason no model can run, listed under the device verdict in Settings → Translation: the browser lacks the WebAssembly SIMD instructions. Both are technical names.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noWasmSimd"
@@ -12751,11 +12757,11 @@ msgctxt "translate.capability.reason.probeFailed"
 msgid "the device check itself failed"
 msgstr "기기 검사 자체가 실패함"
 
-#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation. {limit} is what this device's graphics processor can bind in one buffer, {needed} what the smallest GPU model needs (its largest piece); both are sizes such as "128 MiB" (binary units, kept as they are). GPU is the usual abbreviation for the graphics processor.
+#. One reason the language model cannot run on the graphics processor, listed under the device verdict in Settings → Translation. {limit} is what this device's graphics processor can bind in one buffer, {needed} what the smallest build of the language model for the GPU needs (its largest piece); both are sizes such as "128 MiB" (binary units, kept as they are). GPU is the usual abbreviation for the graphics processor; the language model is a large AI model (Qwen3).
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.smallBuffer"
-msgid "The GPU binds at most {limit} in one buffer; the smallest GPU model needs {needed}"
-msgstr "이 GPU는 버퍼 하나에 최대 {limit}까지 바인딩할 수 있습니다. 가장 작은 GPU 모델에는 {needed}이(가) 필요합니다"
+msgid "The GPU binds at most {limit} in one buffer; the smallest build of the language model for the GPU needs {needed}"
+msgstr "GPU는 버퍼 하나에 최대 {limit}까지 바인딩할 수 있으며, GPU용 언어 모델의 가장 작은 빌드에는 {needed}이(가) 필요합니다"
 
 #. Settings → Translation, under the line that says how much the GPU can hold in one buffer. Shown only while a developer test setting pretends the graphics card is smaller than it is, to try what a phone gets. {size} is a data size with its unit, e.g. '128 MiB'. {key} is the name of the stored setting, e.g. 'thelounge.state.gpuTestLimitMiB' — never translate it. 'Storage' is the browser's local storage for this site.
 #: client/components/Settings/Translation.vue:89
@@ -12829,11 +12835,35 @@ msgctxt "translate.consent.text"
 msgid "Translating this needs {model}, a {size} download. It is kept on this device, so it is downloaded only once."
 msgstr "이 번역에는 {model}이(가) 필요하며 다운로드 크기는 {size}입니다. 이 기기에 보관되므로 한 번만 다운로드합니다."
 
+#. Body of the dialog asking before the CPU copy of a translation model is downloaded (title 'Download {model} for the CPU?'). {model} is the model's name as Settings lists it; {size} its download size with its unit, e.g. '938.4 MiB' or '2.1 GiB'. CPU is the usual abbreviation for the main processor. The buttons are 'Not now' and 'Download'.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.textCpu"
+msgid "Translating this needs {model} on the CPU, a {size} download. It is kept on this device, so it is downloaded only once."
+msgstr "이 번역에는 CPU용 {model}이(가) 필요하며 다운로드 크기는 {size}입니다. 이 기기에 보관되므로 한 번만 다운로드합니다."
+
+#. Body of the dialog asking before the GPU copy of a translation model is downloaded (title 'Download {model} for the GPU?'). {model} is the model's name as Settings lists it; {size} its download size with its unit, e.g. '938.4 MiB' or '2.1 GiB'. GPU is the usual abbreviation for the graphics processor. The buttons are 'Not now' and 'Download'.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.textGpu"
+msgid "Translating this needs {model} on the GPU, a {size} download. It is kept on this device, so it is downloaded only once."
+msgstr "이 번역에는 GPU용 {model}이(가) 필요하며 다운로드 크기는 {size}입니다. 이 기기에 보관되므로 한 번만 다운로드합니다."
+
 #. Title of the dialog that asks before a translation model is downloaded for the first time, because a translation (reading a channel, the composer, a message's Translate) needs it and it is not on this device yet. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)' or 'OPUS-MT German → English (CPU)'.
 #: client/js/translate/index.ts
 msgctxt "translate.consent.title"
 msgid "Download {model}?"
 msgstr "{model}을(를) 다운로드할까요?"
+
+#. Title of the dialog that asks before the CPU copy of a translation model is downloaded, when the model's usual copy is the graphics processor's (the language model). {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B'. CPU is the usual abbreviation for the main processor.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.titleCpu"
+msgid "Download {model} for the CPU?"
+msgstr "CPU용 {model}을(를) 다운로드할까요?"
+
+#. Title of the dialog that asks before the GPU copy of a translation model is downloaded, when the model's usual copy is the main processor's (OPUS-MT, NLLB-200). {model} is the model's name as Settings lists it, e.g. 'NLLB-200 600M (200 languages)'. GPU is the usual abbreviation for the graphics processor.
+#: client/js/translate/index.ts
+msgctxt "translate.consent.titleGpu"
+msgid "Download {model} for the GPU?"
+msgstr "GPU용 {model}을(를) 다운로드할까요?"
 
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
@@ -13086,11 +13116,11 @@ msgctxt "translate.model.failedUnknown"
 msgid "Failed: unknown error"
 msgstr "실패: 알 수 없는 오류"
 
-#. The name of a translation model in Settings → Translation: a large language model that runs on the graphics processor. {name} is the model's product name, never translated; GPU is the usual abbreviation for the graphics processor.
+#. The name of a translation model in Settings → Translation: a large language model, which runs on the graphics processor or the main processor. {name} is the model's product name, never translated.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.llm"
-msgid "{name} (GPU, all languages)"
-msgstr "{name} (GPU, 모든 언어)"
+msgid "{name} (all languages)"
+msgstr "{name} (모든 언어)"
 
 #. State of a model row in Settings → Translation: it is already on the device and is being loaded into memory. {percent} is a number from 0 to 100.
 #: client/components/Settings/Translation.vue
@@ -13098,18 +13128,18 @@ msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
 msgstr "로딩… {percent}%"
 
-#. Reason a GPU translation model cannot load here: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Shown under the model's row in Settings → Translation (its Download button greyed out) and, after a lead sentence such as 'Correcting a message needs the GPU model.', wherever an action needing that model is unavailable.
+#. Reason a GPU translation model cannot load here: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Shown under the model's row in Settings → Translation (its Download button greyed out) and, after a lead sentence such as 'Correcting a message needs the language model.', wherever an action needing that model is unavailable.
 #: client/components/Settings/Translation.vue
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.model.needsBuffer"
 msgid "Needs a GPU buffer of {needed}; this device binds at most {limit}"
 msgstr "{needed} 크기의 GPU 버퍼가 필요합니다. 이 기기는 최대 {limit}까지 바인딩할 수 있습니다"
 
-#. The name of a translation model in Settings → Translation. NLLB-200 600M is a product name; CPU is the usual abbreviation for the main processor; it covers 200 languages.
+#. The name of a translation model in Settings → Translation. NLLB-200 600M is a product name; it covers 200 languages.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.nllb"
-msgid "NLLB-200 600M (CPU, 200 languages)"
-msgstr "NLLB-200 600M (CPU, 200개 언어)"
+msgid "NLLB-200 600M (200 languages)"
+msgstr "NLLB-200 600M (200개 언어)"
 
 #. State of a model row in Settings → Translation: the model is not on this device yet.
 #: client/components/Settings/Translation.vue
@@ -13117,11 +13147,11 @@ msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
 msgstr "다운로드 안 됨"
 
-#. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
+#. The name of a translation model in Settings → Translation: an OPUS-MT pair. {from} and {to} are language names. OPUS-MT is a product name.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.opus"
-msgid "OPUS-MT {from} → {to} (CPU)"
-msgstr "OPUS-MT {from} → {to} (CPU)"
+msgid "OPUS-MT {from} → {to}"
+msgstr "OPUS-MT {from} → {to}"
 
 #. State of a model row in Settings → Translation while it downloads: how far it has got. {percent} is a number from 0 to 100.
 #: client/components/Settings/Translation.vue
@@ -13135,7 +13165,7 @@ msgctxt "translate.model.runsHere"
 msgid "Can run on this device"
 msgstr "이 기기에서 실행 가능"
 
-#. Settings → Translation, a line under the GPU model's row (Qwen3 1.7B) on a device whose graphics card cannot hold the model's largest piece in one buffer (most phones): the app then downloads and runs a special build of the same model whose pieces are smaller. {size} is a data size with its unit, already formatted, e.g. '74.2 MiB'. 'Buffer' is the graphics-card term (a block of GPU memory); 'build' means a compiled version of the same model.
+#. Settings → Translation, a line under the language model's row (Qwen3 1.7B) on a device whose graphics card cannot hold the model's largest piece in one buffer (most phones): the app then downloads and runs a special build of the same model whose pieces are smaller. {size} is a data size with its unit, already formatted, e.g. '74.2 MiB'. 'Buffer' is the graphics-card term (a block of GPU memory); 'build' means a compiled version of the same model.
 #: client/components/Settings/Translation.vue:213
 msgctxt "translate.model.smallBufferBuild"
 msgid "This GPU gets a build of the model made for small graphics buffers: its largest buffer is {size}."
@@ -13202,11 +13232,11 @@ msgctxt "translate.panel.on"
 msgid "On"
 msgstr "켬"
 
-#. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
+#. Note under the 'Send my messages in' picker of the translation panel, on a device that cannot run the language model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the language model (a large AI model) does. A reason sentence follows on its own line.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.ownLanguageNeedsGpu"
-msgid "{language} is greyed out: correcting a message needs the GPU model."
-msgstr "{language}은(는) 회색으로 표시됩니다: 메시지를 교정하려면 GPU 모델이 필요합니다."
+msgid "{language} is greyed out: correcting a message needs the language model."
+msgstr "{language}은(는) 회색으로 표시됩니다: 메시지를 교정하려면 언어 모델이 필요합니다."
 
 #. Explanatory note under the reading switch in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13316,12 +13346,12 @@ msgctxt "translate.picker.sameLanguage"
 msgid "Same language: spelling and grammar are corrected instead."
 msgstr "같은 언어: 대신 맞춤법과 문법을 교정합니다."
 
-#. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the GPU model can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
+#. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the language model (a large AI model) can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
 #: client/components/TranslationPanel.vue
 msgctxt "translate.picker.sameLanguageNeedsGpu"
-msgid "Correcting a message needs the GPU model."
-msgstr "메시지를 교정하려면 GPU 모델이 필요합니다."
+msgid "Correcting a message needs the language model."
+msgstr "메시지를 교정하려면 언어 모델이 필요합니다."
 
 #. Button that translates the draft into the language picked in the composer's translate-into dialog.
 #: client/components/SourceLanguagePicker.vue
@@ -13383,25 +13413,25 @@ msgctxt "translate.settings.disabled"
 msgid "Translation is turned off in this deployment."
 msgstr "이 배포에서는 번역이 꺼져 있습니다."
 
-#. The first option of the GPU model picker in Settings → Translation: the client picks the largest model the device can run.
+#. The first option of the language model picker in Settings → Translation: the client picks the largest model the device can run.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuAutomatic"
 msgid "Automatic — best for this device"
 msgstr "자동 — 이 기기에 가장 적합"
 
-#. Label of the picker in Settings → Translation that chooses which large graphics-processor model to use. GPU is the usual abbreviation for the graphics processor.
+#. Label of the language model picker in Settings → Translation: which large AI model (Qwen3 1.7B or 4B) the app uses to translate and to correct messages.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModel"
-msgid "GPU model"
-msgstr "GPU 모델"
+msgid "Language model"
+msgstr "언어 모델"
 
-#. Explanatory note under the GPU model picker in Settings → Translation.
+#. Explanatory note under the language model picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModelHint"
 msgid "The larger model translates more naturally, needs about 3.4 GB of graphics memory and is slower."
 msgstr "더 큰 모델은 더 자연스럽게 번역하지만, 약 3.4GB의 그래픽 메모리가 필요하고 더 느립니다."
 
-#. Line under the GPU model select in Settings → Translation, for a model that is greyed out in the select because this device's GPU cannot hold it. {model} is the model's name, e.g. 'Qwen3 4B'. Followed by a sentence of its own giving the reason, e.g. 'It needs a GPU that binds 185.5 MiB in one buffer; this one binds 160 MiB.'
+#. Line under the language model select in Settings → Translation, for a model that is greyed out in the select because this device's GPU cannot hold it. {model} is the model's name, e.g. 'Qwen3 4B'. Followed by a sentence of its own giving the reason, e.g. 'It needs a GPU that binds 185.5 MiB in one buffer; this one binds 160 MiB.'
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModelUnfit"
 msgid "{model} can't run on this device."
@@ -13413,7 +13443,7 @@ msgctxt "translate.settings.heading"
 msgid "Translation"
 msgstr "번역"
 
-#. Badge next to the model row in Settings → Translation that the GPU model picker currently selects.
+#. Badge next to the model row in Settings → Translation that the language model picker currently selects.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.inUse"
 msgid "In use"
@@ -13443,7 +13473,7 @@ msgctxt "translate.settings.languageLabel"
 msgid "Interface and reading language"
 msgstr "인터페이스 및 읽기 언어"
 
-#. One option of the GPU model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
+#. One option of the language model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.modelOption"
 msgid "{name} · {size}"
@@ -13461,19 +13491,19 @@ msgctxt "translate.settings.nllbLicence"
 msgid "NLLB-200 is licensed CC BY-NC 4.0: for non-commercial use only."
 msgstr "NLLB-200의 라이선스는 CC BY-NC 4.0으로, 비상업적 용도로만 쓸 수 있습니다."
 
-#. Label of the checkbox in Settings → Translation that allows the smaller main-processor models. CPU is the usual abbreviation for the main processor.
+#. Label of the checkbox in Settings → Translation that allows the small OPUS-MT translation models (one per language pair). OPUS-MT is a product name, never translated.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useCpu"
-msgid "Use the CPU models where they are the better choice"
-msgstr "CPU 모델이 더 나을 때 CPU 모델 사용"
+msgid "Use OPUS-MT where it is the better choice"
+msgstr "더 나은 경우 OPUS-MT 사용"
 
-#. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
+#. Label of the checkbox in Settings → Translation that allows the language model (a large AI model). {model} is its product name, e.g. 'Qwen3 1.7B', never translated.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useGpu"
-msgid "Use the GPU model where it is the better choice"
-msgstr "GPU 모델이 더 나을 때 GPU 모델 사용"
+msgid "Use {model} where it is the better choice"
+msgstr "더 나은 경우 {model} 사용"
 
-#. Switch in Settings → Translation, under 'Use the CPU models where they are the better choice': lets the router use the NLLB-200 model (CPU, 200 languages). Off by default. NLLB-200 is a model name, never translated.
+#. Switch in Settings → Translation, under 'Use OPUS-MT where it is the better choice': lets the router use the NLLB-200 model (200 languages). Off by default; its own switch, independent of OPUS-MT's. NLLB-200 is a model name, never translated.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.useNllb"
 msgid "Use NLLB-200 for languages the other models do not cover"
@@ -13563,6 +13593,20 @@ msgctxt "translate.strip.sourceAuto"
 msgid "auto"
 msgstr "자동"
 
+#. Line under the CPU models in Settings → Translation: the language model would run on {count} processor threads (CPU) after the app is reloaded; this page cannot use more than one yet. {count} is that number, 2 or more in practice. A thread is a parallel strand of computation.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.threads.reload"
+msgid "Reload the app to use {count} CPU thread."
+msgid_plural "Reload the app to use {count} CPU threads."
+msgstr[0] "CPU 스레드 {count}개를 사용하려면 앱을 다시 불러오세요."
+
+#. Line under the CPU models in Settings → Translation: how many processor threads the language model uses on the main processor (CPU). {count} is that number, always 1 or more. A thread is a parallel strand of computation.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.threads.using"
+msgid "Uses {count} CPU thread."
+msgid_plural "Uses {count} CPU threads."
+msgstr[0] "CPU 스레드 {count}개를 사용 중입니다."
+
 #. Tooltip and aria-label of the small button before a translated channel topic in the chat header; pressing it shows the topic as it was set.
 #: client/components/Chat.vue
 msgctxt "translate.topic.showOriginal"
@@ -13588,47 +13632,59 @@ msgctxt "translate.unchangedReason"
 msgid "the line came back unchanged"
 msgstr "줄이 바뀌지 않은 채 돌아왔습니다"
 
-#. Reason nothing can translate: the user turned off both engine switches. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#. Reason nothing can translate: the user turned off the language model and OPUS-MT. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. OPUS-MT is a product name.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.allOff"
-msgid "Both the GPU model and the CPU models are switched off in Settings → Translation."
-msgstr "GPU 모델과 CPU 모델이 모두 설정 → 번역에서 꺼져 있습니다."
+msgid "The language model and OPUS-MT are both switched off in Settings → Translation."
+msgstr "언어 모델과 OPUS-MT가 모두 설정 → 번역에서 꺼져 있습니다."
 
-#. Reason a translation cannot run: the user turned off the 'Use the CPU models' switch. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#. Reason a translation cannot run: the user turned off the OPUS-MT switch. OPUS-MT is a product name, never translated. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.cpuOff"
-msgid "The CPU models are switched off in Settings → Translation."
-msgstr "CPU 모델이 설정 → 번역에서 꺼져 있습니다."
+msgid "OPUS-MT is switched off in Settings → Translation."
+msgstr "OPUS-MT가 설정 → 번역에서 꺼져 있습니다."
 
-#. Reason a translation cannot run: the one model that serves it failed to load earlier in this session and is skipped until the page is reloaded. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason a translation cannot run: the one model that serves it failed to load earlier in this session and is skipped until the page is reloaded. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.down"
 msgid "The model for this failed to load earlier; reload the page to try it again."
 msgstr "이에 필요한 모델을 앞서 불러오지 못했습니다. 다시 시도하려면 페이지를 새로고침하세요."
 
-#. Reason a GPU translation model cannot run: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason a translation cannot run: the user answered 'Not now' when asked to download the CPU copy of a model, and it is not on this device yet. Shown under a translated line that failed (cut at about 120 characters there, so keep it short), in the composer's translation strip and in the translation controls. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B'; {size} its download size with its unit, e.g. '938.4 MiB'. CPU is the usual abbreviation for the main processor. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.downloadCpu"
+msgid "Needs {model} for the CPU, a {size} download: get it in Settings → Translation."
+msgstr "CPU용 {model}이(가) 필요합니다({size} 다운로드): 설정 → 번역에서 다운로드하세요."
+
+#. Reason a translation cannot run: the user answered 'Not now' when asked to download the GPU copy of a model, and it is not on this device yet. Shown under a translated line that failed (cut at about 120 characters there, so keep it short), in the composer's translation strip and in the translation controls. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B'; {size} its download size with its unit, e.g. '938.4 MiB'. GPU is the usual abbreviation for the graphics processor. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.downloadGpu"
+msgid "Needs {model} for the GPU, a {size} download: get it in Settings → Translation."
+msgstr "GPU용 {model}이(가) 필요합니다({size} 다운로드): 설정 → 번역에서 다운로드하세요."
+
+#. Reason a translation model cannot run on the graphics processor: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. GPU is the usual abbreviation for the graphics processor.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.gpuLimits"
-msgid "This GPU's shader limits are too low for the GPU models."
-msgstr "이 GPU의 셰이더 한도가 GPU 모델에 비해 너무 낮습니다."
+msgid "This GPU's shader limits are too low to run models on it."
+msgstr "이 GPU의 셰이더 한도가 너무 낮아 모델을 실행할 수 없습니다."
 
-#. Reason a GPU translation model cannot run: the page is plain HTTP. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebGPU', 'HTTPS' and 'localhost'.
+#. Reason a translation model cannot run on the graphics processor: the page is plain HTTP. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. Keep 'WebGPU', 'HTTPS' and 'localhost'; GPU is the usual abbreviation for the graphics processor.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.insecureOrigin"
-msgid "WebGPU needs the app served over HTTPS (or from localhost), so the GPU models can't run here."
-msgstr "WebGPU는 앱이 HTTPS(또는 localhost)로 제공되어야 하므로 여기서는 GPU 모델을 실행할 수 없습니다."
+msgid "WebGPU needs the app served over HTTPS (or from localhost), so models can't run on the GPU here."
+msgstr "WebGPU를 쓰려면 앱을 HTTPS(또는 localhost)로 제공해야 하므로 여기서는 모델을 GPU에서 실행할 수 없습니다."
 
-#. Reason a translation cannot run: the user turned off the 'Use the GPU model' switch. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
+#. Reason a translation cannot run: the user turned off the language model's switch. {model} is its product name, e.g. 'Qwen3 1.7B', never translated. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.llmOff"
-msgid "The GPU model is switched off in Settings → Translation."
-msgstr "GPU 모델이 설정 → 번역에서 꺼져 있습니다."
+msgid "{model} is switched off in Settings → Translation."
+msgstr "{model}이(가) 설정 → 번역에서 꺼져 있습니다."
 
-#. Reason a translation cannot run: this language pair can be served by the GPU model or by NLLB-200 (no smaller CPU model covers it), and the user has switched both off — turning either one on in Settings → Translation would make it work. NLLB-200 is a model's name; GPU is the usual abbreviation for the graphics processor. Shown wherever a translation action is unavailable (Settings → Translation, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own.
+#. Reason a translation cannot run: this language pair can be served by the language model or by NLLB-200 (no smaller OPUS-MT model covers it), and the user has switched both off — turning either one on in Settings → Translation would make it work. {model} is the language model's product name, e.g. 'Qwen3 1.7B'; NLLB-200 is a model's name; all never translated. Shown wherever a translation action is unavailable, as a sentence of its own.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.llmOrNllbOff"
-msgid "This needs the GPU model or NLLB-200, and both are switched off in Settings → Translation."
-msgstr "GPU 모델이나 NLLB-200이 필요하지만 둘 다 설정 → 번역에서 꺼져 있습니다."
+msgid "This needs {model} or NLLB-200, and both are switched off in Settings → Translation."
+msgstr "이 작업에는 {model} 또는 NLLB-200이 필요한데, 둘 다 설정 → 번역에서 꺼져 있습니다."
 
 #. Reason a translation did not run: the user answered 'Not now' when asked to download the model it needs, and it is not on this device yet. Shown under a translated line that failed (cut at about 120 characters there, so keep it short), in the composer's translation strip and in the translation controls. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)'; {size} its download size with its unit, e.g. '938.4 MiB'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
@@ -13642,37 +13698,49 @@ msgctxt "translate.why.nllbOff"
 msgid "This needs NLLB-200, which is switched off in Settings → Translation."
 msgstr "NLLB-200이 필요하지만 설정 → 번역에서 꺼져 있습니다."
 
-#. Reason a GPU translation model cannot run: WebGPU exists but returned no graphics adapter. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason a GPU translation model cannot run: WebGPU exists but returned no graphics adapter. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.noAdapter"
 msgid "This browser has WebGPU but found no GPU it can use."
 msgstr "이 브라우저에는 WebGPU가 있지만 사용할 수 있는 GPU를 찾지 못했습니다."
 
-#. Reason a GPU translation model cannot run: the graphics card lacks half-precision (16-bit floating point) shader support. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason a translation cannot run: the user pinned the language model to the CPU but chose a model (the larger Qwen3 4B) that has no CPU version. {model} is the chosen model's product name, {choice} the smaller model's ('Qwen3 1.7B'), which does have one; both never translated. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noCpuCopy"
+msgid "{model} can't run on the CPU. Choose {choice} to run it there."
+msgstr "{model}은(는) CPU에서 실행할 수 없습니다. CPU에서 실행하려면 {choice}을(를) 선택하세요."
+
+#. Reason a translation model cannot run on the graphics processor: the graphics card lacks half-precision (16-bit floating point) shader support. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.noF16"
-msgid "This GPU has no 16-bit float shaders, which the GPU models need."
-msgstr "이 GPU에는 GPU 모델에 필요한 16비트 부동소수점 셰이더가 없습니다."
+msgid "This GPU has no 16-bit float shaders, which models need to run on the GPU."
+msgstr "이 GPU에는 모델이 GPU에서 실행되는 데 필요한 16비트 부동 소수점 셰이더가 없습니다."
 
-#. Reason the CPU translation models cannot run. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. Keep 'WebAssembly SIMD'.
+#. Reason the language model (a large AI model) cannot run on the main processor (CPU): the browser's WebAssembly has no 64-bit memory, which the model needs. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. Keep 'WebAssembly'.
+#: client/js/helpers/translateWhy.ts
+msgctxt "translate.why.noMemory64"
+msgid "This browser can't run the language model on the CPU (it has no 64-bit WebAssembly memory)."
+msgstr "이 브라우저는 언어 모델을 CPU에서 실행할 수 없습니다(64비트 WebAssembly 메모리가 없습니다)."
+
+#. Reason a translation model cannot run on the main processor (CPU). Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. Keep 'WebAssembly SIMD'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.noWasmSimd"
-msgid "This browser has no WebAssembly SIMD, which the CPU models need."
-msgstr "이 브라우저에는 CPU 모델에 필요한 WebAssembly SIMD가 없습니다."
+msgid "This browser has no WebAssembly SIMD, which models need to run on the CPU."
+msgstr "이 브라우저에는 모델이 CPU에서 실행되는 데 필요한 WebAssembly SIMD가 없습니다."
 
-#. Reason a GPU translation model cannot run. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'WebGPU' is a browser API name, keep it.
+#. Reason a translation model cannot run on the graphics processor. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. 'WebGPU' is a browser API name, keep it.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.noWebgpu"
-msgid "This browser has no WebGPU, which the GPU models need."
-msgstr "이 브라우저에는 GPU 모델에 필요한 WebGPU가 없습니다."
+msgid "This browser has no WebGPU, which models need to run on the GPU."
+msgstr "이 브라우저에는 모델이 GPU에서 실행되는 데 필요한 WebGPU가 없습니다."
 
-#. Reason a GPU translation model cannot run on this phone or tablet: the model is too large for the memory a mobile browser gives one page, whatever the graphics processor. Shown under the model's row in Settings → Translation (after 'Can't run on this device', its Download button greyed out), under the GPU model select after '{model} can't run on this device.' (the select's own hint above it gives the model's memory size), and wherever an action needing that model is unavailable, as a sentence of its own after a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason a GPU translation model cannot run on this phone or tablet: the model is too large for the memory a mobile browser gives one page, whatever the graphics processor. Shown under the model's row in Settings → Translation (after 'Can't run on this device', its Download button greyed out), under the language model select after '{model} can't run on this device.' (the select's own hint above it gives the model's memory size), and wherever an action needing that model is unavailable, as a sentence of its own after a lead sentence such as 'Correcting a message needs the language model.'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.phoneMemory"
 msgid "It needs more memory than a phone or tablet lets a web page use."
 msgstr "휴대폰이나 태블릿이 웹 페이지에 허용하는 것보다 많은 메모리가 필요합니다."
 
-#. Reason nothing can translate: the app's check of the device's GPU and CPU features threw an error. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason nothing can translate: the app's check of the device's GPU and CPU features threw an error. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.probeFailed"
 msgid "Checking what this device can run failed, so translation is off."
@@ -13685,7 +13753,7 @@ msgctxt "translate.why.probing"
 msgid "Still checking what this device can run…"
 msgstr "이 기기에서 실행할 수 있는 것을 아직 확인하는 중입니다…"
 
-#. Reason a translation cannot run: no installed translation model translates between the two languages asked for. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
+#. Reason a translation cannot run: no installed translation model translates between the two languages asked for. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.unserved"
 msgid "No model on this device covers this pair of languages."

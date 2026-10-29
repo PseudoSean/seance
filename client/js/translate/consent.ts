@@ -57,12 +57,18 @@ export interface DownloadNeed {
 	id: string;
 	sizeBytes: number;
 	label: ModelRef["label"];
+	/** The copy it is about, when the caller knew it. */
+	device?: Device;
 }
 
 /** `device` names the copy whose size the reason gives; absent, the listed one's. */
 export function needsDownloadError(ref: ModelRef, device?: Device): string {
 	const sizeBytes = (device && ref.copies[device]?.sizeBytes) ?? listedSize(ref);
 	const need: DownloadNeed = {id: ref.id, sizeBytes, label: ref.label};
+
+	if (device) {
+		need.device = device;
+	}
 
 	return `${NEEDS_DOWNLOAD}: ${JSON.stringify(need)}`;
 }

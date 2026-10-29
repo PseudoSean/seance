@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {before, describe, it} from "mocha";
 import enCatalog from "../../client/locales/en.json";
 import {setCatalog} from "../../client/js/i18n/core";
-import {translateWhyText} from "../../client/js/helpers/translateWhy";
+import {threadsText, translateWhyText} from "../../client/js/helpers/translateWhy";
 import {translateErrorText} from "../../client/js/helpers/translateErrors";
 import type {RouteBlock} from "../../client/js/translate/router";
 import {buildCatalog, listedSize, type DeviceReason} from "../../client/js/translate/models";
@@ -28,15 +28,55 @@ describe("translateWhyText", () => {
 	const cases: Array<[RouteBlock, string]> = [
 		[{kind: "disabled"}, "translate.settings.disabled"],
 		[{kind: "probing"}, "translate.why.probing"],
-		[{kind: "off", engine: "llm"}, "translate.why.llmOff"],
 		[{kind: "off", engine: "opus"}, "translate.why.cpuOff"],
 		[{kind: "off", engine: "all"}, "translate.why.allOff"],
 		[{kind: "down"}, "translate.why.down"],
 		[{kind: "unserved"}, "translate.why.unserved"],
 		[{kind: "off", engine: "nllb"}, "translate.why.nllbOff"],
-		[{kind: "off", engine: "llmOrNllb"}, "translate.why.llmOrNllbOff"],
 		[{kind: "source"}, "translate.why.unserved"],
 	];
+
+	it("names the language model in its switch's reason, and the pair-serving ones as they are", () => {
+		expect(translateWhyText({kind: "off", engine: "llm"})).to.equal(
+			"Qwen3 1.7B is switched off in Settings → Translation."
+		);
+		expect(translateWhyText({kind: "off", engine: "llm"}, "Qwen3 4B")).to.equal(
+			"Qwen3 4B is switched off in Settings → Translation."
+		);
+		expect(translateWhyText({kind: "off", engine: "opus"})).to.equal(
+			"OPUS-MT is switched off in Settings → Translation."
+		);
+		expect(translateWhyText({kind: "off", engine: "all"})).to.equal(
+			"The language model and OPUS-MT are both switched off in Settings → Translation."
+		);
+		expect(translateWhyText({kind: "off", engine: "llmOrNllb"}, "Qwen3 4B")).to.equal(
+			"This needs Qwen3 4B or NLLB-200, and both are switched off in Settings → Translation."
+		);
+	});
+
+	it("says a model without a CPU copy cannot run on the CPU, and which one to choose", () => {
+		expect(translateWhyText({kind: "noCopy", device: "cpu"}, "Qwen3 4B")).to.equal(
+			"Qwen3 4B can't run on the CPU. Choose Qwen3 1.7B to run it there."
+		);
+	});
+
+	it("says which device a declined download was for, with that copy's size", () => {
+		const llm = buildCatalog().llm;
+		const opus = buildCatalog().opus["de-en"];
+		const gpu = translateWhyText({kind: "download", ref: llm, device: "gpu"});
+		const cpu = translateWhyText({kind: "download", ref: llm, device: "cpu"});
+
+		expect(gpu).to.match(
+			/^Needs Qwen3 1\.7B \(all languages\) for the GPU, a [\d.]+ \w+ download/
+		);
+		expect(cpu).to.match(
+			/^Needs Qwen3 1\.7B \(all languages\) for the CPU, a [\d.]+ \w+ download/
+		);
+		expect(gpu).to.not.equal(cpu);
+		expect(translateWhyText({kind: "download", ref: opus, device: "gpu"})).to.include(
+			"OPUS-MT German → English for the GPU"
+		);
+	});
 
 	for (const [block, key] of cases) {
 		it(`says ${key} for ${JSON.stringify(block)}`, () => {
@@ -53,8 +93,7 @@ describe("translateWhyText", () => {
 			GPU_LIMITS: "translate.why.gpuLimits",
 			NO_WASM_SIMD: "translate.why.noWasmSimd",
 			PROBE_FAILED: "translate.why.probeFailed",
-			// Interim (Task 9 words it): the nearest sentence, WebAssembly's.
-			NO_MEMORY64: "translate.why.noWasmSimd",
+			NO_MEMORY64: "translate.why.noMemory64",
 		};
 
 		for (const [reason, key] of Object.entries(reasons)) {
@@ -64,9 +103,12 @@ describe("translateWhyText", () => {
 			).to.equal(en[key]);
 		}
 
-		// Seven reasons, seven sentences: none falls to another's (NO_MEMORY64
-		// borrows NO_WASM_SIMD's until Task 9).
-		expect(new Set(Object.values(reasons).map((key) => en[key])).size).to.equal(7);
+		// Eight reasons, eight sentences: none falls to another's.
+		expect(new Set(Object.values(reasons).map((key) => en[key])).size).to.equal(8);
+
+		// Each says which device it is about.
+		expect(en["translate.why.noMemory64"]).to.include("on the CPU");
+		expect(en["translate.why.noWebgpu"]).to.include("on the GPU");
 	});
 
 	it("says a phone cannot hold a model", () => {
@@ -136,13 +178,20 @@ describe("translateErrorText", () => {
 
 	it("words a declined download with the model and its size, as the router's reason does", () => {
 		const ref = buildCatalog().llm;
-		const expected = en["translate.why.needsDownload"]
-			.replace("{model}", en["translate.model.llm"].replace("{name}", "Qwen3 1.7B"))
-			.replace("{size}", friendlysize(listedSize(ref)));
+		const model = en["translate.model.llm"].replace("{name}", "Qwen3 1.7B");
+		const size = friendlysize(listedSize(ref));
+		const plain = en["translate.why.needsDownload"]
+			.replace("{model}", model)
+			.replace("{size}", size);
+		const forGpu = en["translate.why.downloadGpu"]
+			.replace("{model}", model)
+			.replace("{size}", size);
 
-		expect(translateErrorText(needsDownloadError(ref))).to.equal(expected);
-		expect(translateWhyText({kind: "download", ref, device: "gpu"})).to.equal(expected);
-		expect(expected).to.include("Qwen3 1.7B").and.include("MiB");
+		// A reason that does not know the copy's device says the plain sentence.
+		expect(translateErrorText(needsDownloadError(ref))).to.equal(plain);
+		expect(translateErrorText(needsDownloadError(ref, "gpu"))).to.equal(forGpu);
+		expect(translateWhyText({kind: "download", ref, device: "gpu"})).to.equal(forGpu);
+		expect(forGpu).to.include("Qwen3 1.7B").and.include("MiB");
 	});
 
 	it("names an OPUS-MT pair by its languages", () => {
@@ -156,5 +205,21 @@ describe("translateErrorText", () => {
 	it("words the queue's own codes", () => {
 		expect(translateErrorText(TIMED_OUT)).to.equal(en["translate.error.timedOut"]);
 		expect(translateErrorText(ABORTED)).to.equal(en["translate.error.aborted"]);
+	});
+});
+
+describe("threadsText", () => {
+	before(() => {
+		setCatalog("en", enCatalog, undefined);
+	});
+
+	it("says how many CPU threads are in use, or would be after a reload", () => {
+		expect(threadsText("isolated", 4)).to.equal("Uses 4 CPU threads.");
+		expect(threadsText("isolated", 1)).to.equal("Uses 1 CPU thread.");
+		expect(threadsText("reload", 4)).to.equal("Reload the app to use 4 CPU threads.");
+	});
+
+	it("says nothing where the page can never be isolated", () => {
+		expect(threadsText("unsupported", 4)).to.equal("");
 	});
 });

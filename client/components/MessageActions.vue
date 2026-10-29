@@ -124,6 +124,7 @@ import {loadEmojiCatalog} from "../js/helpers/emoji";
 import {
 	channelTranslation,
 	currentTranslationBlock,
+	liveLlmName,
 	readingLanguage,
 	retranslate,
 	showOriginal,
@@ -349,7 +350,7 @@ export default defineComponent({
 
 			const block = currentTranslationBlock();
 
-			return block ? translateWhyText(block) : "";
+			return block ? translateWhyText(block, liveLlmName()) : "";
 		});
 		const translateWhyId = `msg-translate-why-${props.message.id}`;
 

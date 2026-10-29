@@ -1914,6 +1914,7 @@ describe("translate/service", () => {
 				id: catalog.llm.id,
 				sizeBytes: catalog.llm.copies.gpu!.sizeBytes,
 				label: catalog.llm.label,
+				device: "gpu",
 			});
 			// The rest of the session: no question, the same answer, for any pair.
 			expect(await r.service.resolve("fr", "en")).to.deep.include({route: null});

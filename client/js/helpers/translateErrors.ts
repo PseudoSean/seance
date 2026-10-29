@@ -49,7 +49,7 @@ export function translateErrorText(error: string, explain?: () => string): strin
 	const need = parseNeedsDownload(error);
 
 	if (need) {
-		return needsDownloadText(need);
+		return needsDownloadText(need, need.device);
 	}
 
 	if (error === TRANSLATION_UNAVAILABLE) {

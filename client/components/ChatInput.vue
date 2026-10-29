@@ -297,6 +297,7 @@ import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
 import {draftGate, onceTargetDefault, sendableTranslation} from "../js/translate/outgoing";
 import {
 	channelTranslation,
+	liveLlmName,
 	pairVerdict,
 	readingLanguage,
 	setChannelOptions,
@@ -733,7 +734,9 @@ export default defineComponent({
 				const entry = outgoing.value;
 				const verdict = entry ? pairVerdict(entry.from, entry.to) : null;
 
-				return verdict && !verdict.route ? translateWhyText(verdict.why) : "";
+				return verdict && !verdict.route
+					? translateWhyText(verdict.why, liveLlmName())
+					: "";
 			})
 				.replace(/\s+/g, " ")
 				.trim();

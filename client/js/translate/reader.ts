@@ -35,7 +35,7 @@ import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} f
 import {namesFor} from "./names";
 import {fromLocaleTag} from "./languages";
 import {needsDownloadError} from "./consent";
-import {type ModelBlock, selectLlm} from "./models";
+import {type ModelBlock, llmName, selectLlm} from "./models";
 import {type RouteVerdict, explainRoute, routeInput, translationBlock} from "./router";
 import {serviceSettings, setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
@@ -179,6 +179,11 @@ function liveCatalog() {
 		store.state.translation.capability,
 		serviceSettings().devices.llm
 	);
+}
+
+/** The language model in use, by its product name (the words of a reason that names it). */
+export function liveLlmName(): string {
+	return llmName(liveCatalog().llm);
 }
 
 /**

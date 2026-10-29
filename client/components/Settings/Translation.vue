@@ -107,7 +107,7 @@
 					type="checkbox"
 					name="translateLlm"
 				/>
-				{{ t("translate.settings.useGpu") }}
+				{{ t("translate.settings.useGpu", {model: llmName(selectedLlm)}) }}
 			</label>
 			<label class="opt">
 				<input
@@ -170,7 +170,7 @@
 			<div v-if="unfitLlms.length" id="translate-llm-unfit" class="translate-hint">
 				<p v-for="choice in unfitLlms" :key="choice.id" class="translate-llm-unfit">
 					{{ t("translate.settings.gpuModelUnfit", {model: llmName(choice)}) }}
-					{{ whyText(llmUnfit(choice)!) }}
+					{{ whyText(llmUnfit(choice)!, llmName(choice)) }}
 				</p>
 			</div>
 			<ul class="translate-models">
@@ -552,9 +552,8 @@ export default defineComponent({
 					});
 				case "NO_WASM_SIMD":
 					return t("translate.capability.reason.noWasmSimd");
-				// Task 9 words this: interim, the nearest phrase (WebAssembly).
 				case "NO_MEMORY64":
-					return t("translate.capability.reason.noWasmSimd");
+					return t("translate.capability.reason.noMemory64");
 				case "PROBE_FAILED":
 					return t("translate.capability.reason.probeFailed");
 
@@ -667,7 +666,7 @@ export default defineComponent({
 			const block = blockOf(modelRef);
 
 			return block && block.kind !== "off" && block.kind !== "probing"
-				? translateWhyText(block)
+				? translateWhyText(block, modelRef.engine === "llm" ? llmName(modelRef) : undefined)
 				: "";
 		};
 

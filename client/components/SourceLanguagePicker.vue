@@ -85,7 +85,7 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
 import {collator} from "../js/i18n/collation";
 import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
-import {pairVerdict, readingLanguage} from "../js/translate/reader";
+import {liveLlmName, pairVerdict, readingLanguage} from "../js/translate/reader";
 import {translateWhyText} from "../js/helpers/translateWhy";
 
 let pickers = 0;
@@ -188,7 +188,7 @@ export default defineComponent({
 		const blockedWhy = computed(() => {
 			const v = verdict.value;
 
-			return v && !v.route ? translateWhyText(v.why) : "";
+			return v && !v.route ? translateWhyText(v.why, liveLlmName()) : "";
 		});
 
 		// A target that is the source is a cleanup pass, not a translation:

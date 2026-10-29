@@ -250,6 +250,7 @@ import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
 import {
 	channelTranslation,
 	currentTranslationBlock,
+	liveLlmName,
 	pairVerdict,
 	readingLanguage,
 	setChannelOptions,
@@ -368,7 +369,7 @@ export default defineComponent({
 		const blockedWhy = computed(() => {
 			const block = currentTranslationBlock();
 
-			return block ? translateWhyText(block) : "";
+			return block ? translateWhyText(block, liveLlmName()) : "";
 		});
 
 		// Writing in `code` is a translation from the language the user reads
@@ -404,7 +405,7 @@ export default defineComponent({
 					: verdict.polish
 					? t("translate.picker.sameLanguageNeedsGpu")
 					: t("translate.pair.unavailable", {from: name(reading), to: name(code)}),
-				why: translateWhyText(verdict.why),
+				why: translateWhyText(verdict.why, liveLlmName()),
 			};
 		});
 

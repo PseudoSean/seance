@@ -14,7 +14,7 @@ import {probeOnce} from "./capability";
 import {emptyContext, type Device, type ModelRef} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {buildCatalog, listedSize, normalizeDeviceChoice} from "./models";
+import {buildCatalog, listedSize, nativeDevice, normalizeDeviceChoice} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
 import {ServiceDeps, ServiceSettings, TranslateService} from "./service";
@@ -97,17 +97,43 @@ function meteredConnection(): boolean {
 	return !!connection && (connection.saveData === true || connection.type === "cellular");
 }
 
+/**
+ * The question's title, a whole sentence per device: the model's usual
+ * copy (the GPU's for the language model, the CPU's for the others) asks
+ * with the plain title, the other device's names its device.
+ */
+function consentTitle(model: string, device: Device, usual: Device): string {
+	if (device === usual) {
+		return t("translate.consent.title", {model});
+	}
+
+	return device === "cpu"
+		? t("translate.consent.titleCpu", {model})
+		: t("translate.consent.titleGpu", {model});
+}
+
+function consentText(model: string, device: Device, usual: Device, size: string): string {
+	if (device === usual) {
+		return t("translate.consent.text", {model, size});
+	}
+
+	return device === "cpu"
+		? t("translate.consent.textCpu", {model, size})
+		: t("translate.consent.textGpu", {model, size});
+}
+
 /** The download question, in the app's confirm dialog (ConfirmDialog.vue): the copy's own size. */
 function askDownload(ref: ModelRef, device: Device): Promise<boolean> {
 	const model = modelDisplayName(ref);
 	const sizeBytes = ref.copies[device]?.sizeBytes ?? listedSize(ref);
+	const usual = nativeDevice(ref);
 
 	return new Promise((resolve) => {
 		eventbus.emit(
 			"confirm-dialog",
 			{
-				title: t("translate.consent.title", {model}),
-				text: t("translate.consent.text", {model, size: friendlysize(sizeBytes)}),
+				title: consentTitle(model, device, usual),
+				text: consentText(model, device, usual, friendlysize(sizeBytes)),
 				note: meteredConnection() ? t("translate.consent.metered") : undefined,
 				button: t("translate.model.download"),
 				cancel: t("translate.consent.notNow"),
