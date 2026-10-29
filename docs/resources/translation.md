@@ -548,7 +548,7 @@ What each copy needs (`models.ts` `modelBlock`, per device):
   `memory` block; the 4B has no CPU copy at all.
 
 **Auto's device order is a placeholder until measured on real GPUs**
-(`router.ts` `deviceOrder`): the language model, GPU only (a single-threaded
+(`models.ts` `deviceOrder`): the language model, GPU only (a single-threaded
 language model reading a channel waits tens of seconds per batch; it runs on
 the CPU only when the user pins it); NLLB-200, GPU then CPU where its GPU copy
 fits (never a phone), else CPU; OPUS-MT, CPU then GPU on a phone (the models

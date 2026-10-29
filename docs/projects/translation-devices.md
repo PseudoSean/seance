@@ -1,6 +1,6 @@
 # Translation devices: every model on the GPU or the CPU
 
-Status: built 2026-10-29 on wild-international (671090ac..DOCSHA). Approved in
+Status: built 2026-10-29 on wild-international (671090ac..47157490). Approved in
 conversation from the mockup (Settings → Translation → Models on a phone and
 on a desktop).
 
