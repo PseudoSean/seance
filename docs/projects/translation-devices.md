@@ -48,9 +48,8 @@ CPU models"). This design separates the model from the device.
 
 ## Non-goals
 
-- Multithreaded WebAssembly. GitHub Pages cannot send the cross-origin
-  isolation headers, so the CPU runs on one thread; a service-worker shim
-  for isolation is a later project.
+- (Was: multithreaded WebAssembly. The user asked for it on 2026-10-29;
+  see § Multithreading.)
 - More devices: a laptop's integrated vs dedicated GPU, Chrome's software
   GPU, the NPU through WebNN.
 - A device per OPUS pair.
@@ -272,6 +271,46 @@ the sandbox's desktop CPU (builder's call within that target).
 - The composer's and the panel's reasons, the header button, the toolbar's
   Translate and the consent dialog all name the device where it matters
   ("Download Qwen3 1.7B for the CPU? 1.6 GB").
+
+## Multithreading (added 2026-10-29, the user: "add multithreading with the service worker workaround too")
+
+The spike measured the CPU at about 1.2 tokens a second on one thread: a
+composer translation with context took 107 s. Multithreaded WebAssembly
+needs a cross-origin-isolated page, which a deploy that sets headers
+already gets (`docs/resources/branding.md` § Threads, `tools/serve.py`) and
+GitHub Pages cannot. So the app's own service worker supplies the headers.
+
+- **The root service worker** (`client/service-worker.js`, not the
+  push-only workers under `push/<uuid>/`) adds
+  `Cross-Origin-Opener-Policy: same-origin` and
+  `Cross-Origin-Embedder-Policy: credentialless` to every response it
+  serves for the app's documents (navigations) and for the app's own
+  worker scripts (`request.destination === "worker"`, same origin), from
+  the network and from the shell cache alike.
+- **`credentialless`, not `require-corp` (my call):** link-preview images,
+  video and audio, the uploader and a model mirror keep loading without
+  any header of their own; they are fetched without cookies. The app
+  embeds no iframes. `COOP: same-origin` severs `window.opener` between
+  the app and windows of other origins; the app opens links in new tabs
+  and relies on no opener.
+- **WebKit does not support `credentialless`:** Safari and every iOS
+  browser stay single-threaded (the CPU language model is blocked there on
+  memory anyway). Nothing else changes for them.
+- **No forced reload (my call):** a page is isolated only once the worker
+  controls it — from the second load on, and always in an installed app.
+  The app never reloads itself for it; Settings says when a reload would
+  bring threads ("Reload the app to use 4 CPU threads").
+- **Threads:** the CPU language model runs wllama's multithreaded build
+  when the worker is isolated, with `cpuThreads(hardwareConcurrency,
+  mobile)` threads: on a phone at most 4 (its little cores hold the big
+  ones back), on a computer a cap measured on this host (1, 2, 4, 8
+  threads timed; the cap is the count past which the gain is under 15 %),
+  never more than `hardwareConcurrency - 1`. The seq2seq models take
+  onnxruntime-web's own thread default, which already follows isolation
+  (`seq2seq.real.ts` `threads`).
+- **The batch and the deadline** (`CPU_BATCH_MAX_LINES`,
+  `CPU_REQUEST_TIMEOUT_MS`) stay as measured single-threaded: they are the
+  floor a non-isolated page needs.
 
 ## First step: the spike (measure, then build)
 
