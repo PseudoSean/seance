@@ -188,11 +188,11 @@ describe("translate/service and the small-buffer build", () => {
 
 		r.releaseProbe();
 		await r.service.capabilities();
-		await r.service.download(r.service.catalog.llm).catch(() => undefined);
+		await r.service.download(r.service.catalog.llm, "gpu").catch(() => undefined);
 		expect(r.store.has(QWEN3_1_7B_SPLIT_ID)).to.equal(true);
 		expect(r.store.has(QWEN3_1_7B_ID)).to.equal(false);
 
-		await r.service.deleteModel(r.service.catalog.llm);
+		await r.service.remove(r.service.catalog.llm, "gpu");
 		expect(r.store.has(QWEN3_1_7B_SPLIT_ID)).to.equal(false);
 		r.service.dispose();
 	});

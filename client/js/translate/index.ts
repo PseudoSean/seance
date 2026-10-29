@@ -11,7 +11,7 @@ import {getBranding} from "../branding";
 import {BUILD} from "../build";
 import {store} from "../store";
 import {probeOnce} from "./capability";
-import {emptyContext, type ModelRef} from "./engine";
+import {emptyContext, type Device, type ModelRef} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
 import {buildCatalog, listedSize, normalizeDeviceChoice} from "./models";
@@ -97,16 +97,17 @@ function meteredConnection(): boolean {
 	return !!connection && (connection.saveData === true || connection.type === "cellular");
 }
 
-/** The download question, in the app's confirm dialog (ConfirmDialog.vue). */
-function askDownload(ref: ModelRef): Promise<boolean> {
+/** The download question, in the app's confirm dialog (ConfirmDialog.vue): the copy's own size. */
+function askDownload(ref: ModelRef, device: Device): Promise<boolean> {
 	const model = modelDisplayName(ref);
+	const sizeBytes = ref.copies[device]?.sizeBytes ?? listedSize(ref);
 
 	return new Promise((resolve) => {
 		eventbus.emit(
 			"confirm-dialog",
 			{
 				title: t("translate.consent.title", {model}),
-				text: t("translate.consent.text", {model, size: friendlysize(listedSize(ref))}),
+				text: t("translate.consent.text", {model, size: friendlysize(sizeBytes)}),
 				note: meteredConnection() ? t("translate.consent.metered") : undefined,
 				button: t("translate.model.download"),
 				cancel: t("translate.consent.notNow"),

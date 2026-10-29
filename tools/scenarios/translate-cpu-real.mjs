@@ -53,13 +53,14 @@ const ROW = (id) => `.translate-model[data-model="${id}"]`;
 const STATE = (id) =>
 	`document.querySelector('${ROW(id)} .translate-model-state')?.textContent.trim()`;
 const STORE = `document.getElementById("app").__vue_app__.config.globalProperties.$store.state`;
+// The CPU copy's view: the store lists one view per copy.
 const VIEW = (id) =>
 	`(() => { const m = ${STORE}.translation.models.find((v) => v.ref.id === ${JSON.stringify(
 		id
-	)}); return m ? {status: m.status, cached: m.cached, fraction: m.fraction, error: m.error} : null; })()`;
+	)} && v.device === "cpu"); return m ? {status: m.status, cached: m.cached, fraction: m.fraction, error: m.error} : null; })()`;
 // Everything the ledger wants to see when a model will not load: the probe's
 // verdict, the worker's own error, and every row's status and error text.
-const SLICE = `(() => { const s = ${STORE}; return {capability: s.translation.capability, workerError: s.translation.workerError, paused: s.translation.paused, settings: {llm: s.settings.translateLlm, cpu: s.settings.translateCpu, to: s.settings.translateTo}, models: s.translation.models.map((m) => ({id: m.ref.id, status: m.status, cached: m.cached, error: m.error}))}; })()`;
+const SLICE = `(() => { const s = ${STORE}; return {capability: s.translation.capability, workerError: s.translation.workerError, paused: s.translation.paused, settings: {llm: s.settings.translateLlm, cpu: s.settings.translateCpu, to: s.settings.translateTo}, models: s.translation.models.map((m) => ({id: m.ref.id, device: m.device, status: m.status, cached: m.cached, error: m.error}))}; })()`;
 
 export const url = BASE;
 

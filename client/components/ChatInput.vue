@@ -713,9 +713,12 @@ export default defineComponent({
 				return "";
 			}
 
-			const view = store.state.translation.models.find((v) => v.ref.id === entry.model);
+			// One view per copy: the one downloading is the route's.
+			const view = store.state.translation.models.find(
+				(v) => v.ref.id === entry.model && v.status === "downloading"
+			);
 
-			return view && view.status === "downloading" ? loadNoteText(loadNote(view)) : "";
+			return view ? loadNoteText(loadNote(view)) : "";
 		});
 
 		// Why it failed, beside "couldn't translate": an ORT session error or

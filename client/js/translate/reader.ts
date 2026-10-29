@@ -299,9 +299,9 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 			// model named (consent.ts), through the queue's rejection path,
 			// which pauses nothing.
 			route: (from, to, hint) =>
-				service.resolve(from, to, hint).then(({route, refused}) => {
+				service.resolve(from, to, hint).then(({route, refused, refusedDevice}) => {
 					if (!route && refused) {
-						throw new Error(needsDownloadError(refused));
+						throw new Error(needsDownloadError(refused, refusedDevice ?? undefined));
 					}
 
 					return route?.ref.engine ?? null;

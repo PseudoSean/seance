@@ -474,7 +474,11 @@ export default defineComponent({
 		const store = useStore();
 		const service = translateService();
 		const enabled = service.enabled;
-		const models = computed(() => store.state.translation.models);
+		// One row per model, its slot's native copy (the service lists one
+		// view per copy); the per-copy rows are Task 10's.
+		const models = computed(() =>
+			store.state.translation.models.filter((view) => view.device === nativeDevice(view.ref))
+		);
 		const capability = computed(() => store.state.translation.capability);
 		// The reading language as it stands: the interface's (one control —
 		// reactivity rides on the store read and the i18n ref the helper reads).
@@ -679,7 +683,7 @@ export default defineComponent({
 		// the worker protocol structured-clones every message, which rejects a
 		// Vue reactive Proxy, so send the raw object underneath it.
 		const download = (modelRef: ModelRef) => {
-			service.download(toRaw(modelRef)).catch(() => {
+			service.download(toRaw(modelRef), nativeDevice(modelRef)).catch(() => {
 				// the view carries the error; nothing else to do
 			});
 		};
@@ -709,7 +713,7 @@ export default defineComponent({
 		);
 
 		const remove = (modelRef: ModelRef) => {
-			service.deleteModel(toRaw(modelRef)).catch((e: unknown) => {
+			service.remove(toRaw(modelRef), nativeDevice(modelRef)).catch((e: unknown) => {
 				loadError.value = errorMessage(e);
 			});
 		};

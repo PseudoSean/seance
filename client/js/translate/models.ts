@@ -565,10 +565,10 @@ function cpuBlock(
 }
 
 /**
- * The device `ref`'s slot runs on until the router walks devices (the
- * language model on the GPU, OPUS-MT and NLLB-200 on the CPU). Interim:
- * callers that have no device of their own pass this; remove with the
- * router's per-device walk.
+ * The device `ref`'s slot ran on before models ran on either (the language
+ * model on the GPU, OPUS-MT and NLLB-200 on the CPU). Interim: only
+ * Settings/Translation.vue still reads it, to show one copy per model until
+ * its per-copy rows (Task 10).
  */
 export function nativeDevice(ref: ModelRef): Device {
 	return ref.engine === "llm" ? "gpu" : "cpu";
@@ -888,12 +888,20 @@ export interface CacheApi {
 	delete(ref: ModelRef, device: Device): Promise<void>;
 }
 
+/** Whether one copy of a model is on the device: one entry per copy. */
 export interface ModelCacheState {
 	ref: ModelRef;
+	device: Device;
 	cached: boolean;
 }
 
-// One entry that cannot answer is that entry's problem — it counts as not
+/** The devices `ref` has a copy for, the GPU copy first. */
+export function copyDevices(ref: Pick<ModelRef, "copies">): Device[] {
+	return (["gpu", "cpu"] as const).filter((device) => ref.copies[device] !== undefined);
+}
+
+// One entry per copy, in catalog order, a model's GPU copy before its CPU
+// copy. One entry that cannot answer is that entry's problem — it counts as not
 // downloaded and Settings still lists every other model (an LLM id the
 // library does not know throws in `webllm.real.ts`'s `has`). A cache api
 // that throws synchronously is the whole of Cache Storage being unusable,
@@ -904,10 +912,13 @@ export async function cacheStates(
 	api: CacheApi
 ): Promise<ModelCacheState[]> {
 	return Promise.all(
-		catalogModels(catalog).map(async (ref) => ({
-			ref,
-			cached: await api.has(ref, nativeDevice(ref)).catch(() => false),
-		}))
+		catalogModels(catalog).flatMap((ref) =>
+			copyDevices(ref).map(async (device) => ({
+				ref,
+				device,
+				cached: await api.has(ref, device).catch(() => false),
+			}))
+		)
 	);
 }
 

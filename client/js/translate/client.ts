@@ -4,7 +4,14 @@
 // pagehide terminate the worker right after).
 
 import {AsyncQueue} from "./asyncQueue";
-import {EngineName, LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
+import {
+	Device,
+	EngineName,
+	LoadProgress,
+	ModelRef,
+	TranslateChunk,
+	TranslateRequest,
+} from "./engine";
 import {GpuBudget, ModelCacheState, ModelCatalog} from "./models";
 import {EngineSnapshot, MainPort, WorkerToMain} from "./protocol";
 
@@ -24,7 +31,14 @@ interface LoadEntry extends DedupEntry<void> {
 interface StreamEntry {
 	queue: AsyncQueue<TranslateChunk>;
 	refId: string;
+	/** The copy the request runs on; absent, the worker picks (any copy's progress is its). */
+	device?: Device;
 	onProgress: (p: LoadProgress) => void;
+}
+
+/** What a load or a delete is kept under: one model's copy on one device. */
+function copyKey(id: string, device: Device): string {
+	return `${id}@${device}`;
 }
 
 // A plain copy of a request, not the caller's object itself: a request's
@@ -66,8 +80,10 @@ export class TranslateError extends Error {
 }
 
 export class TranslateClient {
+	/** By copy (`copyKey`): the two devices' copies of a model are two loads. */
 	private loads = new Map<string, LoadEntry>();
 	private unloads = new Map<EngineName, DedupEntry<void>>();
+	/** By copy (`copyKey`). */
 	private deletes = new Map<string, DedupEntry<void>>();
 	private streams = new Map<number, StreamEntry>();
 	private statusWaiters: Deferred<Record<EngineName, EngineSnapshot>>[] = [];
@@ -94,8 +110,14 @@ export class TranslateClient {
 		);
 	}
 
-	load(ref: ModelRef, onProgress: (p: LoadProgress) => void = () => {}): Promise<void> {
-		const existing = this.loads.get(ref.id);
+	/** Load `ref`'s copy for `device`; a second ask for the same copy joins the first. */
+	load(
+		ref: ModelRef,
+		device: Device,
+		onProgress: (p: LoadProgress) => void = () => {}
+	): Promise<void> {
+		const key = copyKey(ref.id, device);
+		const existing = this.loads.get(key);
 
 		if (existing) {
 			existing.onProgress.push(onProgress);
@@ -104,13 +126,13 @@ export class TranslateClient {
 
 		const entry: LoadEntry = {...deferred<void>(), onProgress: [onProgress]};
 
-		this.loads.set(ref.id, entry);
+		this.loads.set(key, entry);
 		// A plain copy, not the caller's ref itself: a future call site may
 		// hand in a Vue reactive Proxy (Translation.vue already guards with
 		// toRaw(), but nothing enforces that upstream), and every port —
 		// the fake, and a real Worker — structured-clones the message,
 		// which throws DataCloneError on a Proxy.
-		this.port.postMessage({type: "load", ref: {...ref}});
+		this.port.postMessage({type: "load", ref: {...ref}, device});
 
 		return entry.promise;
 	}
@@ -142,7 +164,7 @@ export class TranslateClient {
 		const queue = new AsyncQueue<TranslateChunk>();
 
 		queue.onReturn = () => this.cancel(req.id);
-		this.streams.set(req.id, {queue, refId: ref.id, onProgress});
+		this.streams.set(req.id, {queue, refId: ref.id, device: req.device, onProgress});
 		this.port.postMessage({type: "translate", req: plainRequest(req), ref: {...ref}});
 
 		return queue;
@@ -172,8 +194,10 @@ export class TranslateClient {
 		});
 	}
 
-	deleteModel(ref: ModelRef): Promise<void> {
-		const existing = this.deletes.get(ref.id);
+	/** Delete `ref`'s copy for `device`; the other device's copy stays. */
+	deleteModel(ref: ModelRef, device: Device): Promise<void> {
+		const key = copyKey(ref.id, device);
+		const existing = this.deletes.get(key);
 
 		if (existing) {
 			return existing.promise;
@@ -181,8 +205,8 @@ export class TranslateClient {
 
 		const entry = deferred<void>();
 
-		this.deletes.set(ref.id, entry);
-		this.port.postMessage({type: "delete", ref: {...ref}});
+		this.deletes.set(key, entry);
+		this.port.postMessage({type: "delete", ref: {...ref}, device});
 
 		return entry.promise;
 	}
@@ -262,20 +286,31 @@ export class TranslateClient {
 		this.heard = true;
 
 		switch (message.type) {
-			case "progress":
-				this.loads.get(message.ref.id)?.onProgress.forEach((cb) => cb(message.progress));
+			case "progress": {
+				const key = copyKey(message.ref.id, message.device);
+
+				this.loads.get(key)?.onProgress.forEach((cb) => cb(message.progress));
 
 				for (const stream of this.streams.values()) {
-					if (stream.refId === message.ref.id) {
+					if (
+						stream.refId === message.ref.id &&
+						(stream.device === undefined || stream.device === message.device)
+					) {
 						stream.onProgress(message.progress);
 					}
 				}
 
 				break;
-			case "loaded":
-				this.loads.get(message.ref.id)?.resolve();
-				this.loads.delete(message.ref.id);
+			}
+
+			case "loaded": {
+				const key = copyKey(message.ref.id, message.device);
+
+				this.loads.get(key)?.resolve();
+				this.loads.delete(key);
 				break;
+			}
+
 			case "unloaded":
 				this.unloads.get(message.engine)?.resolve();
 				this.unloads.delete(message.engine);
@@ -295,11 +330,11 @@ export class TranslateClient {
 					// The implicit load of a translation: nothing asked for
 					// this load, so it fails that stream and says why.
 					this.failStream(message.id, new TranslateError(message.message, "load"));
-				} else if (message.scope === "load" && message.ref) {
-					this.loads
-						.get(message.ref.id)
-						?.reject(new TranslateError(message.message, "load"));
-					this.loads.delete(message.ref.id);
+				} else if (message.scope === "load" && message.ref && message.device) {
+					const key = copyKey(message.ref.id, message.device);
+
+					this.loads.get(key)?.reject(new TranslateError(message.message, "load"));
+					this.loads.delete(key);
 				} else if (message.scope === "unload" && message.engine) {
 					this.unloads.get(message.engine)?.reject(error);
 					this.unloads.delete(message.engine);
@@ -307,9 +342,11 @@ export class TranslateClient {
 					this.failStream(message.id, new TranslateError(message.message, "request"));
 				} else if (message.scope === "worker") {
 					this.onWorkerError?.(message.message);
-				} else if (message.scope === "delete" && message.ref) {
-					this.deletes.get(message.ref.id)?.reject(error);
-					this.deletes.delete(message.ref.id);
+				} else if (message.scope === "delete" && message.ref && message.device) {
+					const key = copyKey(message.ref.id, message.device);
+
+					this.deletes.get(key)?.reject(error);
+					this.deletes.delete(key);
 				} else if (message.scope === "status") {
 					this.statusWaiters.splice(0).forEach((w) => w.reject(error));
 				} else if (message.scope === "models") {
@@ -325,10 +362,14 @@ export class TranslateClient {
 			case "models":
 				this.modelsWaiters.splice(0).forEach((w) => w.resolve(message.models));
 				break;
-			case "deleted":
-				this.deletes.get(message.ref.id)?.resolve();
-				this.deletes.delete(message.ref.id);
+
+			case "deleted": {
+				const key = copyKey(message.ref.id, message.device);
+
+				this.deletes.get(key)?.resolve();
+				this.deletes.delete(key);
 				break;
+			}
 		}
 	}
 }

@@ -329,8 +329,13 @@ describe("translate/models", () => {
 			},
 		};
 		const states = await cacheStates(buildCatalog(), api);
+		const copyCount = catalogModels(buildCatalog()).reduce(
+			(n, ref) => n + Object.keys(ref.copies).length,
+			0
+		);
 
-		expect(states.length).to.equal(catalogModels(buildCatalog()).length);
+		// One entry per copy.
+		expect(states.length).to.equal(copyCount);
 		expect(states.find((s) => s.ref.id === DEFAULT_LLM_ID)?.cached).to.equal(false);
 		expect(states.filter((s) => s.ref.id !== DEFAULT_LLM_ID).every((s) => s.cached)).to.equal(
 			true
@@ -340,9 +345,9 @@ describe("translate/models", () => {
 	it("asks the cache api about every model", async () => {
 		const asked: string[] = [];
 		const api: CacheApi = {
-			has(ref) {
-				asked.push(ref.id);
-				return Promise.resolve(ref.id === DEFAULT_NLLB_ID);
+			has(ref, device) {
+				asked.push(`${ref.id}@${device}`);
+				return Promise.resolve(ref.id === DEFAULT_NLLB_ID && device === "cpu");
 			},
 			delete() {
 				return Promise.resolve();
@@ -351,7 +356,17 @@ describe("translate/models", () => {
 		const states = await cacheStates(buildCatalog(), api);
 
 		expect(asked.length).to.equal(states.length);
-		expect(states.find((s) => s.ref.id === DEFAULT_NLLB_ID)?.cached).to.equal(true);
+		// Each copy asked for by its own device, the GPU copy first.
+		expect(asked.filter((a) => a.startsWith(`${DEFAULT_NLLB_ID}@`))).to.deep.equal([
+			`${DEFAULT_NLLB_ID}@gpu`,
+			`${DEFAULT_NLLB_ID}@cpu`,
+		]);
+		expect(
+			states.filter((s) => s.ref.id === DEFAULT_NLLB_ID).map((s) => [s.device, s.cached])
+		).to.deep.equal([
+			["gpu", false],
+			["cpu", true],
+		]);
 		expect(states.find((s) => s.ref.id === DEFAULT_LLM_ID)?.cached).to.equal(false);
 	});
 });

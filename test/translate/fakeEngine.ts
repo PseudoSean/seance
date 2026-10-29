@@ -17,11 +17,19 @@ import type {
  */
 export class FakeEngine implements Engine {
 	readonly name: EngineName;
-	calls = {load: [] as ModelRef[], translate: [] as TranslateRequest[], unload: 0};
+	/** `devices[i]` is the device `load[i]` was asked for. */
+	calls = {
+		load: [] as ModelRef[],
+		devices: [] as Device[],
+		translate: [] as TranslateRequest[],
+		unload: 0,
+	};
 	failLoad: Error | null = null;
 	failTranslate: Error | null = null;
 	loadTicks = 2;
 	private loaded: string[] = [];
+	/** The device `loaded` is on: one device at a time, as engines/onDevice.ts holds a slot. */
+	private device: Device | null = null;
 	private state: EngineStatus = "cold";
 
 	constructor(name: EngineName, private script: (req: TranslateRequest) => string[]) {
@@ -30,10 +38,11 @@ export class FakeEngine implements Engine {
 
 	async load(
 		ref: ModelRef,
-		_device: Device,
+		device: Device,
 		onProgress: (p: LoadProgress) => void
 	): Promise<void> {
 		this.calls.load.push(ref);
+		this.calls.devices.push(device);
 		this.state = "loading";
 
 		if (this.failLoad) {
@@ -48,6 +57,11 @@ export class FakeEngine implements Engine {
 			onProgress({fraction: i / this.loadTicks, text: `part ${i}`});
 		}
 
+		if (this.device !== device) {
+			this.loaded = [];
+			this.device = device;
+		}
+
 		if (this.name === "llm") {
 			this.loaded = [ref.id];
 		} else if (!this.loaded.includes(ref.id)) {
@@ -60,6 +74,7 @@ export class FakeEngine implements Engine {
 	unload(): Promise<void> {
 		this.calls.unload++;
 		this.loaded = [];
+		this.device = null;
 		this.state = "cold";
 		return Promise.resolve();
 	}
@@ -72,8 +87,13 @@ export class FakeEngine implements Engine {
 		return [...this.loaded];
 	}
 
-	isLoaded(id: string, _device?: Device): boolean {
-		return this.loaded.includes(id);
+	isLoaded(id: string, device?: Device): boolean {
+		return this.loaded.includes(id) && (device === undefined || device === this.device);
+	}
+
+	/** The device the loaded models are on; null when none is. */
+	loadedOn(): Device | null {
+		return this.device;
 	}
 
 	capabilities() {
@@ -83,7 +103,7 @@ export class FakeEngine implements Engine {
 	async *translate(req: TranslateRequest, signal: AbortSignal): AsyncIterable<TranslateChunk> {
 		this.calls.translate.push(req);
 
-		if (!this.isLoaded(req.model)) {
+		if (!this.isLoaded(req.model, req.device)) {
 			throw new Error(`model not loaded: ${req.model}`);
 		}
 

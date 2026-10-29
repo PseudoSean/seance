@@ -5,8 +5,8 @@
 // Nothing here knows about the libraries: worker-entry.ts hands in the real
 // engines, tests and fakePort.ts hand in scripted ones.
 
-import {Engine, EngineError, EngineName, ModelRef} from "./engine";
-import {CacheApi, GpuBudget, ModelCatalog, cacheStates, nativeDevice} from "./models";
+import {Device, Engine, EngineError, EngineName, ModelRef} from "./engine";
+import {CacheApi, GpuBudget, ModelCatalog, cacheStates, copyDevices} from "./models";
 import {EngineSnapshot, MainToWorker, WorkerPort, errorMessage} from "./protocol";
 
 export interface EngineSet {
@@ -25,28 +25,41 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 	const loading = new Map<string, Promise<void>>();
 	let catalog: ModelCatalog | null = null;
 
-	// A model has two ways in — Settings' explicit `load` and the implicit one
-	// a `translate` needs — and they can ask for the same model at once, so the
-	// second joins the first rather than starting a second download. Progress
-	// is posted once per report and client.ts fans it out to the `load` caller
-	// and to every stream waiting on that model.
-	const load = (ref: ModelRef): Promise<void> => {
-		const inFlight = loading.get(ref.id);
+	// A copy has two ways in — Settings' explicit `load` and the implicit one
+	// a `translate` needs — and they can ask for the same copy at once, so the
+	// second joins the first rather than starting a second download. The two
+	// devices' copies of one model are two loads, never joined. Progress is
+	// posted once per report and client.ts fans it out to the `load` caller
+	// and to every stream waiting on that copy.
+	const load = (ref: ModelRef, device: Device): Promise<void> => {
+		const key = `${ref.id}@${device}`;
+		const inFlight = loading.get(key);
 
 		if (inFlight) {
 			return inFlight;
 		}
 
 		const promise = engines[ref.engine]
-			.load(ref, nativeDevice(ref), (progress) =>
-				port.postMessage({type: "progress", ref, progress})
+			.load(ref, device, (progress) =>
+				port.postMessage({type: "progress", ref, device, progress})
 			)
-			.finally(() => loading.delete(ref.id));
+			.finally(() => loading.delete(key));
 
-		loading.set(ref.id, promise);
+		loading.set(key, promise);
 
 		return promise;
 	};
+
+	/**
+	 * Where a translate request runs: the device it names (the service names
+	 * one on every request). Without one, where the model is loaded already,
+	 * else its first copy (the GPU's when it has one).
+	 */
+	const deviceFor = (engine: Engine, ref: ModelRef, device: Device | undefined): Device =>
+		device ??
+		(["gpu", "cpu"] as const).find((d) => engine.isLoaded(ref.id, d)) ??
+		copyDevices(ref)[0] ??
+		"cpu";
 
 	const snapshot = (): Record<EngineName, EngineSnapshot> => ({
 		llm: {status: engines.llm.status(), models: engines.llm.loadedModels()},
@@ -71,13 +84,14 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 
 			case "load": {
 				try {
-					await load(message.ref);
-					port.postMessage({type: "loaded", ref: message.ref});
+					await load(message.ref, message.device);
+					port.postMessage({type: "loaded", ref: message.ref, device: message.device});
 				} catch (e) {
 					port.postMessage({
 						type: "error",
 						scope: "load",
 						ref: message.ref,
+						device: message.device,
 						message: errorMessage(e),
 					});
 				}
@@ -103,13 +117,15 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 			case "translate": {
 				const engine = engines[message.ref.engine];
 				const controller = new AbortController();
+				const device = deviceFor(engine, message.ref, message.req.device);
+				const req = {...message.req, device};
 
 				controllers.set(message.req.id, controller);
 
 				try {
-					if (!engine.isLoaded(message.ref.id, nativeDevice(message.ref))) {
+					if (!engine.isLoaded(message.ref.id, device)) {
 						try {
-							await load(message.ref);
+							await load(message.ref, device);
 						} catch (e) {
 							// The model could not load: that is the model's
 							// failure, not this request's, and the page tells
@@ -121,6 +137,7 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 									scope: "load",
 									id: message.req.id,
 									ref: message.ref,
+									device,
 									message: errorMessage(e),
 								});
 							}
@@ -129,7 +146,7 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 						}
 					}
 
-					for await (const chunk of engine.translate(message.req, controller.signal)) {
+					for await (const chunk of engine.translate(req, controller.signal)) {
 						if (controller.signal.aborted) {
 							break;
 						}
@@ -184,13 +201,14 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 				break;
 			case "delete":
 				try {
-					await deps.cache.delete(message.ref, nativeDevice(message.ref));
-					port.postMessage({type: "deleted", ref: message.ref});
+					await deps.cache.delete(message.ref, message.device);
+					port.postMessage({type: "deleted", ref: message.ref, device: message.device});
 				} catch (e) {
 					port.postMessage({
 						type: "error",
 						scope: "delete",
 						ref: message.ref,
+						device: message.device,
 						message: errorMessage(e),
 					});
 				}

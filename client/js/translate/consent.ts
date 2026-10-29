@@ -3,7 +3,7 @@
 // sends a request to the best class whether its model is downloaded or not,
 // and the service loads on demand -- so one click on the header's translate
 // button could start a 1-2 GB download. Before the first such download of a
-// model the user is asked, once: yes is remembered for that model
+// model's copy the user is asked, once: yes is remembered for that copy
 // (`CONSENT_KEY`, a `thelounge.state.*` key, so the settings backup never
 // carries it), "not now" holds every implicit download back for the rest of
 // the session, so a channel full of queued lines asks once and never once
@@ -12,11 +12,28 @@
 // new question. Vue-free: the service (service.ts) owns one, index.ts hands
 // it the dialog and the storage.
 
-import {listedSize} from "./models";
-import type {ModelRef} from "./engine";
+import {buildIdFor, listedSize} from "./models";
+import type {Device, ModelRef} from "./engine";
 
 /** Where the models the user agreed to download are remembered: their ids. */
 export const CONSENT_KEY = "thelounge.state.translateConsent";
+
+/**
+ * The id a copy's yes is kept under. A GPU copy keeps the id a yes always
+ * had -- the build that would be downloaded here (models.ts `buildIdFor`):
+ * a yes to the model on a desktop is not a yes to its small-buffer build,
+ * another download of the same size, once the test switch makes that the
+ * build -- so the consents given before models ran on either device stand.
+ * A CPU copy, a download of its own with one build, is `<id>@cpu`: a yes to
+ * one device's copy never covers the other's.
+ */
+export function consentId(
+	ref: ModelRef,
+	device: Device,
+	maxBufferBytes: number | null | undefined
+): string {
+	return device === "cpu" ? `${ref.id}@cpu` : buildIdFor(ref, maxBufferBytes);
+}
 
 /**
  * The failure a request reports when its route needs a download the user
@@ -33,8 +50,10 @@ export interface DownloadNeed {
 	label: ModelRef["label"];
 }
 
-export function needsDownloadError(ref: ModelRef): string {
-	const need: DownloadNeed = {id: ref.id, sizeBytes: listedSize(ref), label: ref.label};
+/** `device` names the copy whose size the reason gives; absent, the listed one's. */
+export function needsDownloadError(ref: ModelRef, device?: Device): string {
+	const sizeBytes = (device && ref.copies[device]?.sizeBytes) ?? listedSize(ref);
+	const need: DownloadNeed = {id: ref.id, sizeBytes, label: ref.label};
 
 	return `${NEEDS_DOWNLOAD}: ${JSON.stringify(need)}`;
 }
@@ -127,10 +146,10 @@ export class DownloadConsent {
 	/** One dialog at a time across models: the next waits for the last to be answered. */
 	private chain: Promise<unknown> = Promise.resolve();
 
-	private readonly askUser: (ref: ModelRef) => Promise<boolean>;
+	private readonly askUser: (ref: ModelRef, device: Device) => Promise<boolean>;
 	private readonly store: ConsentStore;
 
-	constructor(askUser: (ref: ModelRef) => Promise<boolean>, store: ConsentStore) {
+	constructor(askUser: (ref: ModelRef, device: Device) => Promise<boolean>, store: ConsentStore) {
 		this.askUser = askUser;
 		this.store = store;
 	}
@@ -170,13 +189,15 @@ export class DownloadConsent {
 	}
 
 	/**
-	 * Ask about `ref`, at most once at a time per model and one dialog at a
-	 * time overall. `stillNeeded` is asked again when the question's turn
-	 * comes: a model that was downloaded meanwhile (Settings, another
-	 * question's yes for it) is no longer worth a dialog, and the answer is
-	 * then yes without anything stored.
+	 * Ask about `ref`'s copy for `device`, at most once at a time per id and
+	 * one dialog at a time overall. `ref.id` is the id the answer is kept
+	 * under (`consentId`: the caller puts it in place); `device` is for the
+	 * dialog, which names that copy's size. `stillNeeded` is asked again when
+	 * the question's turn comes: a copy that was downloaded meanwhile
+	 * (Settings, another question's yes for it) is no longer worth a dialog,
+	 * and the answer is then yes without anything stored.
 	 */
-	ask(ref: ModelRef, stillNeeded: () => boolean): Promise<boolean> {
+	ask(ref: ModelRef, device: Device, stillNeeded: () => boolean): Promise<boolean> {
 		const waiting = this.pending.get(ref.id);
 
 		if (waiting) {
@@ -196,7 +217,7 @@ export class DownloadConsent {
 				return true;
 			}
 
-			const yes = await this.askUser(ref).catch(() => false);
+			const yes = await this.askUser(ref, device).catch(() => false);
 
 			if (yes) {
 				this.grantedIds.add(ref.id);

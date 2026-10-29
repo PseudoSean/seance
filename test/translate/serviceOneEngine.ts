@@ -203,7 +203,7 @@ describe("translate/service: one engine at a time on a phone", () => {
 		r = rig(true);
 
 		expect(await text(r.service.translate(request("fr")))).to.equal("llm:hello");
-		await r.service.download(catalog.nllb);
+		await r.service.download(catalog.nllb, "cpu");
 
 		expect(r.log).to.include("w0 unload llm");
 		expect(r.log.indexOf("w0 unload llm")).to.be.lessThan(r.log.indexOf("w0 load seq2seq"));
@@ -213,8 +213,8 @@ describe("translate/service: one engine at a time on a phone", () => {
 		r = rig(true);
 
 		const both = Promise.all([
-			r.service.download(catalog.llm),
-			r.service.download(catalog.opus["de-en"]),
+			r.service.download(catalog.llm, "gpu"),
+			r.service.download(catalog.opus["de-en"], "cpu"),
 		]);
 
 		await r.clock.tickAsync(100);
@@ -243,7 +243,7 @@ describe("translate/service: one engine at a time on a phone", () => {
 
 			const before = r.service.loadTicks();
 
-			await r.service.download(catalog.llm);
+			await r.service.download(catalog.llm, "gpu");
 			expect(r.service.loadTicks() - before, mobile ? "phone" : "computer").to.equal(
 				mobile ? 4 : 0
 			);

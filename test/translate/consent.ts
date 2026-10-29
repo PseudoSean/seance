@@ -4,11 +4,12 @@ import {
 	DownloadConsent,
 	NEEDS_DOWNLOAD,
 	memoryConsent,
+	consentId,
 	needsDownloadError,
 	parseNeedsDownload,
 	storedConsent,
 } from "../../client/js/translate/consent";
-import {buildCatalog, listedSize} from "../../client/js/translate/models";
+import {QWEN3_1_7B_SPLIT_ID, buildCatalog, listedSize} from "../../client/js/translate/models";
 import type {ModelRef} from "../../client/js/translate/engine";
 
 const catalog = buildCatalog();
@@ -37,6 +38,37 @@ describe("translate/consent", () => {
 		expect(parseNeedsDownload(`${NEEDS_DOWNLOAD}: {broken`)).to.equal(null);
 	});
 
+	it("names the declined copy's own size", () => {
+		const need = parseNeedsDownload(needsDownloadError(catalog.llm, "cpu"));
+
+		expect(need?.sizeBytes).to.equal(catalog.llm.copies.cpu!.sizeBytes);
+		expect(need?.id).to.equal(catalog.llm.id);
+	});
+
+	it("keys a GPU copy's yes as before and a CPU copy's under <id>@cpu", () => {
+		const MiB = 1024 * 1024;
+
+		expect(consentId(catalog.nllb, "gpu", 2147483644)).to.equal(catalog.nllb.id);
+		expect(consentId(catalog.nllb, "cpu", 2147483644)).to.equal(`${catalog.nllb.id}@cpu`);
+		// The GPU copy's build follows the binding; the CPU copy has one build.
+		expect(consentId(catalog.llm, "gpu", 128 * MiB)).to.equal(QWEN3_1_7B_SPLIT_ID);
+		expect(consentId(catalog.llm, "cpu", 128 * MiB)).to.equal(`${catalog.llm.id}@cpu`);
+	});
+
+	it("hands the dialog the copy's device", async () => {
+		const devices: string[] = [];
+		const consent = new DownloadConsent((_ref, device) => {
+			devices.push(device);
+
+			return Promise.resolve(true);
+		}, memoryConsent());
+
+		await consent.ask({...catalog.llm, id: `${catalog.llm.id}@cpu`}, "cpu", () => true);
+		expect(devices).to.deep.equal(["cpu"]);
+		expect(consent.granted(`${catalog.llm.id}@cpu`)).to.equal(true);
+		expect(consent.granted(catalog.llm.id)).to.equal(false);
+	});
+
 	it("remembers a yes under thelounge.state.*, which the settings backup never carries", () => {
 		const backend = mapBackend();
 		const store = storedConsent(backend);
@@ -63,9 +95,9 @@ describe("translate/consent", () => {
 			return new Promise<boolean>((resolve) => answers.push(resolve));
 		}, memoryConsent());
 		const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
-		const a1 = consent.ask(catalog.llm, () => true);
-		const a2 = consent.ask(catalog.llm, () => true);
-		const b = consent.ask(catalog.nllb, () => true);
+		const a1 = consent.ask(catalog.llm, "gpu", () => true);
+		const a2 = consent.ask(catalog.llm, "gpu", () => true);
+		const b = consent.ask(catalog.nllb, "gpu", () => true);
 
 		await tick();
 		expect(asked).to.deep.equal([catalog.llm.id]);
@@ -78,7 +110,7 @@ describe("translate/consent", () => {
 
 		consent.forgetDeclines();
 
-		const c = consent.ask(catalog.nllb, () => true);
+		const c = consent.ask(catalog.nllb, "gpu", () => true);
 
 		await tick();
 		answers.shift()!(true);
@@ -94,7 +126,7 @@ describe("translate/consent", () => {
 			return Promise.resolve(true);
 		}, memoryConsent());
 
-		expect(await consent.ask(catalog.llm, () => false)).to.equal(true);
+		expect(await consent.ask(catalog.llm, "gpu", () => false)).to.equal(true);
 		expect(asked).to.equal(0);
 		expect(consent.granted(catalog.llm.id)).to.equal(false);
 	});
@@ -108,9 +140,9 @@ describe("translate/consent", () => {
 			return Promise.resolve(true);
 		}, deaf);
 
-		expect(await consent.ask(catalog.llm, () => true)).to.equal(true);
+		expect(await consent.ask(catalog.llm, "gpu", () => true)).to.equal(true);
 		expect(consent.granted(catalog.llm.id)).to.equal(true);
-		expect(await consent.ask(catalog.llm, () => true)).to.equal(true);
+		expect(await consent.ask(catalog.llm, "gpu", () => true)).to.equal(true);
 		expect(asked).to.equal(1);
 		consent.revoke(catalog.llm.id);
 		expect(consent.granted(catalog.llm.id)).to.equal(false);
@@ -122,7 +154,7 @@ describe("translate/consent", () => {
 			memoryConsent()
 		);
 
-		expect(await consent.ask(catalog.llm, () => true)).to.equal(false);
+		expect(await consent.ask(catalog.llm, "gpu", () => true)).to.equal(false);
 		expect(consent.declined(catalog.llm.id)).to.equal(true);
 	});
 });

@@ -19,7 +19,7 @@ describe("translate/fakePort", () => {
 		client.configure(catalog, "https://app.test/js/ort/");
 		const progress: number[] = [];
 
-		await client.load(catalog.llm, (p) => progress.push(p.fraction));
+		await client.load(catalog.llm, "gpu", (p) => progress.push(p.fraction));
 		expect(progress.length).to.be.greaterThan(2);
 		expect(progress[progress.length - 1]).to.equal(1);
 		expect((await client.models()).find((m) => m.ref.id === catalog.llm.id)?.cached).to.equal(
@@ -46,11 +46,29 @@ describe("translate/fakePort", () => {
 		expect(chunks[chunks.length - 1]).to.equal("[English] Hallo Welt");
 		expect(chunks.length).to.be.greaterThan(1);
 
-		await client.deleteModel(catalog.llm);
+		await client.deleteModel(catalog.llm, "gpu");
 		expect((await client.models()).find((m) => m.ref.id === catalog.llm.id)?.cached).to.equal(
 			false
 		);
 		expect(FAKE_CAPABILITY.tier).to.equal("gpu");
+		terminate();
+	});
+
+	it("remembers a download per copy: the CPU copy's load leaves the GPU copy absent", async () => {
+		const {port, terminate} = fakePort({stepMs: 0});
+		const client = new TranslateClient(port);
+
+		client.configure(catalog, "https://app.test/js/ort/");
+		await client.load(catalog.nllb, "cpu", () => {});
+
+		const nllb = (await client.models())
+			.filter((m) => m.ref.id === catalog.nllb.id)
+			.map((m) => [m.device, m.cached]);
+
+		expect(nllb).to.deep.equal([
+			["gpu", false],
+			["cpu", true],
+		]);
 		terminate();
 	});
 
@@ -59,7 +77,7 @@ describe("translate/fakePort", () => {
 		const client = new TranslateClient(port);
 
 		client.configure(catalog, "https://app.test/js/ort/");
-		await client.load(catalog.llm, () => {});
+		await client.load(catalog.llm, "gpu", () => {});
 
 		const lines = ["Hallo", "Wie geht es dir", "Tschüss"];
 		let last = "";
@@ -114,7 +132,7 @@ describe("translate/fakePort", () => {
 		const client = new TranslateClient(port);
 
 		client.configure(catalog, "https://app.test/js/ort/");
-		await client.load(catalog.llm, () => {});
+		await client.load(catalog.llm, "gpu", () => {});
 
 		const base = {
 			id: 4,
@@ -217,7 +235,7 @@ describe("translate/fakePort", () => {
 		const client = new TranslateClient(port);
 
 		client.configure(catalog, "https://app.test/js/ort/");
-		await client.load(catalog.llm, () => {});
+		await client.load(catalog.llm, "gpu", () => {});
 
 		const req = {
 			id: 3,
@@ -256,7 +274,7 @@ describe("translate/fakePort", () => {
 		const reloaded = new TranslateClient(second.port);
 
 		reloaded.configure(catalog, "https://app.test/js/ort/");
-		await reloaded.load(catalog.llm, () => {});
+		await reloaded.load(catalog.llm, "gpu", () => {});
 
 		let threwAgain = false;
 
