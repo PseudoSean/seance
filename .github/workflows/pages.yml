@@ -87,12 +87,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          tag="$RELEASE_TAG"
-          if [ -z "$tag" ]; then
-            # gh prints the 404 body on stdout, so a repo with no release would
-            # otherwise get it as its tag.
-            tag="$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null)" || tag=""
-          fi
+          # Fork only (PseudoSean/seance): never look up a release, so
+          # develop always stands at the root and no release tree is built.
+          # Not for upstream.
+          tag=""
           base="${tag#v}"
 
           develop_sha="$(gh api "repos/$REPO/commits/$DEFAULT_BRANCH" --jq .sha)"
@@ -214,11 +212,22 @@ jobs:
           path: public
           key: site-v2-${{ matrix.build.name }}-${{ matrix.build.sha }}-${{ needs.plan.outputs.release }}
 
+      # Under a directory named for the build, so every artifact unpacks to
+      # <name>/… however many there are: download-artifact gives each its
+      # own directory only when it downloads more than one, and unpacks a
+      # lone one straight into its path. A one-build site (a fork with no
+      # release, or a run where every other build failed) then had nothing
+      # where assemble looked, and published the "build failed" stub.
+      - name: Name the tree for assemble
+        env:
+          BUILD: ${{ matrix.build.name }}
+        run: mkdir handoff && mv public "handoff/$BUILD"
+
       - name: Hand the tree to assemble
         uses: actions/upload-artifact@v7
         with:
           name: site-${{ matrix.build.name }}
-          path: public
+          path: handoff
           retention-days: 1
           if-no-files-found: error
 
@@ -236,10 +245,13 @@ jobs:
           sparse-checkout: tools/pages-site.mjs
           sparse-checkout-cone-mode: false
 
+      # Each artifact holds one <name>/ directory, so merging them into one
+      # path cannot collide, and the layout is the same for one or many.
       - uses: actions/download-artifact@v8
         with:
           pattern: site-*
-          path: artifacts
+          path: builds
+          merge-multiple: true
 
       # The site's base path (`/seance/` for a project site), so the index
       # can link every build absolutely.
@@ -254,11 +266,9 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$BUILDS" > plan.json
-          # Artifacts land as artifacts/site-<name>/…; the tool wants <name>/.
+          # builds/<name>/… (the hand-off's layout); no build at all leaves
+          # no directory, and the tool stubs every entry.
           mkdir -p builds
-          for d in artifacts/site-*; do
-            [ -d "$d" ] && mv "$d" "builds/${d#artifacts/site-}"
-          done
           node tools/pages-site.mjs plan.json builds site "$RUN_URL"
 
       - name: Upload site
