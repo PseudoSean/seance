@@ -35,7 +35,7 @@
 				{{ t("translate.formality.casual") }}
 			</label>
 		</div>
-		<!-- The iOS shell's system translator (translate/engines/apple.ts):
+		<!-- The iOS and macOS shells' system translator (translate/engines/apple.ts):
 		     taken first for a pair whose language pack is downloaded, and
 		     its packs downloaded through the system's own sheet. -->
 		<section v-if="system" class="translate-system">
@@ -669,6 +669,7 @@ import {
 } from "../../js/translate/models";
 import {GPU_TEST_LIMIT_KEY} from "../../js/translate/gpuTestLimit";
 import {GPU_PREFILL_CHUNK_KEY} from "../../js/translate/gpuPrefillChunk";
+import {nativePlatform} from "../../js/helpers/shell";
 import {translateErrorText} from "../../js/helpers/translateErrors";
 import {translateWhyText} from "../../js/helpers/translateWhy";
 import {
@@ -717,7 +718,7 @@ export default defineComponent({
 		// The reading language as it stands: the interface's (one control —
 		// reactivity rides on the store read and the i18n ref the helper reads).
 		const effectiveReading = computed(() => readingLanguage());
-		// The system translator, in the iOS shell only: its languages, the
+		// The system translator, in the iOS and macOS shells: its languages, the
 		// one picked to ask about, and that pair's pack into the reading
 		// language. `systemFailed`: the sheet closed and the pack is still
 		// not there, so the system Settings path is the way left.
@@ -782,7 +783,9 @@ export default defineComponent({
 			}
 
 			if (systemFailed.value) {
-				return t("translate.system.notDownloaded", vars);
+				return nativePlatform() === "macos"
+					? t("translate.system.notDownloadedMac", vars)
+					: t("translate.system.notDownloaded", vars);
 			}
 
 			switch (systemStatus.value) {
@@ -1166,10 +1169,15 @@ export default defineComponent({
 				});
 			}
 
-			const bytes = cached.reduce(
-				(sum, view) => sum + (view.ref.copies[device]?.sizeBytes ?? 0),
-				0
+			// Pairs that share a repo share its download (models.ts
+			// `sharedPairId`): counted once.
+			const downloads = new Map(
+				cached.map((view) => [
+					view.ref.copies[device]?.source ?? view.ref.id,
+					view.ref.copies[device]?.sizeBytes ?? 0,
+				])
 			);
+			const bytes = [...downloads.values()].reduce((sum, n) => sum + n, 0);
 
 			return tCount("translate.settings.opusDownloaded", cached.length, {size: size(bytes)});
 		};
@@ -1212,9 +1220,18 @@ export default defineComponent({
 			});
 		};
 
+		// Once per download: removing one pair of a shared repo removes the
+		// files every pair on it reads.
 		const removeOpus = (device: Device) => {
+			const sources = new Set<string>();
+
 			for (const view of opusCached(device)) {
-				remove(view);
+				const source = view.ref.copies[device]?.source ?? view.ref.id;
+
+				if (!sources.has(source)) {
+					sources.add(source);
+					remove(view);
+				}
 			}
 		};
 

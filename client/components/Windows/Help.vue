@@ -262,6 +262,17 @@
 						</div>
 					</div>
 
+					<div v-if="numberKey" class="help-item">
+						<div class="subject">
+							<span
+								><kbd>{{ numberKey }}</kbd> <kbd>1</kbd>–<kbd>9</kbd></span
+							>
+						</div>
+						<div class="description">
+							<p>{{ t("help.shortcuts.nthWindow") }}</p>
+						</div>
+					</div>
+
 					<div class="help-item">
 						<div class="subject">
 							<span v-if="!isApple"><kbd>Alt</kbd> <kbd>↓</kbd></span>
@@ -1149,6 +1160,7 @@ import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
 import {KEEP} from "../../js/i18n/core";
 import {isApplePlatform} from "../../js/helpers/device";
+import {numberShortcutModifier} from "../../js/helpers/numberShortcut";
 import {
 	buildIdentityOf,
 	buildTrackOf,
@@ -1169,6 +1181,9 @@ export default defineComponent({
 		const title = computed(() => t("help.title"));
 		const ctcpTitle = computed(() => t("help.commands.ctcpTitle"));
 		const isApple = isApplePlatform();
+		const numberKey = {meta: "⌘", ctrl: "Ctrl", alt: "Alt", none: ""}[
+			numberShortcutModifier() ?? "none"
+		];
 		const isTouch = navigator.maxTouchPoints > 0;
 		const appName = computed(() => store.state.branding.appName);
 		const links = computed(() => store.state.branding.links ?? {});
@@ -1193,8 +1208,14 @@ export default defineComponent({
 		const source = computed(() => sourceLinks(links.value.source, build.value));
 
 		// Installed PWAs have no reload button; a newer build's worker flags
-		// itself in the store (see pwa.ts) and this picks it up.
-		const reloadForUpdate = () => window.location.reload();
+		// itself in the store (see pwa.ts) and this picks it up. The route is
+		// the URL's hash, so a plain reload would come back to Help; loading
+		// the bare path lands on the conversation instead (boot.ts picks the
+		// route when there is none). There is no query to keep: boot strips
+		// connect parameters from the address bar as soon as it reads them.
+		const reloadForUpdate = () => {
+			window.location.replace(window.location.pathname);
+		};
 
 		const close = () => {
 			leavePage();
@@ -1209,6 +1230,7 @@ export default defineComponent({
 			builtFromText,
 			close,
 			isApple,
+			numberKey,
 			isTouch,
 			links,
 			pastRelease,

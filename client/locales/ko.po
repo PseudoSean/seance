@@ -6,6 +6,262 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=(0);\n"
 
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading of the full list.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.all"
+msgid "All channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the window. {network} is the network's name, verbatim.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.aria"
+msgid "Channel browser for {network}"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that asks the server for the list for the first time.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.ask"
+msgid "Load channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): label of the button that empties the search field.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.clear"
+msgid "Clear search"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the close button's label.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.close"
+msgid "Close"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): how many channels the list shows after filtering.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.count"
+msgid "{count} channel"
+msgid_plural "{count} channels"
+msgstr[0] ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button offering to join a channel that does not exist yet, which creates it; {name} is the channel name, verbatim.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.create"
+msgid "Start {name}"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the server refuses the list because the connection is too new.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.delayed"
+msgid "The server is making you wait"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): countdown under 'The server is making you wait'; {count} is the seconds left.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.delayedNote"
+msgid "New connections can list channels in {count} second."
+msgid_plural "New connections can list channels in {count} seconds."
+msgstr[0] ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown when the server's list came back empty.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.empty"
+msgid "The server listed no channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading of the section of channels the network itself puts forward (marked in its MOTD).
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.featured"
+msgid "Featured"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note beside the Featured heading saying who chose these channels.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.featuredNote"
+msgid "Picked by the network"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing every channel.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.filter.all"
+msgid "All"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing channels with at least {count} users; {count} is a number.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.filter.busy"
+msgid "{count}+ people"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing only the channels the network puts forward.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.filter.featured"
+msgid "Featured"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing channels that have a topic set.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.filter.topic"
+msgid "With a topic"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the row of filter chips.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.filters"
+msgid "Filters"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown before the list was ever asked for on this connection.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.idle"
+msgid "No list yet"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is not in. One word.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.join"
+msgid "Join"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): status while the list is requested and no row has arrived yet.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.loading"
+msgid "Asking the server…"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): status while the list arrives; {count} is the rows received so far.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.loadingCount"
+msgid "{count} channel so far…"
+msgid_plural "{count} channels so far…"
+msgstr[0] ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown when the search finds no channel; {query} is what was typed, verbatim.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.noMatches"
+msgid "Nothing matches {query}"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown when the network the window was opened for no longer exists.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.noNetwork"
+msgid "This network is gone"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown in place of a channel's topic when it has none.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.noTopic"
+msgid "No topic"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the network is disconnected.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.offline"
+msgid "Not connected"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note under 'Not connected'.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.offlineNote"
+msgid "The list comes from the server; it loads once the network is back."
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is already in. One word.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.open"
+msgid "Open"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): number of users in a channel, shown on every row and card.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.people"
+msgid "{count} person"
+msgid_plural "{count} people"
+msgstr[0] ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that asks the server for the list again.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.refresh"
+msgid "Refresh"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): tooltip on the Refresh button while it is disabled right after an update.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.refreshSoon"
+msgid "The list was just updated"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the server rejected the LIST arguments; the server's own text follows.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.refused"
+msgid "The server refused the list"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that asks the server again after a refusal.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.retry"
+msgid "Try again"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the search field.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.search"
+msgid "Search channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): placeholder of the search field, which matches channel names and topics.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.searchPlaceholder"
+msgid "Search by name or topic"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that reveals the next page of the list.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.showMore"
+msgid "Show more"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): footer under a long list; {shown} and {total} are numbers of channels.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.showing"
+msgid "Showing {shown} of {total}"
+msgstr ""
+
+#. Sidebar join form: button under the channel name field that opens the channel browser window.
+#: client/components/JoinChannel.vue
+msgctxt "browse.sidebarButton"
+msgid "Browse channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the sort order select.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.sort"
+msgid "Sort"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): sort option: by channel name.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.sort.name"
+msgid "A to Z"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): sort option: by number of users, largest first.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.sort.people"
+msgid "Most people"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the window's heading. Two words.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.title"
+msgid "Browse channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): when the list was last fetched; {when} is a relative time like '5 minutes ago', verbatim.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.updated"
+msgid "Updated {when}"
+msgstr ""
+
 #. Tooltip and aria-label of the ✕ button on a private-conversation or list-window row in the sidebar network list; clicking closes that window (nothing is left on the server).
 #: client/components/Channel.vue
 msgctxt "channel.close"
@@ -114,18 +370,6 @@ msgctxt "chat.mentionsUnread"
 msgid "Open your mentions, {count} unread"
 msgid_plural "Open your mentions, {count} unread"
 msgstr[0] "언급 열기, 읽지 않음 {count}개"
-
-#. Button on the bar shown while reading older messages in the main window: returns to the search results this message was opened from.
-#: client/components/Chat.vue
-msgctxt "chat.past.backToResults"
-msgid "Back to results"
-msgstr ""
-
-#. Past view bar: the button beside Back to results that forgets those results
-#: client/components/Chat.vue
-msgctxt "chat.past.dismissResults"
-msgid "Dismiss the search results"
-msgstr ""
 
 #. Error toast: the server answered, but no longer has the older message the reader asked to go to.
 #: client/js/socket-events/past.ts
@@ -1055,6 +1299,12 @@ msgstr "연결 오류: {message}"
 msgctxt "dates.today"
 msgid "Today"
 msgstr "오늘"
+
+#. A message's time beside it where a day header may be out of sight (search results): the message is from today. {time} is the clock time in the user's format (e.g. 21:58 or 9:58 PM).
+#: client/js/helpers/messageTime.ts
+msgctxt "dates.todayAt"
+msgid "Today {time}"
+msgstr "오늘 {time}"
 
 #. Label of a date marker between message groups in the scrollback: tooltip of the divider between the messages sent the day before; older groups show the date itself.
 #: client/components/DateMarker.vue:4
@@ -3114,12 +3364,6 @@ msgctxt "link.tryAgain"
 msgid "Click to try again"
 msgstr "다시 시도하려면 클릭하세요"
 
-#. Title of the special window the /list command fills with the server's channels. The name doubles as the window's lookup name, so it stays byte-stable per locale while the session lives.
-#: client/js/irc/handlers/list.ts
-msgctxt "list.channelList"
-msgid "Channel List"
-msgstr "채널 목록"
-
 #. Status message when a mode list (bans, invites, exceptions) the user asked for came back with no entries. {kind} is the list's name as an English word inserted by the app ('Ban list', 'Invite list', 'Exception list'); the matching kind keys are list.kindBans/list.kindInvites/list.kindExcepts.
 #: client/js/irc/handlers/lists.ts
 msgctxt "list.isEmpty"
@@ -3143,19 +3387,6 @@ msgstr "예외 목록"
 msgctxt "list.kindInvites"
 msgid "Invite list"
 msgstr "초대 목록"
-
-#. Status line in the 'Channel List' window updated as each channel arrives; {count} is the number received so far.
-#: client/js/irc/handlers/list.ts
-msgctxt "list.loaded"
-msgid "Loaded {count} channel..."
-msgid_plural "Loaded {count} channels..."
-msgstr[0] "채널 {count}개 로드됨..."
-
-#. Status line in the 'Channel List' window while the server sends its channels.
-#: client/js/irc/handlers/list.ts
-msgctxt "list.loading"
-msgid "Loading channel list, this can take a moment..."
-msgstr "채널 목록을 불러오는 중입니다. 잠시 걸릴 수 있습니다..."
 
 #. Title of a special window showing one channel's mode list. {kind} is the list's name ('Ban list' etc.), {channel} the channel name. Byte-stable per locale while the session lives: the title doubles as the window's lookup name.
 #: client/js/irc/handlers/lists.ts
@@ -11786,17 +12017,17 @@ msgctxt "search.window.asking"
 msgid "Asking the server…"
 msgstr "서버에 묻는 중…"
 
-#. Search window (searching the chat history of the server, or of what is loaded on this device): label and tooltip of the back button at the top left: closes the search and returns to that chat. {channel} is the channel or conversation name (verbatim).
-#: client/components/Windows/SearchResults.vue
-msgctxt "search.window.back"
-msgid "Back to {channel}"
-msgstr "{channel}(으)로 돌아가기"
-
 #. Search window (searching the chat history of the server, or of what is loaded on this device): in the status line under the results, after the count: how far back the search went. {when} is a day and a time, already formatted. Lower case.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.window.backTo"
 msgid "back to {when}"
 msgstr "{when}까지"
+
+#. Search panel (searching the chat history of the server, or of what is loaded on this device), beside the chat on a wide screen and over it on a phone: on a phone, the text button beside the search field that closes the search and returns to the chat.
+#: client/components/Windows/SearchResults.vue
+msgctxt "search.window.cancel"
+msgid "Cancel"
+msgstr ""
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): name of a filter: messages from one services account (the identity a user is logged in as, whatever their nick). Also the field's label in the filters sheet. One word.
 #: client/components/Windows/SearchResults.vue
@@ -11840,8 +12071,22 @@ msgctxt "search.window.chip.without"
 msgid "Without"
 msgstr "제외"
 
-#. Search window (searching the chat history of the server, or of what is loaded on this device): a day and a time together (how far back the search went). {day} is a short date ('4 Nov'), {time} a clock time. Order and punctuation are your language's.
+#. Search panel (searching the chat history of the server, or of what is loaded on this device), beside the chat on a wide screen and over it on a phone: button beside the Recent searches heading that forgets that list on this device.
 #: client/components/Windows/SearchResults.vue
+msgctxt "search.window.clearRecent"
+msgid "Clear"
+msgstr ""
+
+#. Search panel (searching the chat history of the server, or of what is loaded on this device), beside the chat on a wide screen and over it on a phone: label and tooltip of the ✕ button that closes the panel; also the label of the header's magnifier while the panel is open.
+#: client/components/Windows/SearchResults.vue
+#: client/components/MessageSearchForm.vue
+msgctxt "search.window.close"
+msgid "Close search"
+msgstr ""
+
+#. Search window (searching the chat history of the server, or of what is loaded on this device): a day and a time together, in the status line (how far back the search went) and beside each result older than yesterday. {day} is a short date ('Nov 4' in English, 'Nov 4, 2025' in another year) or, for a result from the last week, a short weekday ('Tue'); {time} a clock time. Order and punctuation are your language's.
+#: client/components/Windows/SearchResults.vue
+#: client/js/helpers/messageTime.ts
 msgctxt "search.window.dayAndTime"
 msgid "{day}, {time}"
 msgstr "{day} {time}"
@@ -11988,6 +12233,18 @@ msgstr ""
 msgctxt "search.window.placeholder"
 msgid "Search {scope}"
 msgstr "{scope}에서 검색"
+
+#. Search panel (searching the chat history of the server, or of what is loaded on this device), beside the chat on a wide screen and over it on a phone: placeholder of the search field where there is a keyboard; says the Escape key closes the panel. {scope} is a channel name (verbatim) or 'all my channels' (search.window.allChannels). Esc is the key's name as printed on keyboards.
+#: client/components/Windows/SearchResults.vue
+msgctxt "search.window.placeholderEsc"
+msgid "Search {scope} (Esc to close)"
+msgstr ""
+
+#. Search panel (searching the chat history of the server, or of what is loaded on this device), beside the chat on a wide screen and over it on a phone: heading of the list of searches run lately on this device, shown under the empty field.
+#: client/components/Windows/SearchResults.vue
+msgctxt "search.window.recent"
+msgid "Recent searches"
+msgstr ""
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): aria-label of the × on a filter chip. {filter} is the filter's name (From, Account, Date, Has, Without).
 #: client/components/Windows/SearchResults.vue
@@ -13865,24 +14122,6 @@ msgctxt "special.bans.bannedBy"
 msgid "Banned By"
 msgstr "차단한 사람"
 
-#. Column header of the channel list: the channel name, verbatim server data.
-#: client/components/Special/ListChannels.vue
-msgctxt "special.channels.channel"
-msgid "Channel"
-msgstr "채널"
-
-#. Column header of the channel list: the channel's topic, verbatim server data.
-#: client/components/Special/ListChannels.vue
-msgctxt "special.channels.topic"
-msgid "Topic"
-msgstr "주제"
-
-#. Column header of the channel list: how many visible users the channel has.
-#: client/components/Special/ListChannels.vue
-msgctxt "special.channels.users"
-msgid "Users"
-msgstr "사용자"
-
 #. Column header of the ban-exception list: the exempted hostmask, verbatim server data.
 #: client/components/Special/ListExcepts.vue
 msgctxt "special.excepts.exempted"
@@ -14178,6 +14417,12 @@ msgctxt "token.timeout"
 msgid "The server did not answer the token request"
 msgstr "서버가 토큰 요청에 답하지 않았습니다."
 
+#. Tooltip and aria-label of a translated message's Translate action in its hover toolbar; it opens a menu: show the original, copy, retranslate.
+#: client/components/MessageActions.vue
+msgctxt "translate.action.options"
+msgid "Translation options"
+msgstr ""
+
 #. Tooltip and aria-label of the translate button in a message's hover toolbar when the message's translation was hidden; it brings it back.
 #: client/components/MessageActions.vue
 msgctxt "translate.action.showTranslation"
@@ -14287,11 +14532,11 @@ msgctxt "translate.capability.testLimit"
 msgid "Limited to {size} for testing ({key} in this browser's storage). Delete that entry and reload to use the GPU's own limit."
 msgstr "테스트를 위해 {size}로 제한됨(이 브라우저 저장소의 {key}). 해당 항목을 삭제하고 새로고침하면 GPU 자체 한도를 사용합니다."
 
-#. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
+#. Quiet label under a translated line in the message list, and the button for its translation options. {language} is the language the line was written in (or one or two guesses, or ?). Starts lowercase in English: it reads as a caption.
 #: client/components/TranslationLine.vue
-msgctxt "translate.chip.alreadyIn"
-msgid "Already in {language}, not translated. Translation options"
-msgstr "이미 {language} 텍스트이므로 번역하지 않음. 번역 옵션"
+msgctxt "translate.chip.from"
+msgid "from {language}"
+msgstr ""
 
 #. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
 #: client/components/TranslationLine.vue
@@ -14299,41 +14544,43 @@ msgctxt "translate.chip.options"
 msgid "{languages}. Translation options"
 msgstr "{languages}. 번역 옵션"
 
-#. Tooltip and aria-label of a translation line's chip, skipped because the detector could not tell the language apart.
+#. Quiet label under the user's own translated line in the message list (its read-back), and the button for its translation options. {language} is the language the line went out in. Starts lowercase in English: it reads as a caption.
 #: client/components/TranslationLine.vue
-msgctxt "translate.chip.unsure"
-msgid "Language not told apart, not translated. Translation options"
-msgstr "언어가 구분되지 않아 번역되지 않았습니다. 번역 옵션"
+msgctxt "translate.chip.sentIn"
+msgid "sent in {language}"
+msgstr ""
 
-#. Placeholder of the message composer in a channel or private conversation whose outgoing messages are translated. {name} is the channel or nickname; {language} is the language messages are sent in.
+#. Tooltip and aria-label of the composer's translate button while the channel corrects every message (spelling and grammar) in {language}, the user's own language, before sending; a click opens the language sheet, where it can be changed or turned off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
-msgctxt "translate.composer.placeholder"
-msgid "Write to {name} · sent in {language}"
-msgstr "{name}에 메시지 쓰기 · {language}(으)로 전송"
-
-#. Placeholder of the message input when the channel's write target is the language the user reads: every line is corrected (spelling and grammar) before it is sent. {name} is the channel or user name, verbatim; the middle dot is part of the copy.
-#: client/components/ChatInput.vue
-msgctxt "translate.composer.placeholderCorrected"
-msgid "Write to {name} · sent corrected"
-msgstr "{name}에 메시지 쓰기 · 교정해서 전송"
-
-#. Tooltip and aria-label of the composer's translate button while the channel corrects every message (spelling and grammar) in {language}, the user's own language, before sending; a click turns that off. The middle dot is part of the copy.
-#: client/components/ChatInput.vue
+#, fuzzy
 msgctxt "translate.composer.sendCorrectedOn"
-msgid "Sending corrected in {language} · click to stop"
+msgid "Sending corrected in {language} · change or turn off"
 msgstr "{language}(으)로 교정해서 전송 중 · 클릭하여 중지"
 
-#. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens a dialog to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
+#. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens the language sheet to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOff"
 msgid "Translate what I send…"
 msgstr "보내는 메시지 번역…"
 
-#. Tooltip and aria-label of the composer's translate button while the channel sends every message translated into {language} (a language name in the interface language); a click turns that off. The middle dot is part of the copy.
+#. Tooltip and aria-label of the composer's translate button while the channel sends every message translated into {language} (a language name in the interface language); a click opens the language sheet, where it can be changed or turned off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
+#, fuzzy
 msgctxt "translate.composer.sendOn"
-msgid "Sending in {language} · click to stop"
+msgid "Sending in {language} · change or turn off"
 msgstr "{language}(으)로 전송 중 · 클릭하여 중지"
+
+#. The composer's translate button while the channel's send target is the user's own language: lines are corrected, not translated. {language} is the short code, e.g. EN.
+#: client/components/ChatInput.vue
+msgctxt "translate.composer.targetCorrected"
+msgid "{language} ✓"
+msgstr ""
+
+#. The composer's translate button while the channel has a send target: the language the user writes in, an arrow, the language messages are sent in, as short codes ({from} and {to} are e.g. EN and PT). Turn the arrow round for a right-to-left language.
+#: client/components/ChatInput.vue
+msgctxt "translate.composer.targetPair"
+msgid "{from} → {to}"
+msgstr ""
 
 #. Extra line in the dialog asking before a translation model is downloaded, shown only when the browser reports a cellular connection or Data Saver: a warning that the download may cost data.
 #: client/js/translate/index.ts
@@ -14443,8 +14690,26 @@ msgctxt "translate.failed"
 msgid "Couldn't translate"
 msgstr "번역할 수 없었습니다"
 
+#. Tooltip and aria-label of the small button before the user's own line, sent translated into {language}; the line shows what the translation reads back as in the user's reading language, and pressing the button shows the text that went out.
+#: client/components/TranslationFlip.vue
+#, fuzzy
+msgctxt "translate.flip.sentIn"
+msgid "Sent in {language}. Show what was sent"
+msgstr ""
+
+#. Tooltip and aria-label of the small button before a chat line while its original is showing; pressing it shows the translation in its place again.
+#: client/components/TranslationFlip.vue
+msgctxt "translate.flip.showTranslation"
+msgid "Show the translation"
+msgstr ""
+
+#. Tooltip and aria-label of the small button before a translated chat line, which stands in the original's place; pressing it shows the original. {language} is the source language's name, or several joined.
+#: client/components/TranslationFlip.vue
+msgctxt "translate.flip.translatedFrom"
+msgid "Translated from {language}. Show the original"
+msgstr ""
+
 #. Choice for how formally a translation addresses people: keep whatever the original message did.
-#: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
@@ -14513,66 +14778,36 @@ msgctxt "translate.gpuFallback.title"
 msgid "The GPU stopped"
 msgstr "GPU가 멈췄습니다"
 
-#. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
-#: client/components/Chat.vue
-msgctxt "translate.header.off"
-msgid "Translate messages into {reading}"
-msgstr "메시지를 {reading}(으)로 번역"
-
-#. Tooltip of the translate button in a chat window's header when translation is off and the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
-#: client/components/Chat.vue
-msgctxt "translate.header.offPaused"
-msgid "Translate messages into {reading}, paused: {reason}"
-msgstr "{reading}로 메시지 번역, 일시 중지: {reason}"
-
-#. Tooltip of the translate button in a chat window's header while incoming messages are not translated but outgoing ones are. {reading} and {writing} are language names.
-#: client/components/Chat.vue
-msgctxt "translate.header.offWrite"
-msgid "Translate messages into {reading}, sending in {writing}"
-msgstr "{reading}(으)로 메시지 번역, {writing}(으)로 전송"
-
-#. Tooltip of the translate button in a chat window's header when only outgoing messages are translated and the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
-#: client/components/Chat.vue
-msgctxt "translate.header.offWritePaused"
-msgid "Translate messages into {reading}, sending in {writing}, paused: {reason}"
-msgstr "{reading}(으)로 메시지 번역, {writing}(으)로 전송, 일시 중지: {reason}"
-
-#. Tooltip of the translate button in a chat window's header while incoming messages are being translated. {reading} is a language name.
-#: client/components/Chat.vue
-msgctxt "translate.header.read"
-msgid "Translating into {reading}"
-msgstr "{reading}로 번역 중"
-
-#. Tooltip of the translate button in a chat window's header when translation is on but the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
-#: client/components/Chat.vue
-msgctxt "translate.header.readPaused"
-msgid "Translating into {reading}, paused: {reason}"
-msgstr "{reading}로 번역 중, 일시 중지: {reason}"
-
-#. Tooltip of the translate button in a chat window's header while incoming messages are translated and outgoing ones are too. {reading} and {writing} are language names.
-#: client/components/Chat.vue
-msgctxt "translate.header.readWrite"
-msgid "Translating into {reading}, sending in {writing}"
-msgstr "{reading}(으)로 번역 중, {writing}(으)로 전송 중"
-
-#. Tooltip of the translate button in a chat window's header when reading and writing are both translated but the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
-#: client/components/Chat.vue
-msgctxt "translate.header.readWritePaused"
-msgid "Translating into {reading}, sending in {writing}, paused: {reason}"
-msgstr "{reading}(으)로 번역 중, {writing}(으)로 전송 중, 일시 중지: {reason}"
-
-#. Tooltip and aria-label of the translate button in a chat window's header on a touch device, where tapping it opens the translation panel.
-#: client/components/Chat.vue
-msgctxt "translate.header.settings"
-msgid "Translation settings"
-msgstr "번역 설정"
-
 #. Warning shown under a language choice, in the translation panel and in Settings, when the available models translate that language poorly.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.limitedLanguage"
 msgid "Translations into and out of this language are often wrong."
 msgstr "이 언어로 또는 이 언어에서 번역하면 자주 틀립니다."
+
+#. Shown once under a translated line in a channel (iPhone and iPad app only), followed by a 'Get it' button: the device's own translator (Apple's Translation framework) can translate this language once its language pack is downloaded from the system's sheet. {language} is a language name, e.g. 'Portuguese'. 'Apple' is the company; keep it recognisable.
+#: client/components/TranslationLine.vue
+msgctxt "translate.line.applePack"
+msgid "Apple can translate {language} on this device"
+msgstr ""
+
+#. Button after 'Apple can translate {language} on this device' under a translated line: opens the system's sheet that downloads the language pack.
+#: client/components/TranslationLine.vue
+msgctxt "translate.line.applePackGet"
+msgid "Get it"
+msgstr ""
+
+#. Button after 'Needs a {size} download' under a line in a channel: downloads the translation model and translates the line.
+#: client/components/TranslationLine.vue
+msgctxt "translate.line.download"
+msgid "Download"
+msgstr ""
+
+#. Shown under a line in a channel whose translation needs a model that is not on this device yet, in place of a failure, followed by a Download button. The app did not download it by itself because it is large. {size} is its download size with its unit, e.g. '620 MiB'.
+#: client/components/TranslationLine.vue
+msgctxt "translate.line.needsDownload"
+msgid "Needs a {size} download"
+msgstr ""
 
 #. Note shown in the composer's translation strip or under a message while the model it needs is being fetched for the first time. {model} is the model's name, {percent} a number from 0 to 100.
 #: client/js/helpers/modelLabel.ts
@@ -14621,12 +14856,6 @@ msgstr "다른 언어에서 재번역…"
 msgctxt "translate.menu.showOriginal"
 msgid "Show original only"
 msgstr "원문만 표시"
-
-#. A translation chip's menu item.
-#: client/components/TranslationLine.vue
-msgctxt "translate.menu.translateAnyway"
-msgid "Translate anyway"
-msgstr "그래도 번역"
 
 #. Item of the menu the message toolbar's Translate action opens: pick the language this line is in before translating it. Ends in an ellipsis because a dialog follows.
 #: client/components/MessageActions.vue
@@ -14731,21 +14960,16 @@ msgctxt "translate.model.smallBufferBuild"
 msgid "This GPU gets a build of the model made for small graphics buffers: its largest buffer is {size}."
 msgstr "이 GPU에는 작은 그래픽 버퍼용으로 만든 모델 빌드가 사용됩니다. 그 최대 버퍼는 {size}입니다."
 
-#. Label of the compact equals-icon chip shown in place of a translation that failed because the engine returned the source line as its own answer. Also the chip's tooltip and aria-label; the reason text beside it only appears in development builds.
-#: client/components/TranslationLine.vue
-msgctxt "translate.notTranslated"
-msgid "Not translated"
-msgstr "번역 안 됨"
-
-#. Lead sentence when a translation is unavailable for a language pair (the composer's translate dialog, the translation panel's 'Send my messages in'); the reason follows as a sentence of its own. {from} and {to} are language names, already in the interface language.
+#. Lead sentence when a translation is unavailable for a language pair (the composer's language sheet, the retranslate dialog, the translation panel's 'Send my messages in'); the reason follows as a sentence of its own. {from} and {to} are language names, already in the interface language.
 #: client/components/SourceLanguagePicker.vue
 #: client/components/TranslationPanel.vue
+#: client/components/ComposerLanguageSheet.vue
 msgctxt "translate.pair.unavailable"
 msgid "Nothing on this device can translate {from} into {to}."
 msgstr "이 기기에서는 {from}에서 {to}(으)로 번역할 수 있는 것이 없습니다."
 
-#. Lead sentence in the composer's translate dialog when the source is 'Detect automatically' and no engine here translates into the chosen language; the reason follows as a sentence of its own. {to} is a language name, already in the interface language.
-#: client/components/SourceLanguagePicker.vue
+#. Lead sentence in the composer's language sheet when the source is 'Detect automatically' and no engine here translates into the chosen language; the reason follows as a sentence of its own. {to} is a language name, already in the interface language.
+#: client/components/ComposerLanguageSheet.vue
 msgctxt "translate.pair.unavailableInto"
 msgid "Nothing on this device can translate into {to}."
 msgstr "이 기기에서는 {to}(으)로 번역할 수 있는 것이 없습니다."
@@ -14791,6 +15015,12 @@ msgstr "켬"
 msgctxt "translate.panel.ownLanguageNeedsGpu"
 msgid "{language} is greyed out: correcting a message needs the language model."
 msgstr "{language}은(는) 회색으로 표시됩니다: 메시지를 교정하려면 언어 모델이 필요합니다."
+
+#. Status line at the top of the per-channel translation panel while the engine has paused itself after repeated failures; it resumes by itself within a minute. {reason} is the engine's own untranslated message.
+#: client/components/TranslationPanel.vue
+msgctxt "translate.panel.paused"
+msgid "Translation is paused for now: {reason}"
+msgstr ""
 
 #. Explanatory note under the reading switch in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -14876,66 +15106,19 @@ msgctxt "translate.picker.dialog"
 msgid "Retranslate from another language"
 msgstr "다른 언어에서 다시 번역"
 
-#. First option of the source-language picker in the composer's translate-into dialog: the draft's language is detected rather than named.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.fromAuto"
-msgid "Detect automatically"
-msgstr "자동 감지"
-
-#. Label of the source-language picker in the dialog the composer's translate button opens; preselected to the language the user reads.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.fromLabel"
-msgid "Translate from"
-msgstr "원본 언어"
-
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
 msgstr "이 줄의 원본 언어"
 
-#. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.sameLanguage"
-msgid "Same language: spelling and grammar are corrected instead."
-msgstr "같은 언어: 대신 맞춤법과 문법을 교정합니다."
-
-#. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the language model (a large AI model) can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
+#. Lead sentence in the composer's language sheet, the retranslate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the language model (a large AI model) can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
 #: client/components/TranslationPanel.vue
+#: client/components/ComposerLanguageSheet.vue
 msgctxt "translate.picker.sameLanguageNeedsGpu"
 msgid "Correcting a message needs the language model."
 msgstr "메시지를 교정하려면 언어 모델이 필요합니다."
-
-#. Button that translates the draft into the language picked in the composer's translate-into dialog.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.targetConfirm"
-msgid "Translate"
-msgstr "번역"
-
-#. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.targetConfirmCorrect"
-msgid "Correct"
-msgstr "교정"
-
-#. aria-label of the small dialog the composer's translate button opens: pick the language the draft is translated into, this once.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.targetDialog"
-msgid "Translate this message into a language"
-msgstr "이 메시지를 번역할 언어"
-
-#. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.targetLabel"
-msgid "Translate into"
-msgstr "번역할 언어"
-
-#. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
-#: client/components/SourceLanguagePicker.vue
-msgctxt "translate.picker.thisMessageOnly"
-msgid "This message only"
-msgstr "이 메시지만"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -15065,8 +15248,9 @@ msgstr "인터페이스 언어"
 
 #. Introductory paragraph of the Translation tab in Settings, explaining that translation runs locally.
 #: client/components/Settings/Translation.vue
+#, fuzzy
 msgctxt "translate.settings.intro"
-msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
+msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from Translation… in the channel's menu."
 msgstr "메시지는 한 번 다운로드한 모델로 이 기기에서 번역되며, 번역 서비스로는 아무것도 보내지 않습니다. 채널 헤더의 번역 버튼으로 채널마다 켭니다."
 
 #. Explanatory note under the language picker in Settings → Translation.
@@ -15149,6 +15333,103 @@ msgctxt "translate.settings.workerError"
 msgid "Could not reach the translation worker: {error}"
 msgstr "번역 워커에 연결할 수 없음: {error}"
 
+#. Value of the language sheet's 'They read' side before any language is picked.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.choose"
+msgid "Choose…"
+msgstr ""
+
+#. Tooltip and aria-label of the ✕ button that closes the composer's language sheet without changing anything.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.close"
+msgid "Close"
+msgstr ""
+
+#. Status beside the language the user writes in, in the language sheet's 'They read' list: picking it corrects spelling and grammar rather than translating. Short.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.corrects"
+msgid "Corrects spelling"
+msgstr ""
+
+#. Value of the language sheet's 'I write' side, and the first row of its list, when the language of each message is detected rather than named.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.detect"
+msgid "Detect automatically"
+msgstr ""
+
+#. aria-label of the language sheet the composer's translate button opens: pick the language you write in and the one your messages are translated into.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.dialog"
+msgid "Choose the language your messages are sent in"
+msgstr ""
+
+#. Status beside a language in the language sheet whose translation model is not on this device yet. {size} is a file size such as '312.5 MiB'. Short.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.download"
+msgid "{size} download"
+msgstr ""
+
+#. Label of the language sheet's first side: the language the user writes their messages in. Short, shown above the language's name.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.iWrite"
+msgid "I write"
+msgstr ""
+
+#. Shown in the language sheet's list when the search finds nothing. {query} is what the user typed.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.noMatch"
+msgid "No language matches “{query}”."
+msgstr ""
+
+#. Button in the language sheet's header, shown while the user's messages in this channel are being translated: stop translating them.
+#: client/components/ComposerLanguageSheet.vue
+#, fuzzy
+msgctxt "translate.sheet.off"
+msgid "Turn off"
+msgstr ""
+
+#. Heading over shortcut buttons in the language sheet: the languages people wrote in most in this channel recently. {channel} is the channel's name, e.g. #linux.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.recent"
+msgid "Spoken in {channel} lately"
+msgstr ""
+
+#. Placeholder and aria-label of the search field in the language sheet.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.search"
+msgid "Search languages"
+msgstr ""
+
+#. Tooltip and aria-label of the button between the language sheet's two sides: exchanges the language the user writes and the one they send in.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.swap"
+msgid "Swap languages"
+msgstr ""
+
+#. Label of the language sheet's second side: the language the user's messages are sent in, the one the channel reads. Short, shown above the language's name.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.theyRead"
+msgid "They read"
+msgstr ""
+
+#. Checkbox in the language sheet: ticked, the picked language applies to the draft alone (a one-off) rather than to every message the user sends in this channel.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.thisMessageOnly"
+msgid "This message only"
+msgstr ""
+
+#. Heading of the language sheet the composer's translate button opens: the language the user's messages are translated into before they are sent.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.title"
+msgid "Send my messages in"
+msgstr ""
+
+#. Heading over the languages at the end of the language sheet's list that nothing on this device can translate into from the language the user writes. Tapping one shows why.
+#: client/components/ComposerLanguageSheet.vue
+msgctxt "translate.sheet.unavailableHeading"
+msgid "Not available on this device"
+msgstr ""
+
 #. Text of the second row of the composer's translation strip when translating the translation back into the user's own language failed.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.checkFailed"
@@ -15173,17 +15454,18 @@ msgctxt "translate.strip.failed"
 msgid "couldn't translate, send as written?"
 msgstr "번역할 수 없음, 원문으로 보낼까요?"
 
-#. Tooltip and aria-label of the button in the composer's translation strip that dismisses the translation and returns to the draft. Escape is the keyboard key of the same name.
-#: client/components/ChatInput.vue
-msgctxt "translate.strip.keepTyping"
-msgid "Keep typing (Escape)"
-msgstr "계속 입력 (Escape)"
-
 #. Chip at the start of the composer's translation strip when the draft was corrected in its own language rather than translated. {language} is that language's name, in the interface language.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.polishChip"
 msgid "{language}, corrected"
 msgstr "{language}, 교정됨"
+
+#. Label before the composer preview's round trip: the translation translated back into the user's language, so they can check it. The text follows it.
+#: client/components/ChatInput.vue
+#, fuzzy
+msgctxt "translate.strip.readsBack"
+msgid "Reads back as:"
+msgstr ""
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the main processor.
 #: client/components/ChatInput.vue
@@ -15233,11 +15515,47 @@ msgctxt "translate.strip.sendTranslation"
 msgid "Send the translation"
 msgstr "번역 보내기"
 
+#. Note under the composer's translation preview after Return was pressed while it was still translating: the message goes as soon as it is done.
+#: client/components/ChatInput.vue
+msgctxt "translate.strip.sendsWhenReady"
+msgid "Sends when the translation is ready"
+msgstr ""
+
 #. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
 msgstr "자동"
+
+#. Label over the composer's live translation preview: the line Return will send, and the language it is in.
+#: client/components/ChatInput.vue
+msgctxt "translate.strip.willSendIn"
+msgid "Will send in {language}"
+msgstr ""
+
+#. Button on the suggestion card above the message box: from now on, the user's messages in this channel are translated into {language} (a language name) before they are sent.
+#: client/components/ChatInput.vue
+msgctxt "translate.suggest.accept"
+msgid "Write in {language}"
+msgstr ""
+
+#. Button on the suggestion card above the message box: dismiss it and do not suggest it again in this channel.
+#: client/components/ChatInput.vue
+msgctxt "translate.suggest.decline"
+msgid "Not in this channel"
+msgstr ""
+
+#. Note on the suggestion card above the message box. {model} is a translation model's name; {size} is a file size such as '312.5 MiB'.
+#: client/components/ChatInput.vue
+msgctxt "translate.suggest.download"
+msgid "Uses {model}, a {size} download."
+msgstr ""
+
+#. Card above the message box. {channel} is a channel name such as #linux; {language} is a language name such as Portuguese. Saying yes translates the user's messages into that language before they are sent.
+#: client/components/ChatInput.vue
+msgctxt "translate.suggest.lead"
+msgid "Most of {channel} writes in {language}. Write your messages in {language} here?"
+msgstr ""
 
 #. Status line in the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable. {from} and {to} are language names. Shown while the system's download sheet is open.
 #: client/components/Settings/TranslationOptions.vue
@@ -15325,18 +15643,11 @@ msgctxt "translate.topic.showTranslation"
 msgid "Show the translated topic"
 msgstr "번역된 주제 보기"
 
-#. Lead sentence of the per-channel translation panel's notice, and the channel header translate button's label, when no translation engine can run (both switched off, or a device that runs neither); the reason follows as a sentence of its own.
+#. Lead sentence of the per-channel translation panel's notice when no translation engine can run (both switched off, or a device that runs neither); the reason follows as a sentence of its own.
 #: client/components/TranslationPanel.vue
-#: client/components/Chat.vue
 msgctxt "translate.unavailable.lead"
 msgid "Translation can't run here right now."
 msgstr "지금은 여기서 번역을 실행할 수 없습니다."
-
-#. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
-#: client/components/TranslationLine.vue
-msgctxt "translate.unchangedReason"
-msgid "the line came back unchanged"
-msgstr "줄이 바뀌지 않은 채 돌아왔습니다"
 
 #. Reason nothing can translate: the user turned off the language model and OPUS-MT. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the language model.'. 'Settings → Translation' names the settings tab. OPUS-MT is a product name.
 #: client/js/helpers/translateWhy.ts

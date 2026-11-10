@@ -142,6 +142,21 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(keptNets[0].saslPassword).to.equal("hunter2");
 	});
 
+	it("strips a server password too, and counts it as a password", function () {
+		store.set(
+			"thelounge.networks",
+			JSON.stringify([{uuid: "z", host: "znc.example", serverPassword: "bob/rig:pw"}])
+		);
+
+		const stripped = collectBackup();
+		const nets = stripped.entries["thelounge.networks"] as Record<string, unknown>[];
+		expect(nets[0]).to.not.have.property("serverPassword");
+		expect(hasPasswords(stripped)).to.equal(false);
+
+		const kept = collectBackup({includePasswords: true});
+		expect(hasPasswords(kept)).to.equal(true);
+	});
+
 	it("takes the live settings over the stored ones", function () {
 		seed();
 		const backup = collectBackup({settings: {theme: "day", coloredNicks: true}});
@@ -261,6 +276,25 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(store.get("thelounge.push")).to.equal(JSON.stringify({a: {}}));
 		expect(store.has("thelounge.state.sidebar")).to.equal(false);
 		expect(store.get("thelounge.mentions")).to.equal("[]");
+	});
+
+	it("restoring forgets the SASL logins this device trusted", function () {
+		// A restored entry with the same uuid may carry other credentials, and
+		// the key is never in a file: the first login after a restore proves itself.
+		seed();
+		store.set("thelounge.state.saslOk", JSON.stringify({a: "alice"}));
+		applyBackup(
+			{
+				format: FORMAT,
+				version: VERSION,
+				exportedAt: "",
+				entries: {settings: {theme: "day"}},
+			},
+			"web",
+			{}
+		);
+
+		expect(store.has("thelounge.state.saslOk")).to.equal(false);
 	});
 
 	it("an older file leaves a key its version never carried alone", function () {

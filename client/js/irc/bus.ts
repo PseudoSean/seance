@@ -12,10 +12,11 @@ import {requestReplyParent, requestSearch, requestSearchContext} from "./history
 import {refreshOper, setSnomask} from "./oper";
 import {request} from "./request";
 import * as saved from "./saved-networks";
+import {forgetLogin} from "./saslTrust";
 import {checkServices, servicesBan} from "./services";
 import type {ConnectOptions} from "./types";
 import type {NetworkMode} from "../helpers/dnd";
-import {REPLY_TAG} from "./wire";
+import {replyTags} from "./wire";
 
 export interface ClientRegistry {
 	clientForChannel(chanId: number): IrcClient | undefined;
@@ -54,11 +55,11 @@ export function networkInfo(
 }
 
 export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): void {
-	bus.handle("input", ({target, text, reply, edit}) => {
+	bus.handle("input", ({target, text, reply, edit, language, machineTranslated}) => {
 		const client = registry.clientForChannel(target);
 
 		if (client) {
-			client.input(target, text, {reply, edit});
+			client.input(target, text, {reply, edit, language, machineTranslated});
 		} else {
 			// eslint-disable-next-line no-console
 			console.warn("[irc] input for unknown channel", target, text);
@@ -73,7 +74,7 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 
 		if (client && client.isConnected) {
 			// A notification's reply answers the message it was shown for.
-			client.sendMessage(target, text, replyTo ? {tags: {[REPLY_TAG]: replyTo}} : {});
+			client.sendMessage(target, text, replyTo ? {tags: replyTags(replyTo)} : {});
 		} else {
 			// eslint-disable-next-line no-console
 			console.warn("[irc] send to a network that is not connected", network, target);
@@ -145,9 +146,11 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		const client = registry.clientForNetwork(network);
 
 		if (client) {
-			client.send(
-				value ? `METADATA * SET ${key} private :${value}` : `METADATA * SET ${key}`
-			);
+			const line = client.metadataSetLine(key, value);
+
+			if (line) {
+				client.send(line);
+			}
 		}
 	});
 
@@ -161,6 +164,12 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 
 	bus.handle("persistence:sessions:list", (params) => {
 		persistenceClient(params)?.send("PERSISTENCE LIST");
+	});
+
+	// The channel browser (Windows/ChannelBrowser.vue): one LIST per ask,
+	// answered as `channel:list` (handlers/list.ts).
+	bus.handle("channel:list:ask", ({network, args}) => {
+		registry.clientForNetwork(network)?.requestChannelList(args);
 	});
 
 	bus.handle("persistence:sessions:logout", (params) => {
@@ -353,6 +362,12 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		next.presenceAt = modeChosen ? Date.now() : kept;
 
 		saved.save(next);
+
+		// Edited credentials have not proved themselves (saslTrust.ts); the
+		// client, when there is one, forgets them again in applySettings.
+		if (next.saslAccount !== base?.saslAccount || next.saslPassword !== base?.saslPassword) {
+			forgetLogin(uuid);
+		}
 
 		if (client) {
 			// Host, port, TLS, channels and SASL: applied on the next connect,

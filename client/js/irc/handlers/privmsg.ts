@@ -13,7 +13,9 @@ import {inRestorationWindow, isRoutineReplayNotice} from "../persistence";
 import {privilegesModified} from "../oper";
 import {noteServicesLine, snoopNicks} from "../servicesfeed";
 import {handleServerNotice, handleWallops} from "../snotice";
-import {EDIT_TAG, REPLY_TAG, trailingLine} from "../wire";
+import {DRAFT_REPLY_TAG, EDIT_TAG, REPLY_TAG, trailingLine} from "../wire";
+import {languageFieldsOf} from "../langtag";
+import {noteListDelay} from "./list";
 import type {Handler} from "../types";
 import {ignoreListFor} from "../../ignore";
 import {scriptManager} from "../scripting/manager";
@@ -144,6 +146,11 @@ function handleMessage(
 			return;
 		}
 	} else if (fromServer) {
+		// nefarious2's "wait N seconds before /list": the channel browser shows it.
+		if (type === MessageType.NOTICE && noteListDelay(client, text)) {
+			return;
+		}
+
 		nick = nick || client.options.host;
 		chan = client.findChannel(target);
 
@@ -253,7 +260,7 @@ function handleMessage(
 		message.statusmsgGroup = group;
 	}
 
-	// Replies (`+reply` ratified, `+draft/reply` what poxchat sends) and our
+	// Replies (`+reply`, or the `+draft/reply` poxchat sends) and our
 	// own edit marker, bus-contract §1.4. The parent may not be loaded; the
 	// UI resolves it when rendering.
 	const replyTo = replyTagOf(msg);
@@ -266,6 +273,14 @@ function handleMessage(
 	if (editOf) {
 		message.editOf = editOf;
 	}
+
+	// The language tags (`langtag.ts`): what the sender says the text is
+	// in, and whether its client machine-translated it. An edit carries its
+	// own, so a rewrite sent as typed loses the original's note.
+	Object.assign(
+		message,
+		languageFieldsOf((name) => msg.tags.get(name))
+	);
 
 	// The original leaves the inbox, loaded or not; the inbox checks that
 	// the edit's sender wrote it (`by`). The edit brings its own entry if it
@@ -309,9 +324,9 @@ function handleMessage(
 	}
 }
 
-/** The msgid a PRIVMSG / TAGMSG refers to (`+draft/reply` preferred, `+reply` accepted). */
+/** The msgid a PRIVMSG / TAGMSG refers to (`+reply` preferred, `+draft/reply` accepted). */
 export function replyTagOf(msg: IrcMessage): string | undefined {
-	return msg.tags.get(REPLY_TAG) || msg.tags.get("+reply") || undefined;
+	return msg.tags.get(REPLY_TAG) || msg.tags.get(DRAFT_REPLY_TAG) || undefined;
 }
 
 function handleCtcpResponse(client: IrcClient, nick: string, ctcp: Ctcp, time: Date): void {
