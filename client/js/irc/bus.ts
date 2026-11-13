@@ -9,6 +9,7 @@ import type {EventBus} from "../socket";
 import type {IrcClient} from "./client";
 import {requestMore} from "./history";
 import {requestReplyParent, requestSearch, requestSearchContext} from "./historysearch";
+import {changeBans} from "./banList";
 import {refreshOper, setSnomask} from "./oper";
 import {request} from "./request";
 import * as saved from "./saved-networks";
@@ -146,11 +147,7 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		const client = registry.clientForNetwork(network);
 
 		if (client) {
-			const line = client.metadataSetLine(key, value);
-
-			if (line) {
-				client.send(line);
-			}
+			client.writePayloadTier(key, value);
 		}
 	});
 
@@ -170,6 +167,25 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 	// answered as `channel:list` (handlers/list.ts).
 	bus.handle("channel:list:ask", ({network, args}) => {
 		registry.clientForNetwork(network)?.requestChannelList(args);
+	});
+
+	// The Bans window and the ban dialog (irc/banList.ts): the list, answered
+	// as `channel:bans`, and every change to it.
+	bus.handle("channel:bans:ask", ({network, channel}) => {
+		registry.clientForNetwork(network)?.requestBanList(channel);
+	});
+
+	bus.handle("channel:bans:change", ({network, id, change}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (!client) {
+			bus.dispatch("channel:bans:changed", {network, id, outcome: "closed"});
+			return;
+		}
+
+		void changeBans(client, change).then((result) => {
+			bus.dispatch("channel:bans:changed", {network, id, ...result});
+		});
 	});
 
 	bus.handle("persistence:sessions:logout", (params) => {

@@ -38,7 +38,7 @@
 import type {CapNegotiator} from "./caps";
 import type {Channel, MsgRef} from "./channel";
 import type {IrcClient} from "./client";
-import type {BatchHandler, OpenBatch} from "./handlers/batch";
+import {openBatchesOf, type BatchHandler, type OpenBatch} from "./handlers/batch";
 import {formatLine, IrcMessage, utf8ByteLength} from "./message";
 import {presenceResumed} from "./presence";
 
@@ -141,6 +141,21 @@ export function noteRestorationActivity(client: IrcClient): void {
 	arm(client, state, RESTORE_QUIET_MS);
 }
 
+/**
+ * A restoration batch is still open. While one is, the autojoin waits for it
+ * to close, however long its lines pause (a retransmit on a phone), up to the
+ * deadline: the quiet period only stands in for a batch nobody announced.
+ */
+function restorationBatchOpen(client: IrcClient): boolean {
+	for (const open of openBatchesOf(client).values()) {
+		if (open.type === PERSISTENCE_CAP) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 function arm(client: IrcClient, state: RestoreState, delay: number): void {
 	if (state.timer !== null) {
 		clearTimeout(state.timer);
@@ -149,6 +164,12 @@ function arm(client: IrcClient, state: RestoreState, delay: number): void {
 	const wait = Math.max(0, Math.min(delay, state.deadline - Date.now()));
 	state.timer = setTimeout(() => {
 		state.timer = null;
+
+		if (restorationBatchOpen(client) && Date.now() < state.deadline) {
+			arm(client, state, RESTORE_QUIET_MS);
+			return;
+		}
+
 		client.restorationSettled();
 	}, wait);
 }
@@ -187,7 +208,9 @@ export const persistenceBatch: BatchHandler = (client, batch) => {
 		client.restoring = false;
 	}
 
-	if (waiting) {
+	if (waiting && restorationBatchOpen(client)) {
+		arm(client, state, RESTORE_QUIET_MS); // another one is still being restored
+	} else if (waiting) {
 		client.restorationSettled();
 	}
 
@@ -275,6 +298,7 @@ export function persistenceFailed(client: IrcClient, msg: IrcMessage): boolean {
 	if (context === "ATTACH" && client.attachCursor !== undefined) {
 		client.attachCursor = undefined;
 		client.serverReplay = false;
+		client.replayIds = undefined;
 		// eslint-disable-next-line no-console
 		console.debug(`[irc] PERSISTENCE ATTACH refused (${code}); catching up ourselves`);
 		return true;
@@ -285,8 +309,17 @@ export function persistenceFailed(client: IrcClient, msg: IrcMessage): boolean {
 
 /** True when `batch` is, or is nested in, the server's bouncer-replay wrapper. */
 export function inBouncerReplay(batch: OpenBatch): boolean {
+	return within(batch, BOUNCER_REPLAY_BATCH);
+}
+
+/** True when `batch` is, or is nested in, the server's session restoration. */
+export function inRestoration(batch: OpenBatch): boolean {
+	return within(batch, PERSISTENCE_CAP);
+}
+
+function within(batch: OpenBatch, type: string): boolean {
 	for (let b: OpenBatch | undefined = batch; b; b = b.parent) {
-		if (b.type === BOUNCER_REPLAY_BATCH) {
+		if (b.type === type) {
 			return true;
 		}
 	}
@@ -317,6 +350,7 @@ export const bouncerReplayBatch: BatchHandler = (client, batch) => {
 		client.handleMessage(msg);
 	}
 
+	client.replayIds = undefined; // the replay is over
 	presenceResumed(client);
 };
 

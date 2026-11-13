@@ -21,6 +21,7 @@ import {SharedUser} from "./user";
 import {SharedChangelogData} from "./changelog";
 import {SharedConfiguration, LockedSharedConfiguration} from "./config";
 import {SharedOperState, SnoticeInfo} from "./oper";
+import {BanChange, BanChangeOutcome, SharedBanList} from "./ban-list";
 import {SharedChannelList} from "./channel-list";
 
 type Session = {
@@ -178,6 +179,11 @@ interface ServerToClientEvents {
 	/** Message `id` (already delivered via `msg`) replaces message `replaces`. */
 	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
 	/**
+	 * Message `id`, shown as an edit of a line not loaded yet, is not one:
+	 * that line came, and someone else wrote it. It stands as a line of its own.
+	 */
+	"msg:unedit": EventHandler<{chan: number; id: number}>;
+	/**
 	 * The pending copy `id` (delivered via `msg` with `pending: true`) is
 	 * settled: drop it. The echo, or the error line, that settles it
 	 * follows as its own `msg`.
@@ -249,6 +255,13 @@ interface ServerToClientEvents {
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
 	/** A network's channel list as the client holds it (irc/channelList.ts): on every change of its status, every PROGRESS_EVERY rows, and when the MOTD's featured channels are known. */
 	"channel:list": EventHandler<{network: string; list: SharedChannelList}>;
+	"channel:bans": EventHandler<{network: string; list: SharedBanList; open: boolean}>;
+	"channel:bans:changed": EventHandler<{
+		network: string;
+		id: string;
+		outcome: BanChangeOutcome;
+		text?: string;
+	}>;
 	msg: EventHandler<{
 		msg: SharedMsg;
 		chan: number;
@@ -259,6 +272,17 @@ interface ServerToClientEvents {
 		 * but do not notify or play a sound.
 		 */
 		replay?: boolean;
+		/**
+		 * A catch-up line placed among rows already shown, by its server
+		 * time (irc/history.ts `placeByTime`): its id lies between its
+		 * neighbours', and a line of ours never moves `firstUnread` back.
+		 */
+		placed?: boolean;
+		/**
+		 * A placed line that counts as unread: if it lies under the store's
+		 * marker, the marker goes back to the row before it.
+		 */
+		counted?: boolean;
 	}>;
 	/**
 	 * Unread mentions for the inbox (docs/projects/inbox.md): a live or
@@ -273,7 +297,12 @@ interface ServerToClientEvents {
 	 * an edit from `by` (whom the inbox checks against the entry's sender),
 	 * whether or not it is loaded.
 	 */
-	"inbox:drop": EventHandler<{network: string; target: string; msgid: string; by?: string}>;
+	"inbox:drop": EventHandler<{
+		network: string;
+		target: string;
+		msgid: string;
+		by?: {nick?: string; account?: string};
+	}>;
 
 	init: EventHandler<{active: number; networks: SharedNetwork[]; token?: string}>;
 
@@ -322,7 +351,7 @@ interface ClientToServerEvents {
 		text: string;
 		/** msgid to reply to: plain text / `/me` get `+reply` (and `+draft/reply`). */
 		reply?: string;
-		/** msgid of our own message to replace: REDACT (channels) + resend with `+seance/edit`. */
+		/** msgid of our own message to replace: REDACT (channels) + resend with the edit tags. */
 		edit?: string;
 		/** The language the text is in (the composer's translation target): `+draft/language`. */
 		language?: string;
@@ -357,6 +386,8 @@ interface ClientToServerEvents {
 	"persistence:sessions:list": EventHandler<{network?: string}>;
 	/** Ask a network for its channel list (one `LIST`, the whole answer, kept on the device); refused while one is under way or the server's delay runs. `args` are the server's own LIST arguments (`/list >10`). */
 	"channel:list:ask": EventHandler<{network: string; args?: string[]}>;
+	"channel:bans:ask": EventHandler<{network: string; channel: string}>;
+	"channel:bans:change": EventHandler<{network: string; id: string; change: BanChange}>;
 	/** End the current device's bouncer session (`PERSISTENCE DETACH`): the hold preference clears and the session is destroyed. */
 	"persistence:sessions:logout": EventHandler<{network?: string}>;
 
