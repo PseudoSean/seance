@@ -27,6 +27,7 @@ import {forgetPresenceSync} from "./presenceSync";
 import {forgetUserAway} from "./userAwayStore";
 import {forgetLogin} from "./saslTrust";
 import type {ConnectOptions} from "./types";
+import {accountRequired} from "../branding";
 import {PRESENCE_MODES, type NetworkMode, type PresenceMode} from "../helpers/dnd";
 import type {ServicesConfig} from "../../../shared/types/network";
 
@@ -402,9 +403,11 @@ export function fromForm(data: Record<string, unknown>, existing?: SavedNetwork)
 		}
 	}
 
-	// A blank password field in the edit form means "keep what I had".
-	if (existing && asString(data.saslPassword) === "" && existing.saslPassword) {
-		base.saslPassword = existing.saslPassword;
+	// A blank or missing password field in the edit form means "keep what I
+	// had", for the same account only: a password belongs to its account.
+	if (existing && asString(data.saslPassword) === "") {
+		const sameAccount = asString(base.saslAccount) === asString(existing.saslAccount);
+		base.saslPassword = sameAccount ? existing.saslPassword : "";
 	}
 
 	// The server password's switch off clears it; on with the field blank
@@ -499,13 +502,20 @@ export function withTrustedCertificate(net: SavedNetwork, sha256: string): Saved
 }
 
 /**
- * The entry cannot connect as saved: a password it needs was not kept on
- * disk (`rememberPassword` off), so it waits for the connect form.
+ * The entry cannot connect as saved, so it waits for the connect form: a
+ * password it needs was not kept on disk (`rememberPassword` off), or it
+ * logs in with nothing on a deploy that lets only accounts in
+ * (`accountRequired`) — a guest's entry from before guests were turned
+ * off, which the sign-in panel replaces with a login.
  */
-export function needsPassword(net: SavedNetwork): boolean {
+export function needsPassword(
+	net: SavedNetwork,
+	loginRequired: boolean = accountRequired()
+): boolean {
 	return (
 		(net.sasl === "plain" && !net.saslPassword) ||
-		(!!net.hasServerPassword && !net.serverPassword)
+		(!!net.hasServerPassword && !net.serverPassword) ||
+		(loginRequired && !net.sasl)
 	);
 }
 
