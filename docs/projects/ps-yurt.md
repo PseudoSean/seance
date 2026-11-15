@@ -1,6 +1,6 @@
 # Inside the yurt: the `ps` theme's private conversations
 
-**Status: plan 1 (the still room) and plan 2 (its motion) built, 2026-11-15** (`docs/projects/ps-yurt-plan-1.md`, merged into develop; `docs/projects/ps-yurt-plan-2.md`, on `ps-yurt-motion`). The approved mockup is `docs/resources/themes/ps-yurt/mockup.html` (its README says what in it is the design); where the two disagree, this document wins. It supersedes `docs/projects/ps-theme.md` §5.7 (the frosted plains).
+**Status: plan 1 (the still room), plan 2 (its motion) and plan 3 (the stove's fire, §16) built, 2026-11-15** (`docs/projects/ps-yurt-plan-1.md` and `ps-yurt-plan-2.md`, merged into develop; `docs/projects/ps-yurt-plan-3.md`, on `ps-yurt-fire`). The approved mockup is `docs/resources/themes/ps-yurt/mockup.html` (its README says what in it is the design); where the two disagree, this document wins. It supersedes `docs/projects/ps-theme.md` §5.7 (the frosted plains).
 
 ## 1. Intent
 
@@ -166,18 +166,18 @@ A query is now just another view to `tierFor`.
 2. `.ps-ym-panes`, the moving HTML panes (`windowMotion`);
 3. the front svg, everything else, with holes at the openings (an even-odd clip; a mask re-rastered the svg off the pixel grid at fractional scales);
 4. the glows as screen-blended layers of their own, the fire's in `.ps-ym-fireglow`;
-5. the over svg, with the stove's second drawing, the beam and the fire;
+5. the over svg, with the stove's second drawing, the beam, the dark firebox and its coal bed, and the still fire;
 6. `.ps-ym-top`, with the moving fire, the lamp's flame and the steam.
 
 One length, `--ps-ym-s`, places the HTML in the design frame as the svg's `slice` does. `psng/room-motion.ts` (`ROOM_MOTION_CSS`, adopted with the room's sheet) hangs the motion on NG's groups, in phase:
 
-- `hearth`, a new group: the fire's body and the glow on the mockup's `flick`, the tongues and the lamp's flame on its `flick-b`;
+- `hearth`, a new group: the glow on the mockup's `flick` and the lamp's flame on its `flick-b`; since plan 3 (§16), the fire's three tongues licking on their own beats (`psng-yt-lick-a`, `-b`, `-c`), its core breathing (`psng-yt-core`) and four sparks rising (`psng-yt-rise`, not in calm), in the door's box clipped to its opening;
 - `steam`, a new group: the smoke's keyframes;
 - `clouds`;
 - `weather`: the plains' own rain tiles, snow and flash, run by NG's rules;
 - `stars`, which sleep by day with the plains' stars gate.
 
-Each moving part swaps with plan 1's still drawing (`ps-yt-still-<group>`), and NG's catch-all still exempts the room's animated classes. Calm keeps the hearth; the window clouds rest under `psng-calm`, as measured (§11.2). The sun's canvas never draws in a query, and a move between the plains and the room rewrites `--psng-t`, so the picture shown starts its loops where the clock puts them (a change of view that keeps the picture, a channel and Settings, leaves it alone). The browser census is `tools/scenarios/ps-yurt.mjs`.
+Each moving part swaps with plan 1's still drawing (`ps-yt-still-<group>`), and NG's catch-all still exempts the room's animated classes. Calm keeps the hearth; the window clouds rest under `psng-calm`, as measured (§11.2). The fire burns while the plains' chimney smokes (plan 3: `--ps-in-burn`, the smoke's own level): its opacity and height follow the burn, and while the chimney sleeps the moving fire, its glow and the steam leave the render tree (`ps-off`, as the stars by day), leaving a dark door with a few embers. The sun's canvas never draws in a query, and a move between the plains and the room rewrites `--psng-t`, so the picture shown starts its loops where the clock puts them (a change of view that keeps the picture, a channel and Settings, leaves it alone). The browser census is `tools/scenarios/ps-yurt.mjs`.
 
 ## 9. Legibility
 
@@ -298,6 +298,45 @@ NG's cloud drift recalculates style each frame in both views: about 47 a second 
 
 The iPhone sitting is the user's.
 
+### 11.3 The stove's fire, measured (plan 3 task 3, 2026-11-15)
+
+§11.2's method and script, on the production builds, with one change: plan 2's own build (`90d818bd2`, local develop before plan 3) served beside plan 3's and measured in the same sitting, in place of §11.2's figures. The 1-minute load was 2–4 throughout (§11.2's sitting ran 8–40), so this sitting reads lower than §11.2 everywhere; its two builds compare with each other, not with §11.2. A clear 21:00 (2 January), full and calm, three rounds of four slots rotated by one each round; the noon rows are single runs. These are Chrome figures, which rank only.
+
+Each 21:00 figure is the median of three, with its range:
+
+| Slot                                | Desktop: channel → query          | Phone 4×: channel → query               |
+| ----------------------------------- | --------------------------------- | --------------------------------------- |
+| Full, clear 21:00, plan 2           | 7.0 % (6.9–7.1) → 2.7 % (2.5–4.0) | 27.4 % (25.6–28.8) → 30.3 % (29.6–34.3) |
+| Full, clear 21:00, plan 3           | 6.8 (6.5–7.4) → 4.1 (3.9–4.1)     | 27.1 (26.0–27.6) → 34.6 (33.7–34.8)     |
+| Calm, clear 21:00, plan 2           | 2.1 (1.8–2.3) → 0.16 (0.16)       | 4.2 (3.5–4.3) → 0.95 (0.92–1.04)        |
+| Calm, clear 21:00, plan 3           | 2.0 (1.9–2.2) → 1.7 (1.6–2.0)     | 4.5 (3.5–4.8) → 18.9 (18.7–20.8)        |
+| Full, clear noon, plan 2 (one run)  | 10.0 → 2.4                        | 30.4 → 21.4                             |
+| Full, clear noon, plan 3 (one run)  | 7.8 → 2.3                         | 32.0 → 17.2                             |
+| Still, clear noon, plan 3 (one run) | — → 0.09                          | — → 0.27                                |
+
+**Calm at night reads over the plains' calm.** On the phone profile a calm query at 21:00 read 18.9 % against the channel's 4.5 % (plan 2: 0.95 %), and the page recalculated style 60 times a second against plan 2's 2. A phone's Auto is calm (tiers.ts), so this is every phone's default in a query at night. That is the case §11 names, where the fire would be the next to leave calm; §16 keeps the dance in calm. Plan 3 leaves it as built and reports it: the two sections disagree, and §11's gate is the iPhone sitting.
+
+**The trigger is the page; what each tick costs in the room is not settled.** Single runs on the phone profile, calm at 21:00, rank only:
+
+- One CSS change at a time, none moved it from 17–21 %: no clip, no size container, no overflow, the licks without skew, the burn's opacity pinned, the licks alone off, the core alone off.
+- With the licks and the core both off the query read 0.85 %, and with the fire hidden 0.87 %.
+- The same six animations, with the tongues and the core on the lamp's opacity flicker in place of their licks, read 1.08 % with 2 recalculations a second.
+- A probe with a plain transform animation (its `animation` set inline and `important`, so NG's catch-all leaves it alone) recalculated style 60 times a second wherever it stood: on `body`, `#theme-scene`, `.ps-indoor`, `.ps-ym-top`, `.ps-ym-fire` and `.ps-ym-flames`. With no probe it was 2 a second.
+- Chrome's trace reports no compositing failure for any of the room's six animations. A bare page built the same way composites the same keyframes at under one recalculation a second: the clip, the size container, the isolation, the screen-blended glow, the burn-scaled parent, the svg gradient and the delay from a custom property.
+
+So in this headless Chromium every transform animation in the app's page is ticked on the main thread and opacity animations are not: §11.2's finding for NG's own cloud drift. That explains why there is a tick every frame, not what it costs. A calm channel also restyles every frame (about 47 a second, §11.2) and reads 4.5 %, while the calm query restyles 60 a second and reads 18.9 %: a tick costs about three to four times as much in the room, which has about 1,000 more elements (§11.1), whatever the number of moving boxes. Giving the tongues and the core layers of their own (`will-change: transform`) did not change it (18.7 % against 17.8 %, two runs each). Whether a phone's compositor ticks the same way is for the iPhone sitting (§11), with the room calm at night first.
+
+**At full the night costs a little more, and the day less.** At full a 21:00 query read 34.6 % against plan 2's 30.3 % on the phone profile, and 4.1 against 2.7 on the desktop: the four dancing boxes on top of the drift's recalculation every frame. That widens §11.2's open breach, where the query at night already cost more than the channel (now 34.6 % against 27.1 %). At a clear noon the fire, its glow and the steam are out, and a query read 17.2 % against plan 2's 21.4 % on the phone profile (single runs).
+
+The candidates are the user's call:
+
+- keep the dance in calm, as built (§16);
+- in calm, let the tongues and the core flicker by opacity instead of licking: 1.1 % in Chrome, but a flicker rather than a dance;
+- find out what a tick costs in the room (the trace's restyled elements and paint per frame, a calm query against a calm channel): a room-side cause could keep the dance in calm and narrow the full tier's breach too;
+- decide after the iPhone sitting.
+
+Scripts: `tmp/yurt-check/perf3-run.sh`, `perf3-iso.sh`, `probe-anc.mjs` and `trace-fire.mjs` (scratch).
+
 ## 12. Tests and checks
 
 **Mocha:**
@@ -365,7 +404,7 @@ The uncommitted change on this branch that made a private conversation always Gl
 
 ## 16. The stove's fire (2026-11-15)
 
-**Status: approved by the user (2026-11-15); plan 3 (`docs/projects/ps-yurt-plan-3.md`).**
+**Status: built, 2026-11-15** (plan 3, `docs/projects/ps-yurt-plan-3.md`, on `ps-yurt-fire`); approved by the user the same day. Its cost in Chrome is §11.3: a calm query at night reads over the plains' calm, left to the user.
 
 ### Intent
 
@@ -420,7 +459,7 @@ Shown side by side in an Artifact; the user picked A:
 - **The swaps and gates:**
   - The still fire shows only while the fire burns; the embers show only while it is out.
   - The moving fire, the sparks and the steam take `ps-off` while the stove is out. That is the stars' gate (plan 2): nothing animates unseen.
-- **Legibility:** the sweep loses the day's grounds under the fire's glow, which only removes light. The night is unchanged.
+- **Legibility:** the sweep loses the day's grounds under the fire's glow, which only removes light. As built it gains the door: the firebox and its coal bed are room colours, as dark as the floors allow by day (about the door's own iron), and the firebox darkens behind the flames only once the night glass is up (`cavity`), each swept at its strength (the final review of plan 3). The night is otherwise unchanged.
 
 ### Non-goals
 
