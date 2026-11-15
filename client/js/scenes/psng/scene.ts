@@ -19,12 +19,13 @@ import {sceneClasses, sceneMarkup, sceneVars, weatherChanged} from "../ps/markup
 import {paletteAt} from "../ps/palette";
 import {HEAT_HAZE, weatherLayers} from "../ps/plains";
 import {publishMoment, unpublish} from "../ps/publish";
-import {roomMarkup, windowWeather} from "../ps/room";
+import {roomMarkup, windowMotion, windowWeather} from "../ps/room";
 import {overcastBuilder, watchComposer, watchLand} from "../ps/watchers";
 import {fireDriver, ngSun} from "./flame";
 import {GROUPS, groupOverride, groupsFor} from "./groups";
 import {ngBirds} from "./poses";
 import {rainTiles} from "./rain";
+import {ROOM_MOTION_CSS} from "./room-motion";
 import {NG_STILL_CSS} from "./styles";
 import {phaseSeconds, tierFor, type Tier} from "./tiers";
 
@@ -99,21 +100,22 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		root.insertAdjacentHTML("beforeend", roomMarkup());
 		room = root.querySelector(".ps-indoor") as HTMLElement;
 		roomSheet = new CSSStyleSheet();
-		roomSheet.replaceSync(roomCss());
+		roomSheet.replaceSync(roomCss() + ROOM_MOTION_CSS);
 		document.adoptedStyleSheets = [...document.adoptedStyleSheets, roomSheet];
 	};
 
-	// The fire's frame loop runs only in the full tier, with the sun's group on and its gate live;
+	// The fire's frame loop runs only in the full tier, with the sun's group on and its gate live, and
+	// never in a query, where the plains are out of the render tree (docs/projects/ps-yurt.md §8);
 	// anywhere else no frame is requested (calm keeps the one frame it has painted).
 	const syncFire = () => {
-		if (tier === "full" && sunOn && sunLive) {
+		if (tier === "full" && sunOn && sunLive && latest.view !== "query") {
 			fire?.start();
 		} else {
 			fire?.stop();
 		}
 	};
 
-	// A rest that ends on its own (the window left for another, a hidden page, a query) freezes the
+	// A rest that ends on its own (the window left for another, a hidden page) freezes the
 	// scene where it stands instead of snapping it to its still places: each running animation's
 	// transform and opacity pinned inline, then every animation removed (psng-frozen), the group
 	// classes kept so nothing leaves the page. Its clock stops too: the time spent frozen is taken
@@ -312,8 +314,17 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			const slot = room.querySelector(".ps-yt-weather") as HTMLElement;
 			slot.innerHTML = windowWeather(m.weather, isPhoneLayout());
 			slot.dataset.weather = m.weather;
+			// What moves in them, rebuilt with them (plan 2).
+			const panes = room.querySelector(".ps-ym-panes") as HTMLElement;
+			panes.innerHTML = windowMotion(m.weather, isPhoneLayout());
+			panes.dataset.weather = m.weather;
 			roomBuilt = m.weather;
 		}
+
+		// The room's stars sleep when the plains' do (the stars' gate): nothing twinkles unseen.
+		room?.querySelectorAll(".ps-ym-stars").forEach((el) =>
+			el.classList.toggle("ps-off", !live.stars)
+		);
 
 		sunLive = live.sun;
 
@@ -347,8 +358,21 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	};
 
 	const update = (state: SceneHostState) => {
+		const viewChanged = lastView !== null && state.view !== lastView;
+		// The plains show in a channel and in any other view; the room in a query alone.
+		const pictureChanged =
+			lastView !== null && (state.view === "query") !== (lastView === "query");
 		latest = state;
 		setGroups();
+
+		// A picture leaving the render tree drops its animations and the one coming back starts them
+		// anew: at a move between the plains and the room while moving, the phase is written again as on
+		// a resume, so the loops of the picture now shown start where the clock puts them. A change of
+		// view that keeps the picture (a channel and Settings) leaves it alone, so nothing running jumps.
+		if (pictureChanged && tier !== "still") {
+			root.style.setProperty("--psng-t", `${phaseSeconds(new Date(), mounted) - restedS}s`);
+		}
+
 		findViewport();
 		root.dataset.view = state.view;
 		root.classList.toggle("ps-private", state.view === "query");
@@ -358,7 +382,6 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			buildRoom();
 		}
 
-		const viewChanged = lastView !== null && state.view !== lastView;
 		lastView = state.view;
 
 		if (state.visible && !visible) {

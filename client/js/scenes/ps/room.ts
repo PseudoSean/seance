@@ -12,6 +12,7 @@
  * (`ps-yt-lit`). The windows' weather is a slot (`.ps-yt-weather`) the scene
  * fills for the day (task 5). Pure and Vue-free: mocha loads it directly.
  */
+import {rainTiles} from "../psng/rain";
 import {WEATHERS, type Weather} from "./engine";
 import type {RoomColour} from "./indoor";
 import {
@@ -253,6 +254,8 @@ interface Lights {
 	lamp?: P3;
 	screen?: P3;
 	flame?: string;
+	/** Where the lamp's flame sprite stands (plan 2: its moving copy is placed there). */
+	flameAt?: P3;
 	screenFace?: string;
 }
 
@@ -676,6 +679,7 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		s += sprite(lampAt, SPR.lamp) + sprite(fr.pt(0.36, 0.3, 1.05), SPR.bowl);
 		lights.lamp = fr.pt(-0.25, 0.24, 1.25);
 		lights.flame = sprite(lampAt, SPR.flame);
+		lights.flameAt = lampAt;
 		return {d: 0.52, svg: s};
 	},
 
@@ -840,6 +844,16 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 type Quad = Array<[number, number, number]>;
 const quadPath = (q: Quad) => "M" + q.map((p) => n(p[0]) + "," + n(p[1])).join(" L") + " Z";
 
+/** `q`'s points pushed `d` design units out from its centre: a clip that overdraws its opening (plan 2). */
+function grow(q: ReadonlyArray<readonly number[]>, d: number): number[][] {
+	const cx = q.reduce((t, p) => t + p[0], 0) / q.length;
+	const cy = q.reduce((t, p) => t + p[1], 0) / q.length;
+	return q.map((p) => {
+		const l = Math.hypot(p[0] - cx, p[1] - cy) || 1;
+		return [p[0] + ((p[0] - cx) / l) * d, p[1] + ((p[1] - cy) / l) * d, ...p.slice(2)];
+	});
+}
+
 function bbox(q: Quad) {
 	const xs = q.map((p) => p[0]);
 	const ys = q.map((p) => p[1]);
@@ -1000,11 +1014,30 @@ function windowPanes(): Array<{clip: string; inner: Quad}> {
 }
 
 /** A cloud in the plains' own cloud colour. */
-function cloud(x: number, y: number, k: number, style = "fill: var(--ps-cloud)"): string {
-	return `<g class="ps-yt-cloud" style="${style}" transform="translate(${n(x)},${n(y)}) scale(${
+/** A cloud's four ellipses, about its middle: 47 × 23 design units at scale 1. */
+const CLOUD_SHAPE =
+	'<ellipse cx="0" cy="4" rx="22" ry="6"/><ellipse cx="-8" cy="0" rx="9" ry="7"/><ellipse cx="5" cy="-2" rx="11" ry="9"/><ellipse cx="15" cy="2" rx="8" ry="6"/>';
+
+function cloud(
+	x: number,
+	y: number,
+	k: number,
+	style = "fill: var(--ps-cloud)",
+	extra = ""
+): string {
+	return `<g class="ps-yt-cloud${
+		extra ? ` ${extra}` : ""
+	}" style="${style}" transform="translate(${n(x)},${n(y)}) scale(${
 		Math.round(k * 100) / 100
-	})"><ellipse cx="0" cy="4" rx="22" ry="6"/><ellipse cx="-8" cy="0" rx="9" ry="7"/><ellipse cx="5" cy="-2" rx="11" ry="9"/><ellipse cx="15" cy="2" rx="8" ry="6"/></g>`;
+	})">${CLOUD_SHAPE}</g>`;
 }
+
+/** How many of a pane's `k` (the back window's count) it draws: by its width, halved on a phone. */
+const paneCount = (k: number, width: number, backWidth: number, phone: boolean) =>
+	Math.max(1, Math.round(k * (width / backWidth) * (phone ? 0.5 : 1)));
+
+/** The crown's opening, as the eye sees it. */
+const crownOpening = () => circle3(0, CROWN_H, 0, CROWN_R - 0.06).map(project);
 
 /** How many clouds the back window shows in each fair weather. */
 const FAIR_CLOUDS: Partial<Record<Weather, number>> = {clear: 2, wind: 4, heat: 1};
@@ -1024,8 +1057,7 @@ export function windowWeather(weather: Weather, phone: boolean): string {
 	panes.forEach((pane, i) => {
 		const {x: ix, y: iy, w: iw, h: ih} = bbox(pane.inner);
 		const r = rng(211 + i * 17 + WEATHERS.indexOf(weather) * 101);
-		const count = (k: number) =>
-			Math.max(1, Math.round(k * (iw / backWidth) * (phone ? 0.5 : 1)));
+		const count = (k: number) => paneCount(k, iw, backWidth, phone);
 		let s = `<g clip-path="url(#${pane.clip})">`;
 		s += `<rect x="${n(ix)}" y="${n(iy)}" width="${n(iw)}" height="${n(
 			ih
@@ -1037,7 +1069,9 @@ export function windowWeather(weather: Weather, phone: boolean): string {
 				s += cloud(
 					ix + iw * (0.15 + 0.7 * r()),
 					iy + ih * (0.1 + 0.25 * r()),
-					(0.55 + 0.35 * r()) * (iw / backWidth) ** 0.3
+					(0.55 + 0.35 * r()) * (iw / backWidth) ** 0.3,
+					undefined,
+					"ps-yt-still-clouds"
 				);
 			}
 		} else {
@@ -1059,7 +1093,9 @@ export function windowWeather(weather: Weather, phone: boolean): string {
 			for (let k = 0; k < count(weather === "storm" ? 60 : 34); k++) {
 				const x = ix + r() * (iw + 10);
 				const y = iy + r() * ih;
-				s += `<line class="ps-yt-rain" x1="${n(x)}" y1="${n(y)}" x2="${n(x - 3)}" y2="${n(
+				s += `<line class="ps-yt-rain ps-yt-still-weather" x1="${n(x)}" y1="${n(
+					y
+				)}" x2="${n(x - 3)}" y2="${n(
 					y + 9
 				)}" style="stroke: color-mix(in oklab, var(--ps-sky-hor), #fff 45%)" stroke-width="1" opacity=".6"/>`;
 			}
@@ -1075,9 +1111,9 @@ export function windowWeather(weather: Weather, phone: boolean): string {
 
 		if (weather === "snow") {
 			for (let k = 0; k < count(44); k++) {
-				s += `<circle class="ps-yt-flake" cx="${n(ix + r() * iw)}" cy="${n(
-					iy + r() * ih
-				)}" r="${n(
+				s += `<circle class="ps-yt-flake ps-yt-still-weather" cx="${n(
+					ix + r() * iw
+				)}" cy="${n(iy + r() * ih)}" r="${n(
 					0.7 + r() * 1.2
 				)}" style="fill: color-mix(in oklab, var(--ps-cloud), #fff 60%)"/>`;
 			}
@@ -1095,6 +1131,91 @@ export function windowWeather(weather: Weather, phone: boolean): string {
 	});
 
 	return out + `</g>`;
+}
+
+/**
+ * The windows' motion (plan 2, docs/projects/ps-yurt.md §8): one HTML pane over each window and the
+ * crown's opening, placed in the room's design frame (room-motion.ts reads --x/--y/--w/--h) and clipped
+ * to the glass, holding what moves in the day's weather: the fair weathers' clouds, drifting; the
+ * plains' rain tiles (rain.ts); snow; the storm's flash; and stars that twinkle. As many as the still
+ * windows draw (windowWeather), halved on a phone; built on the same weather trigger.
+ */
+export function windowMotion(weather: Weather, phone: boolean): string {
+	const windows = windowPanes();
+	const backWidth = bbox(windows[0].inner).w;
+	const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
+	const panes: Array<{name: string; q: ReadonlyArray<readonly number[]>; window: boolean}> = [
+		...windows.map((w) => ({name: w.clip.replace("ps-yt-win-", ""), q: w.inner, window: true})),
+		{name: "crown", q: crownOpening(), window: false},
+	];
+	const fair = FAIR_CLOUDS[weather];
+
+	return panes
+		.map((pane, i) => {
+			const {x, y, w, h} = bbox(pane.q as Quad);
+			const r = rng(611 + i * 17 + WEATHERS.indexOf(weather) * 101);
+			const count = (k: number) => paneCount(k, w, backWidth, phone);
+			const clip = pane.q
+				.map((p) => `${pct((p[0] - x) / w)} ${pct((p[1] - y) / h)}`)
+				.join(",");
+			let s = "";
+			// Stars first: the farthest thing in a pane.
+			const stars = pane.window ? (pane.name === "back" ? 6 : 4) : 5;
+			s += `<div class="ps-ym-stars">`;
+
+			for (let k = 0; k < stars; k++) {
+				const tw = 3 + 3 * r();
+				s += `<i class="ps-ym-tw" style="left:${pct(r())};top:${pct(
+					r() * (pane.window ? 0.55 : 1)
+				)};--tw:${tw.toFixed(2)}s;--twl:${(-r() * 6).toFixed(2)}s"></i>`;
+			}
+
+			s += `</div>`;
+
+			if (pane.window && fair !== undefined) {
+				for (let k = 0; k < count(fair); k++) {
+					const kk = (0.55 + 0.35 * r()) * (w / backWidth) ** 0.3;
+					const top = 0.1 + 0.25 * r();
+					const cd =
+						(70 + 30 * r()) * Math.sqrt(w / backWidth) * (weather === "wind" ? 0.5 : 1);
+					s += `<div class="ps-ym-cloud" style="top:${pct(top)};width:${pct(
+						(47 * kk) / w
+					)};--cd:${cd.toFixed(1)}s;--cdl:${(-r() * cd).toFixed(
+						1
+					)}s"><svg viewBox="-23 -12 47 23" style="fill: var(--ps-cloud)">${CLOUD_SHAPE}</svg></div>`;
+				}
+			}
+
+			if (pane.window && (weather === "rain" || weather === "storm")) {
+				s += rainTiles(count(weather === "storm" ? 60 : 34), {width: w, height: h});
+			}
+
+			if (pane.window && weather === "snow") {
+				let flakes = "";
+
+				for (let k = 0; k < count(44); k++) {
+					flakes += `<i style="left:${(r() * 105).toFixed(1)}%;--fs:${(
+						(2 + 3.4 * r()) /
+						16
+					).toFixed(3)}rem;--fd:${(3 + 3 * r()).toFixed(2)}s;--fdl:${(-r() * 6).toFixed(
+						2
+					)}s;--fx:${(-30 + 50 * r()).toFixed(1)}cqw;opacity:${(0.5 + 0.5 * r()).toFixed(
+						2
+					)}"></i>`;
+				}
+
+				s += `<div class="ps-snow">${flakes}</div>`;
+			}
+
+			if (pane.window && weather === "storm") {
+				s += `<div class="ps-flash"></div>`;
+			}
+
+			return `<div class="ps-ym-pane" data-pane="${pane.name}" style="--x:${n(x)};--y:${n(
+				y
+			)};--w:${n(w)};--h:${n(h)};clip-path:polygon(${clip})">${s}</div>`;
+		})
+		.join("");
 }
 
 /** The room, as the page shows it. */
@@ -1140,7 +1261,9 @@ export function roomMarkup(): string {
 	}
 
 	// The crown: its ring, the sky through it, its bent ribs.
-	const openingPts = pts(circle3(0, CROWN_H, 0, CROWN_R - 0.06).map(project));
+	const opening = crownOpening();
+	const openingPts = pts(opening);
+	const openingOut = pts(grow(opening, 2));
 	const arch = (f: number, alongX: boolean) => {
 		const l: P3[] = [];
 		const rr = CROWN_R - 0.06;
@@ -1333,11 +1456,17 @@ export function roomMarkup(): string {
 		poly3(circle3(0, 0.84, 0.1, 0.11, 24), cls("collarTop")) +
 		across(0.84, CROWN_H + 0.3, 0.075, 0.1, cls("pipe")) +
 		[1.1, 1.6, 2.1, 2.6].map((h) => across(h, h + 0.04, 0.088, 0.1, cls("pipeBand"))).join("") +
-		sprite([-0.17, 0.76, -0.1], SPR.pot + SPR.steam, 0.0055) +
+		sprite(
+			[-0.17, 0.76, -0.1],
+			SPR.pot + `<g class="ps-yt-still-steam">${SPR.steam}</g>`,
+			0.0055
+		) +
 		sprite([0.18, 0.76, -0.12], SPR.kettle, 0.0055);
 	const stove = piece("stove", stoveBody);
-	const fire =
-		Dr.arched(-0.125, 0.125, 0.33, 0.48, 0.06, `fill="url(#ps-yt-fire)" ${LIT}`) +
+	// The fire in the door: its body, and its tongues with the glow along the door's foot (plan 2 flickers
+	// the two apart, as the mockup's flick and flick-b did).
+	const fireBody = Dr.arched(-0.125, 0.125, 0.33, 0.48, 0.06, `fill="url(#ps-yt-fire)" ${LIT}`);
+	const fireTongues =
 		Dr.poly(
 			[
 				[-0.09, 0.34],
@@ -1363,6 +1492,7 @@ export function roomMarkup(): string {
 			`fill="#fff6c4" opacity=".9" ${LIT}`
 		) +
 		Dr.rect(-0.125, 0.33, 0.125, 0.36, `fill="#ffcf6a" opacity=".55" ${LIT}`);
+	const fire = fireBody + fireTongues;
 	const door = project(doorMap(0, 0.42));
 
 	// The posts that hold the crown.
@@ -1568,38 +1698,63 @@ export function roomMarkup(): string {
 		`<linearGradient id="ps-yt-beam-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbe8" stop-opacity=".34"/><stop offset="1" stop-color="#fff3cc" stop-opacity=".07"/></linearGradient>` +
 		`<clipPath id="ps-yt-roof-clip"><polygon points="${roofPoly}"/></clipPath>` +
 		`<clipPath id="ps-yt-wall-clip"><polygon points="${wallPoly}"/></clipPath>` +
+		// The views out and their weather overdraw their openings by 2 units (the frames cover it).
 		views
-			.map((v) => `<clipPath id="${v.clip}"><polygon points="${pts(v.inner)}"/></clipPath>`)
+			.map(
+				(v) =>
+					`<clipPath id="${v.clip}"><polygon points="${pts(
+						grow(v.inner, 2)
+					)}"/></clipPath>`
+			)
 			.join("") +
 		`<clipPath id="ps-yt-crown"><polygon points="${openingPts}"/></clipPath>` +
+		`<clipPath id="ps-yt-crown-out"><polygon points="${openingOut}"/></clipPath>` +
+		// The front's holes: exactly the openings, where the back shows through. A clip, not a mask: a
+		// mask re-rasters its whole svg off the pixel grid at a fractional scale.
+		`<clipPath id="ps-yt-openings"><path clip-rule="evenodd" d="M-3000,-3000H5000V5000H-3000Z${[
+			...views.map((v) => v.inner),
+			opening,
+		]
+			.map((q) => `M${q.map((p) => `${n(p[0])},${n(p[1])}`).join("L")}Z`)
+			.join("")}"/></clipPath>` +
 		`</defs>`;
 
-	const body =
+	// What is seen through the openings (plan 2, task 2): the views out, their weather (the scene fills
+	// it for the day), the crown's sky, its veil and its still stars, each overdrawing its opening.
+	const behind =
+		views.map((v) => windowView(v.inner, v.clip, v.side, v.seed)).join("") +
+		`<g class="ps-yt-weather" data-weather=""></g>` +
+		piece(
+			"crown",
+			`<polygon points="${openingOut}" style="fill: color-mix(in oklab, var(--ps-sky-top), var(--ps-sky-mid) 35%)"/>` +
+				`<polygon points="${openingOut}" style="fill: var(--ps-veil-c); opacity: var(--ps-veil)"/>` +
+				`<g clip-path="url(#ps-yt-crown-out)"><g class="ps-yt-star">${crownStars}</g></g>`
+		);
+
+	// Everything else, with holes at the openings for the back to show through; nothing in it blends.
+	const inFront =
+		`<g clip-path="url(#ps-yt-openings)">` +
 		// The floor first: everything else stands on it or rises from its edge.
 		`<rect x="-3000" y="-3000" width="8000" height="8000" fill="url(#ps-yt-floor)"/>` +
 		`<g opacity=".5">${boards}</g>` +
-		// The roof and its poles, the crown.
+		// The roof and its poles, the crown's ring.
 		`<polygon points="${roofPoly}" fill="url(#ps-yt-roof)"/>` +
 		`<g clip-path="url(#ps-yt-roof-clip)">${poles}</g>` +
-		piece(
-			"crown",
-			poly3(circle3(0, CROWN_H, 0, CROWN_R + 0.1), cls("crown")) +
-				`<polygon points="${openingPts}" style="fill: color-mix(in oklab, var(--ps-sky-top), var(--ps-sky-mid) 35%)"/>` +
-				`<polygon points="${openingPts}" style="fill: var(--ps-veil-c); opacity: var(--ps-veil)"/>` +
-				`<g clip-path="url(#ps-yt-crown)"><g class="ps-yt-star">${crownStars}</g>${ribs}</g>` +
-				poly3(
-					circle3(0, CROWN_H, 0, CROWN_R - 0.03),
-					`fill="none" ${cls(undefined, "poleEdge")} stroke-width="2"`
-				)
-		) +
+		poly3(circle3(0, CROWN_H, 0, CROWN_R + 0.1), cls("crown")) +
 		// The wall: lining, lattice, the band under the roof and the skirt.
 		`<polygon points="${wallPoly}" fill="url(#ps-yt-wall)"/>` +
 		`<g clip-path="url(#ps-yt-wall-clip)" opacity=".9">${lattice}</g>` +
 		ribbon(WALL_H - 0.09, WALL_H, R - 0.04, cls("band")) +
 		ribbon(0, 0.1, R - 0.04, cls("skirt")) +
-		// The views out, their weather (the scene fills it for the day), the windows' frames.
-		views.map((v) => windowView(v.inner, v.clip, v.side, v.seed)).join("") +
-		`<g class="ps-yt-weather" data-weather=""></g>` +
+		`</g>` +
+		// The crown's bent ribs and its rim, over its sky.
+		`<g class="ps-yt-ribs"><g clip-path="url(#ps-yt-crown)">${ribs}</g>` +
+		poly3(
+			circle3(0, CROWN_H, 0, CROWN_R - 0.03),
+			`fill="none" ${cls(undefined, "poleEdge")} stroke-width="2"`
+		) +
+		`</g>` +
+		// The windows' frames.
 		piece("window-back", back) +
 		piece("curtains", curtains) +
 		sideWindows +
@@ -1626,10 +1781,11 @@ export function roomMarkup(): string {
 			backBox.h * 1.2
 		)}" fill="url(#ps-yt-g-golden)"/></g>` +
 		// Everything standing, far to near.
-		standing +
-		// The glows light the walls, the floor and everything standing (a screen blend over them, the
-		// mockup's order); the stove is drawn again over them, so its iron stays dark against its own glow.
-		`<g style="mix-blend-mode: screen">` +
+		standing;
+
+	// The glows light the walls, the floor and everything standing: layers of their own that ps.css
+	// screen-blends over the room (the mockup's order); the fire's sits in a box that can flicker.
+	const fireGlow =
 		`<circle class="ps-yt-glow-fire" cx="${n(door[0])}" cy="${n(door[1])}" r="${n(
 			(FOCAL * 2.4) / door[2]
 		)}" fill="url(#ps-yt-g-fire)"/>` +
@@ -1639,7 +1795,8 @@ export function roomMarkup(): string {
 			1.3,
 			1.0,
 			'fill="url(#ps-yt-g-fire)"'
-		)}</g>` +
+		)}</g>`;
+	const otherGlows =
 		(lamp
 			? `<circle class="ps-yt-glow-lamp" cx="${n(lamp[0])}" cy="${n(lamp[1])}" r="${n(
 					(FOCAL * 0.75) / lamp[2]
@@ -1649,15 +1806,66 @@ export function roomMarkup(): string {
 			? `<circle class="ps-yt-glow-screen" cx="${n(screenAt[0])}" cy="${n(
 					screenAt[1]
 			  )}" r="${n((FOCAL * 0.45) / screenAt[2])}" fill="url(#ps-yt-g-screen)"/>`
-			: "") +
-		`</g>` +
+			: "");
+
+	// Over the glows: the stove drawn again, so its iron stays dark against its own glow; the sun's
+	// beam through the crown, over everything it falls across; and what stays bright in the dark.
+	const over =
 		`<g class="ps-yt-stove-over">${stoveBody}</g>` +
-		// The sun's beam through the crown, over everything it falls across, the stove and its pipe too.
 		`<polygon class="ps-yt-beam" points="${pts(beam)}" fill="url(#ps-yt-beam-fill)"/>` +
-		// What stays bright in the dark: the fire, the lamp's flame, the screen at night.
-		fire +
-		(lights.flame ? `<g class="ps-yt-glow-lamp">${lights.flame}</g>` : "") +
+		`<g class="ps-yt-still-hearth">${fire}</g>` +
+		(lights.flame ? `<g class="ps-yt-glow-lamp ps-yt-still-hearth">${lights.flame}</g>` : "") +
 		(lights.screenFace ? `<g class="ps-yt-glow-screen">${lights.screenFace}</g>` : "");
 
-	return `<div class="ps-indoor"><svg class="ps-yt" viewBox="-320 0 1920 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${defs}${body}</svg></div>`;
+	// What moves over it all (plan 2, task 4): the fire in two layers that flicker apart, the lamp's flame,
+	// and the pot's steam; each in a box in the design frame (room-motion.ts), drawn in its own svg.
+	const place = (b: {x: number; y: number; w: number; h: number}) =>
+		`--x:${n(b.x)};--y:${n(b.y)};--w:${n(b.w)};--h:${n(b.h)}`;
+	const viewBox = (b: {x: number; y: number; w: number; h: number}) =>
+		`${n(b.x)} ${n(b.y)} ${n(b.w)} ${n(b.h)}`;
+	const fireBox = bbox(
+		[doorMap(-0.14, 0.31), doorMap(0.14, 0.31), doorMap(-0.14, 0.57), doorMap(0.14, 0.57)].map(
+			project
+		) as Quad
+	);
+	let moving =
+		`<div class="ps-ym-fire" style="${place(fireBox)}">` +
+		`<div class="ps-ym-fire-body"><svg viewBox="${viewBox(fireBox)}">${fireBody}</svg></div>` +
+		`<div class="ps-ym-fire-tongues"><svg viewBox="${viewBox(
+			fireBox
+		)}">${fireTongues}</svg></div>` +
+		`</div>`;
+
+	if (lights.flame && lights.flameAt && depthOf(lights.flameAt) > NEAR) {
+		// SPR.flame spans x ±5 and y -26 to -9 at the sprite's unit (0.0115), a margin round it.
+		const [fx, fy, fz] = project(lights.flameAt);
+		const k = (FOCAL * 0.0115) / fz;
+		const flameBox = {x: fx - 6 * k, y: fy - 27 * k, w: 12 * k, h: 19 * k};
+		moving += `<div class="ps-ym-lamp" style="${place(
+			flameBox
+		)}"><div class="ps-ym-flame"><svg viewBox="${viewBox(flameBox)}">${
+			lights.flame
+		}</svg></div></div>`;
+	}
+
+	const potRim = project([-0.17, 0.84, -0.1]);
+	moving +=
+		`<div class="ps-ym-steam" style="--x:${n(potRim[0])};--y:${n(potRim[1])};--w:0;--h:0">` +
+		[0, -1.2, -2.4].map((d) => `<i style="--sd:3.6s;--sdl:${d}s"></i>`).join("") +
+		`</div>`;
+
+	const layer = (names: string, content: string) =>
+		`<svg class="${names}" viewBox="-320 0 1920 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${content}</svg>`;
+
+	return (
+		`<div class="ps-indoor">` +
+		layer("ps-yt", defs + behind) +
+		`<div class="ps-ym-panes" data-weather=""></div>` +
+		layer("ps-yt ps-yt-front", inFront) +
+		`<div class="ps-ym-fireglow">${layer("ps-yt", fireGlow)}</div>` +
+		layer("ps-yt ps-yt-glow", otherGlows) +
+		layer("ps-yt ps-yt-over", over) +
+		`<div class="ps-ym-top">${moving}</div>` +
+		`</div>`
+	);
 }

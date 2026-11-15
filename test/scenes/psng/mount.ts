@@ -437,6 +437,39 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 			});
 		});
 
+		it("the moving panes follow the day's weather with the static slot, moving or frozen (plan 2, Review Focus 2)", function () {
+			// 21 June 2026 is clear, 22 June heat.
+			withPage(new Date(2026, 5, 21, 23, 59), (page, clock) => {
+				const scene = mountOn(page, {view: "query"});
+				const panes = room(page).querySelector(".ps-ym-panes");
+				expect(panes.dataset.weather).to.equal("clear");
+				expect(panes.markup).to.contain("ps-ym-cloud");
+				scene.update(state({view: "query", attended: false}));
+				clock.tick(120_000);
+				expect(() => scene.update(state({view: "query"}))).to.not.throw();
+				expect(panes.dataset.weather).to.equal("heat");
+				expect(panes.markup).to.not.contain("psng-rain-tile");
+				scene.destroy();
+			});
+		});
+
+		it("the room's stars sleep when the plains' do (the stars' gate): ps-off on its star layers by day", function () {
+			for (const [hour, off] of [
+				[12, true],
+				[23, false],
+			] as const) {
+				withPage(new Date(2026, 5, 21, hour, 0), (page) => {
+					const indoor = new FakeElement(".ps-indoor");
+					const stars = new FakeElement(".ps-ym-stars");
+					indoor.lists.set(".ps-ym-stars", () => [stars]);
+					page.root.planted.set(".ps-indoor", indoor);
+					const scene = mountOn(page, {view: "query"});
+					expect(stars.classList.contains("ps-off"), `${hour}:00`).to.equal(off);
+					scene.destroy();
+				});
+			}
+		});
+
 		it("a query publishes the roof as the canvas, light words and the room's tints; a channel publishes as before, at once both ways", function () {
 			withPage(new Date(2026, 5, 21, 12, 30), (page) => {
 				const meta = page.plantMeta(THEME_COLOR);
@@ -495,7 +528,7 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 				(n) => n.startsWith("psng-m-") || n === "psng-calm"
 			);
 		const all = GROUPS.map((g) => `psng-m-${g}`).sort();
-		const calm = ["psng-m-clouds"];
+		const calm = ["psng-m-clouds", "psng-m-hearth"];
 
 		// systemAccessibility() follows the first window it is given for good.
 		let following = false;
@@ -509,7 +542,7 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 			}
 		};
 
-		it("full: every group's class, none else; unattended or a query: frozen with its classes; attended again: all", function () {
+		it("full: every group's class, none else; unattended: frozen with its classes; a query: every class, not frozen (spec §8)", function () {
 			withPage(new Date(2026, 5, 21, 12, 0), (page) => {
 				follow(page);
 				const scene = mountOn(page);
@@ -523,7 +556,10 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 				expect(motionClasses(page).sort()).to.deep.equal(all);
 				expect(frozen()).to.equal(false);
 				scene.update(state({view: "query"}));
-				expect(frozen()).to.equal(true);
+				expect(frozen(), "a query moves").to.equal(false);
+				expect(motionClasses(page).sort()).to.deep.equal(all);
+				scene.update(state({view: "query", attended: false}));
+				expect(frozen(), "unattended in a query").to.equal(true);
 				scene.update(state({view: "query", motion: "still"}));
 				expect(motionClasses(page), "the setting at Still snaps").to.deep.equal([]);
 				expect(frozen()).to.equal(false);
@@ -550,7 +586,7 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 			});
 		});
 
-		it("calm: the clouds and psng-calm; destroy removes every class", function () {
+		it("calm: the clouds, the hearth and psng-calm; destroy removes every class", function () {
 			withPage(new Date(2026, 5, 21, 12, 0), (page) => {
 				follow(page);
 				const scene = mountOn(page, {motion: "calm"});
@@ -615,6 +651,51 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 				clock.tick(60_000);
 				scene.update(state());
 				expect(phase.lastCall.args[1]).to.equal(`${12 * 3600 + 10}s`);
+				scene.destroy();
+			});
+		});
+
+		it("--psng-t: rewritten at each change of view while moving, from the clock less the rested time", function () {
+			withPage(new Date(2026, 5, 21, 12, 0), (page, clock) => {
+				follow(page);
+				const scene = mountOn(page);
+				const {phase} = watch(page);
+				clock.tick(90_000);
+				scene.update(state({view: "query"}));
+				expect(phase.lastCall.args[1], "into a query").to.equal(`${12 * 3600 + 90}s`);
+				clock.tick(30_000);
+				scene.update(state());
+				expect(phase.lastCall.args[1], "back to the channel").to.equal(
+					`${12 * 3600 + 120}s`
+				);
+				scene.update(state({attended: false}));
+				clock.tick(60_000);
+				scene.update(state());
+				expect(phase.lastCall.args[1], "the thaw, the rest taken off").to.equal(
+					`${12 * 3600 + 120}s`
+				);
+				clock.tick(10_000);
+				scene.update(state({view: "query"}));
+				expect(phase.lastCall.args[1], "into a query again").to.equal(
+					`${12 * 3600 + 130}s`
+				);
+				clock.tick(10_000);
+				scene.update(state());
+				expect(phase.lastCall.args[1], "and back").to.equal(`${12 * 3600 + 140}s`);
+				scene.destroy();
+			});
+		});
+
+		it("--psng-t: kept across a channel and another view (Settings, Help): the same picture, nothing jumps", function () {
+			withPage(new Date(2026, 5, 21, 12, 0), (page, clock) => {
+				follow(page);
+				const scene = mountOn(page);
+				const {phase} = watch(page);
+				clock.tick(300_000);
+				scene.update(state({view: "other"}));
+				clock.tick(60_000);
+				scene.update(state());
+				expect(phase.callCount, "the plains both ways").to.equal(0);
 				scene.destroy();
 			});
 		});
@@ -747,6 +828,24 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 				});
 			});
 
+			it("stops in a query and runs again on the plains, every time", function () {
+				withPage(new Date(2026, 5, 21, 12, 0), (page) => {
+					follow(page);
+					const paints = plantFire(page);
+					const scene = mountOn(page);
+					expect(paints.pending(), "the plains at noon").to.equal(1);
+
+					for (let i = 0; i < 2; i++) {
+						scene.update(state({view: "query"}));
+						expect(paints.pending(), "a query").to.equal(0);
+						scene.update(state());
+						expect(paints.pending(), "the plains again").to.equal(1);
+					}
+
+					scene.destroy();
+				});
+			});
+
 			it("its gate off (midnight): no frame request", function () {
 				withPage(new Date(2026, 5, 21, 0, 0), (page) => {
 					follow(page);
@@ -810,6 +909,22 @@ describe("ps NG scene: mount (psng/scene.ts, on a stand-in page)", function () {
 						clock.tick(1);
 						expect(moving(page)).to.equal(GROUPS.length);
 						expect(paints.pending()).to.equal(1);
+						scene.destroy();
+					});
+				});
+
+				it("a phone in a query: auto is calm (the clouds and the hearth); the drawer holds it still", function () {
+					withPage(new Date(2026, 5, 21, 12, 0), (page) => {
+						follow(page);
+						const set = plantDrawer(page, true);
+						const scene = mountOn(page, {phone: true, motion: "auto", view: "query"});
+						expect(
+							[...page.root.classList.names]
+								.filter((n) => n.startsWith("psng-m-") || n === "psng-calm")
+								.sort()
+						).to.deep.equal(["psng-calm", "psng-m-clouds", "psng-m-hearth"]);
+						set("menu-open");
+						expect(moving(page), "the drawer holds it still").to.equal(0);
 						scene.destroy();
 					});
 				});
