@@ -16,9 +16,10 @@
  * backend with {@link useStorageBackend}.
  */
 
+import {isNetworkId} from "./bouncer";
 import storage from "../localStorage";
 import {collator} from "../i18n/collation";
-import {forgetNetworkLog} from "./querylog";
+import {forgetNetworkConversations} from "./conversationStore";
 import {forgetClosedQueries} from "./closedQueries";
 import {forgetNoticeLog} from "./noticelog";
 import {forgetOperPrefs} from "./operprefs";
@@ -26,6 +27,7 @@ import {forgetMuteMemory} from "./muteMemory";
 import {forgetPresenceSync} from "./presenceSync";
 import {forgetUserAway} from "./userAwayStore";
 import {forgetLogin} from "./saslTrust";
+import {forgetIgnoreList} from "../ignore";
 import type {ConnectOptions} from "./types";
 import {accountRequired} from "../branding";
 import {PRESENCE_MODES, type NetworkMode, type PresenceMode} from "../helpers/dnd";
@@ -69,6 +71,24 @@ export type SavedNetwork = ConnectOptions & {
 	notifyEnabled?: boolean;
 	/** Slash commands run in the lobby after every registration, one per entry. */
 	commands?: string[];
+	/**
+	 * A bouncer's control connection (irc/bouncer.ts): the ids of its networks
+	 * already offered here. Each is added as a network of its own once; one the
+	 * user removes is not added again.
+	 */
+	bouncerSeen?: string[];
+	/**
+	 * A network added from a bouncer's list: the name the bouncer gave it, so
+	 * a rename there is followed while the user has not renamed it here
+	 * (irc/bouncer.ts `followRename`).
+	 */
+	bouncerName?: string;
+	/**
+	 * This entry has registered behind a bouncer that keeps its own channel
+	 * list (IrcClient.behindBouncer) before: from then on the bouncer, not
+	 * the saved channels, says what is joined.
+	 */
+	bouncerSettled?: boolean;
 	/** Epoch ms of the last connect; the picker lists most recent first. */
 	lastUsed?: number;
 	/** Newest message seen on this network (see {@link NetworkCursor}). */
@@ -109,6 +129,20 @@ export function defaultPort(tls: boolean, transport?: ConnectOptions["transport"
 	}
 
 	return tls ? 9998 : 8067;
+}
+
+/**
+ * Whether `port` is one we suggest for this kind of connection, which the
+ * edit form swaps for the new suggestion when its TLS box or connection type
+ * changes; any other port is the user's own and stays. 8443, nefarious2's
+ * wss:// port and the suggestion before 9998, counts for wss:// too.
+ */
+export function isSuggestedPort(
+	port: number,
+	tls: boolean,
+	transport?: ConnectOptions["transport"]
+): boolean {
+	return port === defaultPort(tls, transport) || (tls && transport !== "tcp" && port === 8443);
 }
 
 /** `wss://host:port/path` / `host/path` → bare host name, for display. */
@@ -156,6 +190,15 @@ function asString(value: unknown): string {
 	return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
 		? String(value).trim()
 		: "";
+}
+
+/**
+ * A password as typed: a space at either end is part of it, so it is not
+ * trimmed. One with nothing but whitespace counts as none, which the edit
+ * form reads as "keep the stored one" (fromForm), as it does a blank field.
+ */
+function asSecret(value: unknown): string {
+	return asString(value) === "" ? "" : String(value);
 }
 
 /** A hand-edited backup may list its channels: `"join": ["#a", "#b"]`. */
@@ -271,7 +314,7 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 		join: asJoin(raw.join),
 		sasl,
 		saslAccount: sasl ? asString(raw.saslAccount) : "",
-		saslPassword: sasl ? asString(raw.saslPassword) : "",
+		saslPassword: sasl ? asSecret(raw.saslPassword) : "",
 		autoconnect: asBoolean(raw.autoconnect),
 		rememberPassword,
 		pushEnabled: raw.pushEnabled === undefined ? true : asBoolean(raw.pushEnabled),
@@ -280,7 +323,7 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 	};
 
 	// A line break or NUL would end the PASS line early (wire.ts refuses it).
-	const serverPassword = asString(raw.serverPassword).replace(/[\r\n\0]/g, "");
+	const serverPassword = asSecret(raw.serverPassword).replace(/[\r\n\0]/g, "");
 
 	if (serverPassword) {
 		net.serverPassword = serverPassword;
@@ -298,6 +341,22 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 
 	if (typeof raw.lastUsed === "number" && Number.isFinite(raw.lastUsed)) {
 		net.lastUsed = raw.lastUsed;
+	}
+
+	if (isNetworkId(raw.bouncerNetId)) {
+		net.bouncerNetId = raw.bouncerNetId;
+	}
+
+	if (typeof raw.bouncerName === "string" && raw.bouncerName) {
+		net.bouncerName = raw.bouncerName;
+	}
+
+	if (Array.isArray(raw.bouncerSeen)) {
+		net.bouncerSeen = raw.bouncerSeen.filter(isNetworkId);
+	}
+
+	if (raw.bouncerSettled === true) {
+		net.bouncerSettled = true;
 	}
 
 	const cursor = asCursor(raw.cursor);
@@ -334,7 +393,7 @@ export function presenceModeOf(net: Pick<SavedNetwork, "presenceMode"> | undefin
 
 /** Whether a network takes part in Web Push (`draft/webpush`): the saved
  * flag, defaulting to enabled — entries stored before the flag existed and
- * networks never saved (plain `/connect host`) are push-enabled; only an
+ * networks never saved (plain `/server host`) are push-enabled; only an
  * explicit `false` opts a network out. */
 export function pushEnabledOf(net: Pick<SavedNetwork, "pushEnabled"> | undefined): boolean {
 	return net?.pushEnabled !== false;
@@ -361,19 +420,24 @@ export function migrateGlobalNotify(): void {
 		return;
 	}
 
-	let stored: {desktopNotifications?: unknown};
+	let stored: Record<string, unknown> | null;
 
 	try {
-		stored = raw ? (JSON.parse(raw) as {desktopNotifications?: unknown}) : {};
+		stored = raw ? (JSON.parse(raw) as Record<string, unknown> | null) : {};
 	} catch {
 		return; // garbage settings blob: leave the networks alone
 	}
 
-	if (stored.desktopNotifications !== false) {
+	if (stored?.desktopNotifications !== false) {
 		return;
 	}
 
 	write(list().map((net) => ({...net, notifyEnabled: false})));
+	// Once: the old key goes now, as migrateReadingToLocale's does. Left in
+	// place it switched notifications off again at every boot, on networks
+	// the user had switched back on since, until some setting was changed.
+	delete stored.desktopNotifications;
+	backend.set("settings", JSON.stringify(stored));
 }
 
 /**
@@ -422,6 +486,11 @@ export function fromForm(data: Record<string, unknown>, existing?: SavedNetwork)
 		delete base.trustedCertificates;
 	}
 
+	if (existing && otherBouncerLogin(existing, base)) {
+		delete base.bouncerSeen;
+		delete base.bouncerSettled;
+	}
+
 	// The services block travels whole: the key present with nothing in it
 	// is "None" (the loop above keeps the stored one for a missing key).
 	if ("services" in data) {
@@ -453,6 +522,7 @@ export function toConnectOptions(net: SavedNetwork): ConnectOptions {
 		// one it was given (IrcClient.applySettings).
 		serverPassword: net.serverPassword ?? (net.hasServerPassword ? undefined : ""),
 		trustedCertificates: net.trustedCertificates ?? [],
+		...(net.bouncerNetId ? {bouncerNetId: net.bouncerNetId} : {}),
 	};
 }
 
@@ -470,6 +540,30 @@ function moved(existing: SavedNetwork, host: unknown, port: unknown): boolean {
 	return (
 		(host !== undefined && !sameHost(asString(host), existing.host)) ||
 		(port !== undefined && Number(port) !== existing.port)
+	);
+}
+
+/** ZNC's login in a server password `user/network:password`: what comes before the `:`. */
+export function zncLogin(serverPassword: unknown): string {
+	const text = asString(serverPassword);
+	const colon = text.indexOf(":");
+	return colon < 0 ? "" : text.slice(0, colon);
+}
+
+/**
+ * Whether `next` (any field absent: unchanged) takes `existing` to another
+ * server, SASL account or ZNC network. What the entry learned behind its
+ * bouncer account then goes (fromForm, mergeOptions): soju's offered network
+ * ids are small integers every soju reuses, and a fresh ZNC network should
+ * get the typed channels on its first connect.
+ */
+function otherBouncerLogin(existing: SavedNetwork, next: Record<string, unknown>): boolean {
+	return (
+		moved(existing, next.host, next.port) ||
+		(next.saslAccount !== undefined &&
+			asString(next.saslAccount) !== (existing.saslAccount ?? "")) ||
+		(next.serverPassword !== undefined &&
+			zncLogin(next.serverPassword) !== zncLogin(existing.serverPassword))
 	);
 }
 
@@ -637,7 +731,7 @@ export function remove(uuid: string): void {
 		write(remaining);
 	}
 
-	forgetNetworkLog(uuid); // its private conversations go with it
+	forgetNetworkConversations(uuid); // its conversations go with it
 	forgetClosedQueries(uuid); // and the ones it closed
 	forgetNoticeLog(uuid); // and its server notices
 	forgetOperPrefs(uuid);
@@ -645,6 +739,10 @@ export function remove(uuid: string): void {
 	forgetPresenceSync(uuid); // and when it was last in sync with the shared presence
 	forgetUserAway(uuid); // and the /away it would declare at the next registration
 	forgetLogin(uuid); // and the SASL login that worked on it
+	// Its channel order and ignore list too: keyed by a random uuid, nothing
+	// would ever read them again, yet both travel in every settings backup.
+	forgetChannelOrder(uuid);
+	forgetIgnoreList(uuid);
 }
 
 /** Mark an entry as the most recently used one. */
@@ -673,6 +771,17 @@ export function setCursor(uuid: string, cursor: NetworkCursor): void {
 	}
 }
 
+/** The network has registered behind a bouncer: see {@link SavedNetwork.bouncerSettled}. */
+export function setBouncerSettled(uuid: string): void {
+	const all = read();
+	const net = all.find((n) => n.uuid === uuid);
+
+	if (net && !net.bouncerSettled) {
+		net.bouncerSettled = true;
+		write(all, false);
+	}
+}
+
 /** The entry to pre-fill the connect form with, if any. */
 /**
  * The order the user gave a network's channels (drag-and-drop in the
@@ -687,6 +796,16 @@ export function channelOrder(uuid: string): string[] {
 
 export function setChannelOrder(uuid: string, names: string[]): void {
 	backend.set(CHANNEL_ORDER_KEY, JSON.stringify({...readOrders(), [uuid]: names}));
+}
+
+/** Drop a removed network's channel order. */
+function forgetChannelOrder(uuid: string): void {
+	const orders = readOrders();
+
+	if (Object.hasOwn(orders, uuid)) {
+		delete orders[uuid];
+		backend.set(CHANNEL_ORDER_KEY, JSON.stringify(orders));
+	}
 }
 
 function readOrders(): Record<string, unknown> {
@@ -717,8 +836,11 @@ export function findMatching(
 	const h = hostnameOf(host).toLowerCase();
 	const n = nick.trim().toLowerCase();
 
+	// A network added from a bouncer's list shares its host, port and nick
+	// with the bouncer's own entry, which is the one the connect form means.
 	return read().find(
 		(net) =>
+			!net.bouncerNetId &&
 			hostnameOf(net.host).toLowerCase() === h &&
 			net.port === port &&
 			net.nick.toLowerCase() === n &&
@@ -743,6 +865,11 @@ export function mergeOptions(
 	// The connect screen can point a saved network at another server too.
 	if (existing && moved(existing, options.host, options.port)) {
 		delete merged.trustedCertificates;
+	}
+
+	if (existing && otherBouncerLogin(existing, options)) {
+		delete merged.bouncerSeen;
+		delete merged.bouncerSettled;
 	}
 
 	return merged;

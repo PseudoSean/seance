@@ -8,6 +8,7 @@ import {ChanState, ChanType} from "../../../shared/types/chan";
 import type {SharedNetworkChan} from "../../../shared/types/network";
 import type {SharedUser} from "../../../shared/types/user";
 import {MessageType, type SharedMsg, type UserInMessage} from "../../../shared/types/msg";
+import {lineIdentity} from "./conversationStore";
 import type {HistorySpec} from "./history";
 
 export type Casefold = (s: string) => string;
@@ -50,6 +51,10 @@ export interface MsgRef {
 	from?: Author;
 	/** The msgid of the line it edits, if it is an edit. */
 	editOf?: string;
+	/** Lines may be missing before this one (SharedMsg.gapBefore). */
+	gap?: boolean;
+	/** What a line without a msgid is known by (conversationStore.ts lineIdentity). */
+	key?: string;
 }
 
 /**
@@ -125,19 +130,23 @@ export class Channel {
 	catchupPrefetched = false;
 	/**
 	 * We were in this channel when the connection dropped: the re-JOIN's
-	 * echo, unchanged topic and NAMES are state, not activity, and are not
-	 * shown (cleared by the end of that NAMES burst).
+	 * echo and NAMES are state, not activity, and are not shown (cleared by
+	 * the end of that NAMES burst). Its topic never is (handlers/topic.ts).
 	 */
 	rejoining = false;
-	/** The 332 just seen was hidden (a topic we already show); hide its 333 too. */
+	/** The 332 just seen went to the header only (state, not news); its 333 goes nowhere either. */
 	topicQuiet = false;
-	/** The user asked for the topic (`/topic`): show the next 331/332 even if it is unchanged. */
+	/** The user asked for the topic (`/topic`): show the next 331/332 as a line. */
 	topicAsked = false;
 	/** The 332 just shown was asked for: it and its 333 follow the user to the active tab. */
 	topicAskedActive = false;
-	/** The modes 324 last showed; a reconnect asks again and gets the same answer back. */
-	modeText: string | undefined = undefined;
-	/** The user asked for the modes (`/mode #chan`): show the next 324 even if it is unchanged. */
+	/**
+	 * The user joined this channel by hand (`/join`) and its JOIN just came
+	 * back: the topic in that join burst is shown as a line, once — the
+	 * header truncates a long one. Cleared by the end of the burst's NAMES.
+	 */
+	topicWanted = false;
+	/** The user asked for the modes (`/mode #chan`): show the next 324 as a line. */
 	modesAsked = false;
 	/**
 	 * For a `ChanType.SPECIAL` window, what it shows besides its kind: the
@@ -164,6 +173,8 @@ export class Channel {
 	 * edit references (bus-contract §1.4: the IRC layer owns this map).
 	 */
 	readonly idByMsgid = new Map<string, number>();
+	/** The shown lines without a msgid, by time and identity, with how many of each ({@link shows}). */
+	private readonly unstamped = new Map<string, number>();
 	/**
 	 * Edits shown before their original was (the original arrives later in
 	 * an older page): the original's msgid → every such edit, and who sent
@@ -212,6 +223,21 @@ export class Channel {
 	 * and so do reads from other sessions.
 	 */
 	readHeld = false;
+	/**
+	 * "Clear history" (epoch ms): nothing at or before it is shown, kept or
+	 * offered again on this device (IrcClient.clearHistory).
+	 */
+	clearedAt: number | undefined = undefined;
+	/**
+	 * Its window and its `autoJoin` come from what this device kept, not
+	 * from the saved list or a JOIN on this page: joined only where nothing
+	 * else holds our channels (IrcClient.autojoin).
+	 */
+	fromStore = false;
+	/** This connection's JOIN left the gap to the server's cursor replay (persistence.ts). */
+	replayCovered = false;
+	/** A page of older lines is being read from the device (history.ts requestMore). */
+	deviceMore = false;
 	/** A `more` page the connection died on; asked again once we are back (history.ts). */
 	lostMore: HistorySpec | undefined = undefined;
 	/**
@@ -301,6 +327,16 @@ export class Channel {
 			ref.editOf = msg.editOf;
 		}
 
+		if (msg.gapBefore) {
+			ref.gap = true;
+		}
+
+		if (!msg.msgid) {
+			ref.key = lineIdentity(msg, this.fold);
+			const at = `${ref.time.getTime()}\0${ref.key}`;
+			this.unstamped.set(at, (this.unstamped.get(at) ?? 0) + 1);
+		}
+
 		this.msgRefs.set(msg.id, ref);
 		return ref;
 	}
@@ -324,6 +360,17 @@ export class Channel {
 
 			if (ref.msgid && this.idByMsgid.get(ref.msgid) === id) {
 				this.idByMsgid.delete(ref.msgid);
+			}
+
+			if (ref.key !== undefined) {
+				const at = `${ref.time.getTime()}\0${ref.key}`;
+				const left = (this.unstamped.get(at) ?? 1) - 1;
+
+				if (left > 0) {
+					this.unstamped.set(at, left);
+				} else {
+					this.unstamped.delete(at);
+				}
 			}
 
 			if (this.shared.totalMessages > 0) {
@@ -355,6 +402,20 @@ export class Channel {
 		return this.idByMsgid.get(msgid);
 	}
 
+	/**
+	 * Whether `msg` is one of the lines shown: by msgid, or without one by
+	 * its time and best-effort identity (conversationStore.ts lineKey).
+	 */
+	shows(msg: SharedMsg): boolean {
+		if (msg.msgid) {
+			return this.idByMsgid.has(msg.msgid);
+		}
+
+		return this.unstamped.has(
+			`${new Date(msg.time).getTime()}\0${lineIdentity(msg, this.fold)}`
+		);
+	}
+
 	/** msgids already shown (history deduplication). */
 	get msgids(): IterableIterator<string> {
 		return this.idByMsgid.keys();
@@ -371,10 +432,20 @@ export class Channel {
 			return this.newestRef;
 		}
 
+		return this.newestServerRefBefore();
+	}
+
+	/** The newest server-stamped line at or before `upTo` (epoch ms), `skip` aside. */
+	newestServerRefBefore(upTo = Infinity, skip?: MsgRef): MsgRef | undefined {
 		let best: MsgRef | undefined;
 
 		for (const ref of this.msgRefs.values()) {
-			if (ref.msgid && (!best || ref.time.getTime() > best.time.getTime())) {
+			if (
+				ref !== skip &&
+				ref.msgid &&
+				ref.time.getTime() <= upTo &&
+				(!best || ref.time.getTime() > best.time.getTime())
+			) {
 				best = ref;
 			}
 		}

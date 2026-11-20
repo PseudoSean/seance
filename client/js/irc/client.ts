@@ -29,7 +29,24 @@ import type {
 	SharedServerOptions,
 } from "../../../shared/types/network";
 import type {PushSession, ServerToClientEvents} from "../../../shared/types/socket-events";
-import {CapNegotiator, parseCapList, SEANCE_CAPS, webpushVapidOf, WEBPUSH_CAP} from "./caps";
+import {
+	BOUNCER_NETWORKS_CAP,
+	BOUNCER_NOTIFY_CAP,
+	bindLine,
+	isBouncerControl,
+	listNetworks,
+	sameBouncerAccount,
+	type BouncerAttrs,
+	type BouncerNetwork,
+} from "./bouncer";
+import {
+	CapNegotiator,
+	parseCapList,
+	SEANCE_CAPS,
+	SOJU_WEBPUSH_CAP,
+	webpushVapidOf,
+	WEBPUSH_CAP,
+} from "./caps";
 import {casefold, namesEqual} from "./casemap";
 import {
 	Author,
@@ -40,7 +57,7 @@ import {
 	SAID_TYPES,
 	countsAsUnread,
 } from "./channel";
-import {QueryLog} from "./querylog";
+import {ConversationStore, type ConvKind} from "./conversationStore";
 import {commandNames, dispatchInput} from "./commands";
 import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
@@ -48,6 +65,9 @@ import {scriptManager} from "./scripting/manager";
 import {FILEHOST_SERVICE, TokenRequests, filehostUrlOf} from "./authtoken";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
 import {PAYLOAD_KEY} from "./handlers/metadata";
+import {resetModeLists} from "./handlers/lists";
+import {resetWho} from "./handlers/who";
+import {resetWhois} from "./handlers/whois";
 import {CLOSED_KEY, ClosedQueries, closedQueriesKept, encodeClosed} from "./closedQueries";
 import {
 	CONCAT_LINE_TAG_BYTES,
@@ -89,7 +109,7 @@ import {
 	setAttended,
 	syncPresence,
 } from "./presence";
-import {abortHistory, GAP_IDS, retryLostHistory} from "./history";
+import {abortHistory, GAP_IDS, noteZncLine, retryLostHistory} from "./history";
 import {resetSearches} from "./historysearch";
 import {globalUntil, MUTE_KEY, MUTE_READ_DELAY_MS, type PendingMute, releaseMute} from "./pushMute";
 import {MODE_KEY, PRESENCE_KEY, syncShared, type Stamped} from "./presenceShare";
@@ -164,6 +184,8 @@ import {
 	get as getSavedNetwork,
 	MAX_TRUSTED_CERTIFICATES,
 	NetworkCursor,
+	setBouncerSettled,
+	zncLogin,
 	setCursor,
 } from "./saved-networks";
 import {noteServiceReply, resetServiceReplies} from "./services";
@@ -332,6 +354,34 @@ export interface IrcClientOptions extends ConnectOptions {
 	 * whether to trust it (manager.ts, certificatePrompt.ts).
 	 */
 	onUntrustedCertificate?: (certificate: UntrustedCertificate) => void;
+	/**
+	 * The name the user gave this network, if any (manager.ts, from the saved
+	 * entry): it beats ISUPPORT NETWORK ({@link IrcClient.serverNamed}).
+	 */
+	savedName?: () => string | undefined;
+	/**
+	 * A bouncer's control connection listed its networks (bouncer.ts). The
+	 * manager adds the new ones as networks of their own and returns the
+	 * names of those it added and of those it left out for want of room,
+	 * for the lobby to say so.
+	 */
+	onBouncerNetworks?: (networks: BouncerNetwork[]) => {added: string[]; over: string[]};
+	/**
+	 * The bouncer deleted one of its networks: on the control connection,
+	 * `BOUNCER NETWORK <id> *` (`-notify`). The manager stops the entry bound
+	 * to it connecting by itself.
+	 */
+	onBouncerNetworkRemoved?: (id: string) => void;
+	/**
+	 * The bouncer calls network `id` `name` (a list, or a `-notify` change):
+	 * the entry bound to it follows unless the user renamed it here.
+	 */
+	onBouncerNetworkRenamed?: (id: string, name: string) => void;
+	/**
+	 * This connection's `BOUNCER BIND` was refused (`FAIL BOUNCER
+	 * INVALID_NETID`): the network is gone from the bouncer. Same effect.
+	 */
+	onBouncerNetworkGone?: () => void;
 }
 
 /**
@@ -346,6 +396,15 @@ export function saslRequiredHint(): string {
 /** The trusted retries ran out: the login is kept, the next connect tries again. */
 export function saslTrustedGaveUpHint(): string {
 	return t("connect.saslTrustedGaveUpHint");
+}
+
+/**
+ * The server is ZNC: it offers `znc.in/batch` or `znc.in/server-time-iso`,
+ * which only ZNC sends. Not any `znc.in/*` cap: Ergo, a plain ircd, offers
+ * `znc.in/self-message` and `znc.in/playback` itself.
+ */
+export function offersZncCaps(available: ReadonlyMap<string, unknown>): boolean {
+	return available.has("znc.in/batch") || available.has("znc.in/server-time-iso");
 }
 
 /** Prefix characters a channel name may start with when the user omits one. */
@@ -479,8 +538,8 @@ export class IrcClient {
 	readonly authtoken = new TokenRequests();
 	readonly channels: Channel[] = [];
 	readonly lobby: Channel;
-	/** Private conversations kept on this device (querylog.ts). */
-	readonly queryLog: QueryLog;
+	/** Every window's lines kept on this device (conversationStore.ts). */
+	readonly conversations: ConversationStore;
 	/** The queries the user closed: a line from before the close never reopens one. */
 	readonly closed: ClosedQueries;
 	/** This connection's GET of the shared closes answered (irc/closedQueries.ts). */
@@ -506,8 +565,8 @@ export class IrcClient {
 	 * form through {@link setServices}. Undefined: none configured.
 	 */
 	services: ServicesConfig | undefined;
-	/** Query windows brought back from the log, filled on the first announce. */
-	private restoredQueries: Channel[] = [];
+	/** Windows brought back from the device's store, filled on the first announce. */
+	private restoredWindows: Channel[] = [];
 	caps = new CapNegotiator(SEANCE_CAPS);
 
 	/** Our current nick as the server knows it (or the one we asked for). */
@@ -528,8 +587,8 @@ export class IrcClient {
 	private batchRefs = 0;
 	/** The SASL exchange in progress during registration, if any. */
 	sasl: SaslAuth | null = null;
-	/** The last SASL exchange ended successfully (903); a configured login
-	 * that was asked for and succeeded. Drives the push-subscribe prompt. */
+	/** This connection's SASL exchange ended successfully (903); a configured
+	 * login that was asked for and succeeded. Drives the push-subscribe prompt. */
 	saslOk = false;
 	/** Unexplained 904s in a row on a login that has worked (`SASL_TRUSTED_RETRIES`). */
 	private saslUnexplainedRun = 0;
@@ -563,8 +622,26 @@ export class IrcClient {
 	attachCursor: string | undefined;
 	/** The server took that cursor: it replays the gap, so catchup.ts stands down. */
 	serverReplay = false;
+	/** The server could not place that cursor and replays from a point of its own (`CURSOR_UNKNOWN`). */
+	cursorUnknown = false;
 	/** Ids for the cursor's replay, every target's, set aside when the server took the cursor. */
 	replayIds: IdBlock | undefined = undefined;
+	/** This connection goes through ZNC ({@link offersZncCaps}): see history.ts `noteZncLine`. */
+	behindZnc = false;
+	/**
+	 * Registered behind a bouncer on this page already ({@link autojoin}); the
+	 * saved entry's `bouncerSettled` keeps it across page loads.
+	 */
+	private bouncerSettled = false;
+	/**
+	 * A bouncer's networks by id with their attributes, on its control
+	 * connection (bouncer.ts `takeNetworkLine`): what the bouncer panel lists.
+	 */
+	readonly bouncerNetworks = new Map<string, BouncerAttrs>();
+	/** This connection said already why a login without SASL gets no networks (bouncer.ts). */
+	bouncerSaslNoted = false;
+	/** The networks this connection named already as left out for want of room (bouncer.ts). */
+	readonly bouncerOverNoted = new Set<string>();
 
 	private saslTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly bus: Pick<EventBus, "dispatch">;
@@ -684,9 +761,9 @@ export class IrcClient {
 			channel.autoJoin = true;
 		}
 
-		// The private conversations of the last page come back as windows,
-		// as the autojoin channels do; their lines follow the announce.
-		this.queryLog = new QueryLog(
+		// The windows of the last page come back, channels and private
+		// conversations alike; their lines follow the announce.
+		this.conversations = new ConversationStore(
 			this.uuid,
 			(s) => this.casefold(s),
 			() => getSavedNetwork(this.uuid) !== undefined
@@ -695,20 +772,52 @@ export class IrcClient {
 		this.noticeLog = new NoticeLog(this.uuid, () => getSavedNetwork(this.uuid) !== undefined);
 		this.closed = new ClosedQueries(this.uuid, (s) => this.casefold(s));
 
-		for (const name of this.queryLog.names()) {
-			const newest = this.queryLog.newestAt(name);
+		for (const window of this.conversations.windows()) {
+			const {name} = window;
 
-			// Closed in another tab since this log was written.
-			if (newest !== undefined && this.closed.suppresses(name, new Date(newest))) {
-				this.queryLog.forget(name);
+			if (window.kind === "channel") {
+				// A channel whose window was open: it is back at once. Whether
+				// we are in it is the server's to say where something holds
+				// our channels (a held session, a bouncer); where nothing
+				// does, one we were in is joined again, as a reconnect joins
+				// it (`autojoin`). A window the user closed, channel or
+				// private, is not here at all: it stays remembered, and its
+				// lines come back with the window the day it is opened again
+				// (`announceChannel`).
+				let channel = this.findChannel(name);
+
+				if (!channel) {
+					channel = this.createChannel(name, ChanType.CHANNEL, {key: window.key}).channel;
+					channel.autoJoin = window.joined;
+					channel.fromStore = true;
+				}
+
+				if (channel.type === ChanType.CHANNEL) {
+					this.restoredWindows.push(channel);
+				}
+
+				continue;
+			}
+
+			// Closed in another tab since these lines were written.
+			if (this.closed.suppresses(name, new Date(window.touched))) {
+				this.conversations.close(name, new Date(window.touched));
 				continue;
 			}
 
 			if (!this.findChannel(name) && !this.isChannelName(name)) {
 				const {channel} = this.createChannel(name, ChanType.QUERY);
 				channel.autoOpened = true;
-				this.restoredQueries.push(channel);
+				this.restoredWindows.push(channel);
 			}
+		}
+
+		// The cursor is never ahead of the lines: a write that did not land
+		// (a page killed inside the throttle) would leave a hole behind it.
+		const kept = this.conversations.newestStamped();
+
+		if (kept && this.cursor && this.cursor.time > kept.time) {
+			this.cursor = {msgid: kept.msgid, time: kept.time};
 		}
 	}
 
@@ -829,6 +938,7 @@ export class IrcClient {
 			PREFIX: {prefix, modeToSymbol, symbols: symbols.split("")},
 			NETWORK: this.isupport.network ?? this.networkName,
 			FILEHOST: this.filehostUrl(),
+			CASEMAPPING: this.isupport.casemapping,
 		};
 	}
 
@@ -909,7 +1019,7 @@ export class IrcClient {
 		if (!this.announced) {
 			this.announced = true;
 			this.bus.dispatch("network", {network: this.network});
-			this.restoreQueryLines();
+			this.restoreWindows();
 			void this.restoreNotices();
 		}
 
@@ -1102,6 +1212,16 @@ export class IrcClient {
 			serverPassword: next.serverPassword ?? this.options.serverPassword,
 		};
 		const state = this.transport.state;
+
+		// Another server, account or ZNC network: its first registration
+		// behind the bouncer is still to come (autojoin), like the saved
+		// entry's (saved-networks.ts otherBouncerLogin).
+		if (
+			!sameBouncerAccount(merged, this.options) ||
+			zncLogin(merged.serverPassword) !== zncLogin(this.options.serverPassword)
+		) {
+			this.bouncerSettled = false;
+		}
 
 		// New credentials have not proved themselves here yet.
 		if (
@@ -1431,11 +1551,16 @@ export class IrcClient {
 		// ("~rdrake" when unverified), and Ergo refuses it in USER (468).
 		this.ident = this.registrationIdent;
 		this.account = "";
+		// Only this connection's SASL exchange says we logged in: a network
+		// edited to "No authentication", or left without credentials, runs
+		// none, and must not count as logged in on the last connection's word.
+		this.saslOk = false;
 		this.persistenceHold = false;
 		this.persistenceSetting = undefined;
 		this.bouncerAlias = false;
 		this.attachCursor = undefined;
 		this.serverReplay = false;
+		this.cursorUnknown = false;
 		this.replayIds = undefined;
 		this.endSasl();
 
@@ -1499,7 +1624,7 @@ export class IrcClient {
 	/**
 	 * A deploy that lets only accounts in (branding.ts `accountRequired`),
 	 * and a network set to log in with nothing: however it came to be — a
-	 * saved entry from when guests were welcome, `/connect <host>`, "No
+	 * saved entry from when guests were welcome, `/server <host>`, "No
 	 * authentication" in its settings — it could only register as the
 	 * stranger the deploy turned away. Say so, stand its autoconnect down
 	 * (`onSaslRejected`: it can never connect as it is) and, when the
@@ -1630,6 +1755,17 @@ export class IrcClient {
 			{text: keepsLogin ? saslTrustedGaveUpHint() : saslRequiredHint()},
 			true
 		);
+
+		// ZNC before 1.10 has no client SASL (`behindZnc` is set only at
+		// registration): its login is the server password,
+		// `username/network:password`.
+		if (
+			cause === "unavailable" &&
+			!this.options.serverPassword &&
+			offersZncCaps(this.caps.available)
+		) {
+			this.pushMessage(this.lobby, {text: t("connect.serverPasswordHint")}, true);
+		}
 		// The connect flow has already opened an autojoin channel; the reason
 		// this network is empty is in the lobby, so the view goes there.
 		this.bus.dispatch("network:aborted", {network: this.uuid, reason});
@@ -1674,6 +1810,33 @@ export class IrcClient {
 		});
 		this.options.onServerPasswordRejected?.();
 		this.disconnect(sent ? "Server password refused" : "Server password required");
+	}
+
+	/**
+	 * The bouncer refused to bind this connection to its network (`FAIL
+	 * BOUNCER INVALID_NETID`): the network was deleted there, from this or
+	 * another client. Every connection would get the same answer, so this one
+	 * stops, says why, and the entry stops connecting by itself; the user can
+	 * remove it. soju would otherwise carry on with an unbound login that
+	 * joins nothing.
+	 */
+	bouncerNetworkGone(): void {
+		if (this.isQuitting) {
+			return;
+		}
+
+		this.pushMessage(
+			this.lobby,
+			{type: MessageType.ERROR, text: t("bouncer.networkGone")},
+			true
+		);
+		this.closeExplained = true;
+		this.bus.dispatch("network:aborted", {
+			network: this.uuid,
+			reason: "bouncer network deleted",
+		});
+		this.options.onBouncerNetworkGone?.();
+		this.disconnect("Bouncer network deleted");
 	}
 
 	/** Whether a SASL failure of this kind is worth another connection (see saslFailed). */
@@ -1724,6 +1887,12 @@ export class IrcClient {
 				return mechanism !== null && mechanismOffered(mechanism, value);
 			}
 
+			// The network list's updates are the control connection's: a
+			// bound network ignores them, and soju would send them to each.
+			if (name === BOUNCER_NOTIFY_CAP) {
+				return !this.options.bouncerNetId;
+			}
+
 			return true;
 		};
 
@@ -1767,6 +1936,13 @@ export class IrcClient {
 					Date.now()
 				);
 				lines.push(`METADATA * SUB ${MUTE_KEY} ${PRESENCE_KEY} ${MODE_KEY} ${CLOSED_KEY}`);
+			}
+
+			// Bound to one of a bouncer's networks (bouncer.ts): said before CAP END.
+			const bind = bindLine(this);
+
+			if (bind) {
+				lines.unshift(bind);
 			}
 
 			const line = registrationAwayLine(this);
@@ -1982,17 +2158,22 @@ export class IrcClient {
 		// the reason, where it was typed.
 		resetPending(this, t("pending.connectionLost"));
 		resetMultiline(this);
+		// Replies the close cut off before their end numeric never end.
+		resetWhois(this);
+		resetWho(this);
+		resetModeLists(this);
 		abortHistory(this);
 		resetSearches(this);
 		cancelCatchup(this);
 		cancelRestoration(this);
 		this.saveCursor(); // the newest one must not die with the connection
-		this.queryLog.flush();
+		void this.conversations.flush();
 		this.noticeLog.flush();
 		resetRequests(this);
 		resetServiceReplies(this);
 		resetOper(this);
 		this.serverReplay = false;
+		this.cursorUnknown = false;
 		this.replayIds = undefined;
 		this.clearPendingEdits();
 		this.clearTyping();
@@ -2017,8 +2198,12 @@ export class IrcClient {
 
 			if (chan.type === ChanType.CHANNEL) {
 				// Dropped, not our QUIT: the re-JOIN is state, not news (Channel.rejoining).
-				chan.rejoining = chan.state === ChanState.JOINED && !this.quitting;
+				// Still so when this dial never got as far as the JOIN (a
+				// refused socket, a page load without a network).
+				chan.rejoining =
+					!this.quitting && (chan.state === ChanState.JOINED || chan.rejoining);
 				chan.state = ChanState.PARTED;
+				chan.replayCovered = false;
 			}
 		}
 
@@ -2090,6 +2275,7 @@ export class IrcClient {
 		}
 
 		this.connected = true;
+		this.behindZnc = offersZncCaps(this.caps.available);
 		this._state = "registered";
 
 		const first = this.channels.find((chan) => chan.type === ChanType.CHANNEL);
@@ -2141,6 +2327,12 @@ export class IrcClient {
 		// subscription and the Settings UI can tell the two cases apart. The
 		// WEBPUSH REGISTER itself is emitted later through the bus — a
 		// REGISTER sent before CAP END is silently dropped by nefarious2.
+		// A bouncer's control connection: what networks it has (bouncer.ts).
+		this.bouncerNetworks.clear();
+		this.bouncerSaslNoted = false;
+		this.bouncerOverNoted.clear();
+		listNetworks(this);
+
 		this.dispatch("webpush:available", {
 			network: this.uuid,
 			vapid: this.webpushVapid(),
@@ -2164,6 +2356,19 @@ export class IrcClient {
 		} else {
 			this.restorationSettled();
 		}
+	}
+
+	/**
+	 * This connection goes through a bouncer that keeps its own channel list:
+	 * soju (`BOUNCER_NETID`, `soju.im/bouncer-networks`) or ZNC
+	 * ({@link offersZncCaps}). What it holds is what the user is in, on every device.
+	 */
+	get behindBouncer(): boolean {
+		return (
+			this.behindZnc ||
+			this.isupport.tokens.has("BOUNCER_NETID") ||
+			this.caps.available.has(BOUNCER_NETWORKS_CAP)
+		);
 	}
 
 	/**
@@ -2197,16 +2402,44 @@ export class IrcClient {
 	}
 
 	/**
-	 * JOIN every autojoin channel we are not in, the active one's catch-up
+	 * JOIN every autojoin channel we are not in (behind a bouncer that holds
+	 * channels, none: see {@link behindBouncer}), the active one's catch-up
 	 * pipelined behind it: the server processes lines in order, so by the
 	 * time it reads the history request we are a member. Saves a round trip
 	 * on the channel the user is looking at.
 	 */
 	autojoin(): void {
-		const joining = this.channels.filter(
-			(chan) =>
-				chan.type === ChanType.CHANNEL && chan.autoJoin && chan.state === ChanState.PARTED
-		);
+		// A bouncer owns the channel list: it JOINs us to what it holds right
+		// after the MOTD, leaves out what was parted or detached from another
+		// client, and sends nothing while it is off the network. Saved channels
+		// it did not give back stay parted here until the user joins them. The
+		// exception is this entry's first registration behind it: the channels
+		// typed into the connect form are JOINed once, and the bouncer keeps
+		// them from then on (a JOIN for one it holds already is ignored
+		// upstream). A soju control connection has no channels at all.
+		const bouncerOwns =
+			this.behindBouncer &&
+			(isBouncerControl(this) ||
+				this.bouncerSettled ||
+				getSavedNetwork(this.uuid)?.bouncerSettled === true);
+
+		if (this.behindBouncer && !isBouncerControl(this)) {
+			this.bouncerSettled = true;
+			setBouncerSettled(this.uuid);
+		}
+
+		const joining = bouncerOwns
+			? []
+			: this.channels.filter(
+					(chan) =>
+						chan.type === ChanType.CHANNEL &&
+						chan.autoJoin &&
+						chan.state === ChanState.PARTED &&
+						// A held session gave back the channels it holds: one
+						// only this device remembers was left on another, and
+						// stays parted here.
+						!(chan.fromStore && (this.persistenceHold || this.serverReplay))
+			  );
 
 		if (joining.length > 0) {
 			this.joinChannels(joining.map((chan) => ({name: chan.name, key: chan.shared.key})));
@@ -2230,19 +2463,24 @@ export class IrcClient {
 
 	/**
 	 * The VAPID public key this server advertises for Web Push, when the
-	 * `draft/webpush` capability is enabled: the `VAPID` ISUPPORT token the
+	 * `draft/webpush` capability (or soju's `soju.im/webpush`) is enabled: the `VAPID` ISUPPORT token the
 	 * spec has the server send once the cap is on, or nefarious2's cap 302
 	 * value (`vapid=<key>`). The cap is requested bare too, as the spec has
 	 * it offered; undefined when the network cannot push (cap missing or no
 	 * key), and nothing subscribes then.
 	 */
 	webpushVapid(): string | undefined {
-		if (!this.caps.hasCapability(WEBPUSH_CAP)) {
+		// soju offers only its own name for it (caps.ts SOJU_WEBPUSH_CAP).
+		const cap = [WEBPUSH_CAP, SOJU_WEBPUSH_CAP].find((name) => this.caps.hasCapability(name));
+
+		// A bouncer's control connection carries no conversations; its bound
+		// networks subscribe for theirs (bouncer.ts).
+		if (!cap || isBouncerControl(this)) {
 			return undefined;
 		}
 
 		return (
-			webpushVapidOf(this.caps.value(WEBPUSH_CAP) ?? "") ??
+			webpushVapidOf(this.caps.value(cap) ?? "") ??
 			// The same checks and normal form for the 005 token.
 			webpushVapidOf(`vapid=${this.isupport.vapid ?? ""}`)
 		);
@@ -2389,7 +2627,7 @@ export class IrcClient {
 	}
 
 	/** Send one raw line. Reports an ERROR message in the lobby instead of throwing. */
-	send(line: string): boolean {
+	send(line: string, charge = true): boolean {
 		if (this.transport.state !== "open") {
 			this.pushMessage(this.lobby, {type: MessageType.ERROR, text: t("send.notConnected")});
 			return false;
@@ -2397,7 +2635,11 @@ export class IrcClient {
 
 		try {
 			this.transport.send(line);
-			this.fakeLag.charge(line);
+
+			if (charge) {
+				this.fakeLag.charge(line);
+			}
+
 			return true;
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
@@ -3471,6 +3713,15 @@ export class IrcClient {
 			return;
 		}
 
+		// Behind ZNC, what we saw live is what its next buffer replay repeats.
+		if (
+			this.behindZnc &&
+			!this.replaying &&
+			(msg.command === "PRIVMSG" || msg.command === "NOTICE")
+		) {
+			noteZncLine(this, msg);
+		}
+
 		// An answer to one of our labeled requests (request.ts): its asker
 		// renders it, the handlers never see it.
 		if (interceptRequestLine(this, msg)) {
@@ -3516,7 +3767,8 @@ export class IrcClient {
 		// What a reconnect's catch-up walk may stop on: only what we held at
 		// this JOIN. A line relayed while the walk runs is in its pages too,
 		// with the gap below it still unfilled (history.ts).
-		const heldIds = joined && !alreadyJoined ? new Set(joined.msgids) : undefined;
+		let heldIds = joined && !alreadyJoined ? new Set(joined.msgids) : undefined;
+		let before = beforeJoin;
 
 		// An upgrade policy read on a plain connection is acted on before the
 		// CAP handler answers the line: that socket gets nothing but the
@@ -3540,11 +3792,28 @@ export class IrcClient {
 			// The ATTACH cursor's server-driven replay already covers the gap
 			// of a channel the server restored; asking again per channel is
 			// exactly what the cursor replaces (persistence.ts).
-			if (chan && !serverReplayCovers(this, chan, beforeJoin)) {
+			// A window this JOIN opened with lines the device kept (a channel
+			// the user had closed): they are what the catch-up walks back to.
+			if (chan && !joined && chan.historyRequested) {
+				const own = chan.msgRefs.get(chan.idOf(msg.tags.get("msgid") ?? "") ?? NaN);
+				before = chan.newestServerRefBefore(Infinity, own) ?? chan.newestRef;
+				heldIds = new Set(chan.msgids);
+
+				if (own?.msgid) {
+					heldIds.delete(own.msgid);
+				}
+			}
+
+			if (chan) {
+				chan.replayCovered = serverReplayCovers(this, chan, before);
+			}
+
+			if (chan && !chan.replayCovered) {
 				// History + read marker, paced (catchup.ts): the active channel
 				// now, the rest one at a time so the server's flood penalty
 				// never queues the user's own lines.
-				enqueueCatchup(this, chan, beforeJoin, heldBeforeJoin, heldIds);
+				enqueueCatchup(this, chan, before, heldBeforeJoin, heldIds);
+				this.noteFilled(chan);
 			} else if (chan) {
 				// The replay fills the gap, not a `more` page the last
 				// connection died on: that one is asked again here.
@@ -3578,7 +3847,19 @@ export class IrcClient {
 		this.bus.dispatch("nick", {network: this.uuid, nick});
 	}
 
-	/** Record the network name from ISUPPORT and rename the lobby. */
+	/**
+	 * ISUPPORT named the network: take the name unless the user gave it one
+	 * ({@link IrcClientOptions.savedName}). Read here, before anything is
+	 * announced: putting the user's name back from a `network:name` listener
+	 * re-entered the dispatch, and the store kept whichever came last, the
+	 * server's, whenever a server resent 005 (soju does on an upstream
+	 * reconnect).
+	 */
+	serverNamed(name: string): void {
+		this.setNetworkName(this.options.savedName?.() || name);
+	}
+
+	/** Record the network name and rename the lobby. */
 	setNetworkName(name: string): void {
 		if (name === this.networkName) {
 			return;
@@ -3596,17 +3877,18 @@ export class IrcClient {
 			return false;
 		}
 
-		this.followInQueryLog(event, args[0]);
+		this.followInStore(event, args[0]);
 		return this.bus.dispatch(event, ...args);
 	};
 
 	/**
-	 * An edit, a redaction or a reaction in a query reaches the log the way
+	 * An edit, a redaction or a reaction reaches the device's store the way
 	 * it reaches the UI — through the one dispatch every handler uses — so
-	 * no handler has to know the log exists. Ids are the UI's; the log keys
-	 * by msgid, which `msgRefs` holds for every loaded line.
+	 * the kept line follows what is on screen. A redaction is also sent
+	 * straight from its handler, for a line that is kept but not loaded
+	 * (handlers/redact.ts).
 	 */
-	private followInQueryLog(event: string, payload: unknown): void {
+	private followInStore(event: string, payload: unknown): void {
 		if (event !== "msg:edit" && event !== "msg:redact" && event !== "msg:react") {
 			return;
 		}
@@ -3615,7 +3897,7 @@ export class IrcClient {
 		const chan = this.channelById(data.chan);
 		const msgid = chan?.msgRefs.get(data.id)?.msgid;
 
-		if (!chan || chan.type !== ChanType.QUERY || !msgid) {
+		if (!chan || !this.storeKind(chan) || !msgid) {
 			return;
 		}
 
@@ -3623,13 +3905,111 @@ export class IrcClient {
 			const original = chan.msgRefs.get((payload as {replaces: number}).replaces)?.msgid;
 
 			if (original) {
-				this.queryLog.edit(chan.name, original, msgid);
+				this.conversations.edit(chan.name, original, msgid);
 			}
 		} else if (event === "msg:redact") {
-			this.queryLog.redact(chan.name, msgid);
+			this.conversations.redact(chan.name, msgid);
 		} else {
 			const {text, nick, remove} = payload as {text: string; nick: string; remove: boolean};
-			this.queryLog.react(chan.name, msgid, text, nick, remove);
+			this.conversations.react(chan.name, msgid, text, nick, remove);
+		}
+	}
+
+	/** Keep a line handed to the UI on the device (conversationStore.ts). */
+	keep(chan: Channel, msg: SharedMsg): void {
+		const kind = this.storeKind(chan);
+
+		if (
+			!kind ||
+			(chan.clearedAt !== undefined && new Date(msg.time).getTime() <= chan.clearedAt)
+		) {
+			return;
+		}
+
+		this.conversations.append(chan.name, kind, msg);
+		this.conversations.setFilled(chan.name, kind, chan.historyFilled);
+	}
+
+	/**
+	 * The server's replay does not cover what it was trusted to (its cursor
+	 * was unknown, persistence.ts): the channels whose JOIN left the gap to
+	 * it walk for themselves after all.
+	 */
+	catchUpUncovered(): void {
+		for (const chan of this.channels) {
+			if (!chan.replayCovered) {
+				continue;
+			}
+
+			chan.replayCovered = false;
+
+			if (chan.state === ChanState.JOINED) {
+				enqueueCatchup(
+					this,
+					chan,
+					chan.catchupRef(),
+					chan.historyFilled ? chan.newestServerRef() : undefined,
+					new Set(chan.msgids)
+				);
+				this.noteFilled(chan);
+			}
+		}
+	}
+
+	/** `chan.historyFilled` as it stands now goes with its lines on the device. */
+	noteFilled(chan: Channel): void {
+		const kind = this.storeKind(chan);
+
+		if (kind) {
+			this.conversations.setFilled(chan.name, kind, chan.historyFilled);
+		}
+	}
+
+	/**
+	 * Lines are missing before message `id` of `chan`, or no longer are: the
+	 * model, the UI's divider (`msg:gap`) and the kept line follow. Always
+	 * dispatched, also when nothing changed: the divider's control waits for it.
+	 */
+	setGap(chan: Channel, id: number, on: boolean): void {
+		const ref = chan.msgRefs.get(id);
+
+		if (!ref) {
+			return;
+		}
+
+		if (!!ref.gap !== on) {
+			ref.gap = on || undefined;
+			const key = ref.msgid ?? ref.key;
+
+			if (key !== undefined) {
+				this.conversations.setGap(chan.name, ref.time, key, on);
+			}
+		}
+
+		this.dispatch("msg:gap", {chan: chan.id, id, gap: on});
+	}
+
+	/**
+	 * The user cleared `chan`'s history (client/js/history.ts, which has
+	 * emptied the store's copy): everything shown is forgotten as a trim
+	 * forgets it, the counters start again from nothing, and the lines kept
+	 * on this device go. Nothing at or before the newest of them is kept,
+	 * shown or fetched again here: without that the next page load, or the
+	 * next history page, would bring the cleared lines back.
+	 */
+	clearHistory(chan: Channel): void {
+		const newest = Math.max(
+			chan.newestServerAt ?? 0,
+			...[...chan.msgRefs.values()].map((ref) => ref.time.getTime())
+		);
+		chan.forget([...chan.msgRefs.keys()]);
+		chan.shared.unread = 0;
+		chan.shared.highlight = 0;
+		chan.shared.firstUnread = 0;
+
+		if (newest > 0) {
+			chan.clearedAt = Math.max(chan.clearedAt ?? 0, newest);
+			this.conversations.clear(chan.name, new Date(chan.clearedAt));
 		}
 	}
 
@@ -3917,32 +4297,66 @@ export class IrcClient {
 			index,
 			shouldOpen: options.shouldOpen ?? false,
 		});
+
+		// A window the user had closed, opened again: what was kept of it.
+		if ((type === ChanType.CHANNEL || type === ChanType.QUERY) && this.announced) {
+			this.restoreWindow(channel);
+
+			// Asked for by the user: open from here on, a reload included.
+			if (type === ChanType.QUERY && options.shouldOpen) {
+				this.conversations.reopen(name, "query");
+			}
+		}
+
 		return channel;
 	}
 
-	/**
-	 * Hand the restored query windows their logged lines, as one history
-	 * page each (`more`, negative ids, no unread): remembered by msgid like
-	 * any page, so the server's own replay of the same lines — the ATTACH
-	 * cursor's, a CHATHISTORY page — is deduplicated against them.
-	 */
-	private restoreQueryLines(): void {
-		for (const chan of this.restoredQueries.splice(0)) {
-			if (!this.channels.includes(chan)) {
-				continue;
-			}
+	/** What the store calls `chan`'s kind, or undefined for a window it does not keep. */
+	storeKind(chan: Channel): ConvKind | undefined {
+		return chan.type === ChanType.CHANNEL
+			? "channel"
+			: chan.type === ChanType.QUERY
+			? "query"
+			: undefined;
+	}
 
-			const messages = this.queryLog.messages(chan.name);
+	/**
+	 * Hand the restored windows their kept lines, as one history page each
+	 * (`more`, negative ids), before any connection: a page load is then a
+	 * reconnect. The lines are remembered by msgid like any page, so the
+	 * server's own copy of them (the ATTACH cursor's replay, a CHATHISTORY
+	 * page) is deduplicated against them, and a channel's JOIN starts the
+	 * catch-up walk from its newest one instead of a first fill (history.ts).
+	 */
+	private restoreWindows(): void {
+		for (const chan of this.restoredWindows.splice(0)) {
+			if (this.channels.includes(chan)) {
+				this.restoreWindow(chan);
+			}
+		}
+	}
+
+	/**
+	 * Hand `chan` the lines this device kept of it, if it kept any: at the
+	 * first announce for the windows the last page left open, and when a
+	 * window the user had closed is opened again (a channel joined anew, a
+	 * private conversation written in or asked for).
+	 */
+	private restoreWindow(chan: Channel): void {
+		{
+			const meta = this.conversations.meta(chan.name);
+			chan.clearedAt = meta?.clearedAt;
+			const messages = this.conversations.restoredMessages(chan.name);
 
 			if (messages.length === 0) {
-				continue;
+				return;
 			}
 
 			const ids = this.historyIds(messages.length);
 			let lastRef: MsgRef | undefined;
 			// Lines this device had not read when the page went away count
-			// again; in a log from before the read point was kept, nothing does.
-			const read = this.queryLog.readUpTo(chan.name);
+			// again; where no read point was kept, nothing does.
+			const read = meta?.read === undefined ? undefined : new Date(meta.read);
 			const page: Array<[SharedMsg, MsgRef]> = [];
 			let lastRead = 0;
 
@@ -3957,7 +4371,7 @@ export class IrcClient {
 				}
 			});
 
-			for (const [msgid, index] of this.queryLog.aliases(chan.name)) {
+			for (const [msgid, index] of this.conversations.restoredAliases(chan.name)) {
 				if (!chan.idByMsgid.has(msgid)) {
 					chan.idByMsgid.set(msgid, messages[index].id);
 				}
@@ -3965,11 +4379,28 @@ export class IrcClient {
 
 			chan.newestRef ??= lastRef;
 			chan.shared.totalMessages += messages.length;
+
+			if (chan.type === ChanType.CHANNEL) {
+				// As a live page holds them: the JOIN's catch-up walks back
+				// to these lines, and the server's replay may cover the gap
+				// when they were complete (persistence.ts serverReplayCovers).
+				chan.historyRequested = true;
+				chan.historyFilled = !!meta?.filled;
+				// Its JOIN is state, not something that happened.
+				chan.rejoining = chan.autoJoin;
+			}
+
+			// Older lines: the device's first, then the server's. A private
+			// conversation's server may keep none, so it offers only what
+			// the device has.
+			const moreAvailable =
+				chan.type === ChanType.CHANNEL || this.conversations.hasOlder(chan.name);
 			this.bus.dispatch("more", {
 				chan: chan.id,
 				messages,
-				totalMessages: chan.shared.totalMessages,
-				moreAvailable: false,
+				totalMessages: chan.shared.totalMessages + (moreAvailable ? 1 : 0),
+				moreAvailable,
+				device: this.conversations.hasOlder(chan.name),
 			});
 
 			if (read && read.getTime() > 0) {
@@ -4022,8 +4453,10 @@ export class IrcClient {
 
 	/** Drop a channel from the model and the UI (`part` event). */
 	removeChannel(chan: Channel): void {
-		if (chan.type === ChanType.QUERY) {
-			this.queryLog.forget(chan.name); // closed: not brought back
+		// Closed: not brought back by itself. Its lines stay for the day it
+		// is opened again.
+		if (this.storeKind(chan)) {
+			this.conversations.close(chan.name, chan.newestRef?.time);
 		}
 
 		const idx = this.channels.indexOf(chan);
@@ -4083,17 +4516,22 @@ export class IrcClient {
 		const placed = old;
 		msg.id = id ?? (ids && ids.next < ids.end ? ids.next++ : this.ids.msgId());
 		const ref = chan.remember(msg);
+		const newest = chan.newestRef;
 
-		if (!placed || !chan.newestRef) {
+		// A catch-up line is delivered after the lines relayed while it was
+		// fetched: one older than a line the server stamped since is not the
+		// newest, or the read marker would stop short of that line. Judged
+		// against a server-stamped line only: a local one is on our clock.
+		if (
+			!newest ||
+			(!placed && (!replay || !newest.msgid || ref.time.getTime() >= newest.time.getTime()))
+		) {
 			chan.newestRef = ref;
 		}
 
 		this.noteCursor(msg);
 
-		if (chan.type === ChanType.QUERY) {
-			// Before the counting below, which may move the read point it keeps.
-			this.queryLog.append(chan.name, msg);
-		}
+		this.keep(chan, msg); // before the counting below, which may move the read point it keeps
 
 		// An original its author's edit already replaced on screen counts
 		// for nothing: the edit counted in its place (privmsg.ts counts an

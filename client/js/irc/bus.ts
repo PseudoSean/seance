@@ -6,8 +6,10 @@
  */
 
 import type {EventBus} from "../socket";
+import {t} from "../i18n/core";
+import {bouncerRequest} from "./bouncer";
 import type {IrcClient} from "./client";
-import {requestMore} from "./history";
+import {requestFill, requestMore} from "./history";
 import {requestReplyParent, requestSearch, requestSearchContext} from "./historysearch";
 import {changeBans} from "./banList";
 import {refreshOper, setSnomask} from "./oper";
@@ -235,6 +237,26 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		bus.dispatch("oper:notices", {network, entries: client ? client.noticeLog.all() : []});
 	});
 
+	// A bouncer's networks (bouncer.ts): the bouncer panel adds, changes or
+	// deletes one, labeled, on the control connection.
+	bus.handle("bouncer:request", ({network, id, subcommand, netid, attrs}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (!client) {
+			bus.dispatch("bouncer:replied", {
+				network,
+				id,
+				ok: false,
+				error: t("bouncer.cannotChange"),
+			});
+			return;
+		}
+
+		void bouncerRequest(client, subcommand, netid, attrs).then((reply) => {
+			bus.dispatch("bouncer:replied", {network, id, ...reply});
+		});
+	});
+
 	// Services support (services.ts): the edit form's liveness check on the
 	// bots, and a G-line or shun asked of the oper service.
 	bus.handle("services:check", ({network, id, services}) => {
@@ -340,6 +362,26 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		registry.clientForChannel(target)?.channelById(target)?.forget(ids);
 	});
 
+	bus.handle("history:clear", ({target}) => {
+		const client = registry.clientForChannel(target);
+		const chan = client?.channelById(target);
+
+		if (client && chan) {
+			client.clearHistory(chan);
+		}
+	});
+
+	bus.handle("history:fill", ({target, id}) => {
+		const client = registry.clientForChannel(target);
+		const chan = client?.channelById(target);
+
+		// Nothing could be asked (offline, refused): the divider's control
+		// is released as it was.
+		if (client && chan && !requestFill(client, chan, id)) {
+			client.setGap(chan, id, !!chan.msgRefs.get(id)?.gap);
+		}
+	});
+
 	bus.handle("network:get", (uuid) => {
 		const info = networkInfo(registry, uuid);
 
@@ -357,7 +399,7 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 			return;
 		}
 
-		// Unsaved live network (e.g. `/connect host`): seed from its options,
+		// Unsaved live network (e.g. `/server host`): seed from its options,
 		// and the mode the lobby dot set (the form posts none it was not given).
 		// A password that is not remembered is stored blank, but the client
 		// still holds it, and a blank field keeps it (fromForm). save() keeps

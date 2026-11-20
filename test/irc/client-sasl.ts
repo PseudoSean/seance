@@ -361,6 +361,40 @@ describe("IrcClient SASL", function () {
 		expectAborted(transport, client);
 	});
 
+	// ZNC before 1.10 has no client SASL: its login is the server password.
+	const ZNC_HINT =
+		"Set the server password in this network's settings. For ZNC it is username/network:password.";
+
+	it("points a ZNC without SASL (before 1.10) at the server password", function () {
+		const {client, transport} = setup();
+		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS} znc.in/self-message znc.in/batch`);
+
+		expectAborted(transport, client);
+		expect(texts(client.lobby.id)).to.include(ZNC_HINT);
+	});
+
+	it("does not repeat the server password hint to a ZNC that already has one", function () {
+		const {client, transport} = setup({serverPassword: "alice/net:pw"});
+		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS} znc.in/self-message`);
+
+		expectAborted(transport, client);
+		expect(texts(client.lobby.id)).to.not.include(ZNC_HINT);
+	});
+
+	it("gives no ZNC hint to a server that is not ZNC", function () {
+		const {client, transport} = setup();
+		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS}`);
+
+		expect(texts(client.lobby.id)).to.not.include(ZNC_HINT);
+	});
+
+	it("gives no ZNC hint to Ergo, which offers znc.in/self-message and znc.in/playback", function () {
+		const {client, transport} = setup();
+		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS} znc.in/playback znc.in/self-message`);
+
+		expect(texts(client.lobby.id)).to.not.include(ZNC_HINT);
+	});
+
 	it("reports the missing cap and connects anyway when the deploy allows it", function () {
 		const {client, transport} = setup(CARRY_ON);
 		const requested = offer(transport, OFFERED_CAPS);
@@ -718,6 +752,37 @@ describe("IrcClient SASL", function () {
 		expect(messages(client.lobby.id).map((m) => m.text)).to.include("You are now logged out");
 	});
 
+	it("does not count the last connection's login on one that runs no SASL", function () {
+		const {client, transport} = setup();
+		offer(transport, `${OFFERED_CAPS} sasl=PLAIN`);
+		transport.line("AUTHENTICATE +");
+		transport.lines(
+			":irc.test 900 alice alice!alice@host alice :You are now logged in as alice",
+			":irc.test 903 alice :SASL authentication successful"
+		);
+		finishRegistration(transport);
+		expect(client.saslOk).to.equal(true);
+
+		// The network is edited to "No authentication" while the socket is down.
+		transport.abandon("connection lost");
+		client.applySettings({...client.options, sasl: "", saslAccount: "", saslPassword: ""});
+		transport.sent.length = 0;
+		dispatch.resetHistory();
+		transport.open();
+		expect(client.saslOk).to.equal(false);
+
+		const requested = offer(transport, OFFERED_CAPS);
+		expect(requested).to.not.include("sasl");
+		finishRegistration(transport);
+
+		const available = dispatch
+			.getCalls()
+			.filter((call) => call.args[0] === "webpush:available")
+			.map((call) => call.args[1] as {sasl: boolean});
+		expect(available).to.have.length(1);
+		expect(available[0].sasl).to.equal(false);
+	});
+
 	it("EXTERNAL stub sends AUTHENTICATE EXTERNAL and an empty response", function () {
 		const {transport} = setup({sasl: "external", saslAccount: "", saslPassword: ""});
 		const requested = offer(transport, `${OFFERED_CAPS} sasl=PLAIN,EXTERNAL`);
@@ -1048,7 +1113,7 @@ describe("IrcClient SASL: a deploy that lets only accounts in", function () {
 
 	it("does not dial a network with no login, and says why", function () {
 		// A guest's saved entry from before guests were turned off,
-		// `/connect <host>`, "No authentication" in the network's settings:
+		// `/server <host>`, "No authentication" in the network's settings:
 		// each would register as the stranger the deploy turned away.
 		signInDeploy(false);
 		const {client, transport, rejected} = idle();

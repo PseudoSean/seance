@@ -53,17 +53,6 @@
 						/>
 					</span>
 					<span
-						:aria-label="joinChannelLabel"
-						class="add-channel-tooltip tooltipped tooltipped-e tooltipped-no-touch"
-					>
-						<button
-							:class="['add-channel', {opened: isJoinChannelShown}]"
-							:aria-controls="'join-channel-' + channel.id"
-							:aria-label="joinChannelLabel"
-							@click.stop="$emit('toggle-join-channel')"
-						/>
-					</span>
-					<span
 						v-if="opered"
 						:aria-label="operPanelLabel"
 						class="oper-panel-tooltip tooltipped tooltipped-e tooltipped-no-touch"
@@ -72,6 +61,17 @@
 							class="oper-panel"
 							:aria-label="operPanelLabel"
 							@click.stop="openOperPanel"
+						/>
+					</span>
+					<span
+						v-if="network.bouncer"
+						:aria-label="t('lobby.bouncerPanel')"
+						class="oper-panel-tooltip tooltipped tooltipped-e tooltipped-no-touch"
+					>
+						<button
+							class="oper-panel bouncer-panel"
+							:aria-label="t('lobby.bouncerPanel')"
+							@click.stop="openBouncerPanel"
 						/>
 					</span>
 				</div>
@@ -129,11 +129,9 @@ export default defineComponent({
 			type: Object as PropType<ClientNetwork>,
 			required: true,
 		},
-		isJoinChannelShown: Boolean,
 		active: Boolean,
 		isFiltering: Boolean,
 	},
-	emits: ["toggle-join-channel"],
 	setup(props) {
 		const router = useRouter();
 		const {t} = useI18n();
@@ -157,6 +155,11 @@ export default defineComponent({
 
 		const openOperPanel = () => {
 			void router.push(`/oper/${props.network.uuid}/opers`);
+		};
+
+		// A soju's networks (Windows/BouncerPanel.vue): only on its bouncer connection.
+		const openBouncerPanel = () => {
+			void router.push(`/bouncer/${props.network.uuid}`);
 		};
 
 		// Notification state for this network (bell icon): subscribed,
@@ -215,13 +218,9 @@ export default defineComponent({
 				text:
 					props.network.status.connecting && !retryPending.value
 						? "/disconnect"
-						: "/connect",
+						: "/server",
 			});
 		};
-
-		const joinChannelLabel = computed(() => {
-			return props.isJoinChannelShown ? t("lobby.cancel") : t("lobby.joinChannel");
-		});
 
 		// The nick under the network name is the one this connection uses;
 		// before the first connect it is the configured one.
@@ -328,10 +327,10 @@ export default defineComponent({
 			editLabel,
 			opered,
 			openOperPanel,
+			openBouncerPanel,
 			statusClass,
 			statusLabel,
 			onStatusClick,
-			joinChannelLabel,
 			nickLabel,
 			unreadCount,
 			onCollapseClick,

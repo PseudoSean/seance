@@ -18,17 +18,19 @@ msgctxt "ban.banned"
 msgid "Banned."
 msgstr ""
 
+# reused-from: composer.cancel confirm.cancel form.actionCancel install.art.cancel lobby.cancel oper.action.cancel oper.alertBuilder.form.cancel oper.investigate.card.cancel search.filters.cancel search.window.cancel translate.picker.cancel upload.cancel windows.bouncer.cancel
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): button that closes it.
 #: client/components/BanDialog.vue
 msgctxt "ban.cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "Kanselahin"
 
+# reused-from: oper.ban.check.empty
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): the mask field is empty.
 #: client/js/helpers/channelBans.ts
 msgctxt "ban.check.empty"
 msgid "Enter a mask."
-msgstr ""
+msgstr "Maglagay ng mask."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): why a typed mask cannot be sent.
 #: client/js/helpers/channelBans.ts
@@ -68,11 +70,12 @@ msgctxt "ban.kicked"
 msgid "Kicked."
 msgstr ""
 
+# reused-from: oper.investigate.user.lookingUp
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): shown while the server is asked for the person's address.
 #: client/components/BanDialog.vue
 msgctxt "ban.lookingUp"
 msgid "Looking them up…"
-msgstr ""
+msgstr "Hinahanap…"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): label of the mask field.
 #: client/components/BanDialog.vue
@@ -86,11 +89,12 @@ msgctxt "ban.maskPlaceholder"
 msgid "nick!user@host"
 msgstr ""
 
+# reused-from: oper.action.notSentDown oper.report.notSent
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): nothing could be sent.
 #: client/components/BanDialog.vue
 msgctxt "ban.notConnected"
 msgid "Not sent: the connection is down."
-msgstr ""
+msgstr "Hindi naipadala: putol ang koneksyon."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): who in the channel matches the mask, when there are too many to name. {nicks} is a list of nicks; {more} is a number.
 #: client/components/BanDialog.vue
@@ -124,7 +128,7 @@ msgstr ""
 #: client/components/BanDialog.vue
 msgctxt "ban.reasonPlaceholder"
 msgid "Optional"
-msgstr ""
+msgstr "Opsyonal"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): button that removes the ban being edited.
 #: client/components/BanDialog.vue
@@ -150,7 +154,7 @@ msgstr[1] ""
 #: client/components/BanDialog.vue
 msgctxt "ban.save"
 msgid "Save"
-msgstr ""
+msgstr "I-save"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): said after an edit worked, before the dialog closes.
 #: client/components/BanDialog.vue
@@ -158,17 +162,19 @@ msgctxt "ban.saved"
 msgid "Saved."
 msgstr ""
 
+# reused-from: oper.action.sending oper.alertBuilder.form.sending
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): the button's text while the server answers.
 #: client/components/BanDialog.vue
 msgctxt "ban.sending"
 msgid "Sending…"
-msgstr ""
+msgstr "Ipinapadala…"
 
+# reused-from: oper.action.serverSilent oper.report.noAnswer search.window.errorTimeout
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): no answer in time.
 #: client/components/BanDialog.vue
 msgctxt "ban.silent"
 msgid "The server did not answer."
-msgstr ""
+msgstr "Hindi sumagot ang server."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): button that sets the ban.
 #: client/components/BanDialog.vue
@@ -176,11 +182,12 @@ msgctxt "ban.submit"
 msgid "Ban"
 msgstr ""
 
+# reused-from: menu.kick
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): the same button when the ban is already covered and only the kick is left to do.
 #: client/components/BanDialog.vue
 msgctxt "ban.submitKick"
 msgid "Kick"
-msgstr ""
+msgstr "I-kick"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): tooltip of a suggested mask matching a logged-in account.
 #: client/js/helpers/channelBans.ts
@@ -192,19 +199,19 @@ msgstr ""
 #: client/js/helpers/channelBans.ts
 msgctxt "ban.suggest.host"
 msgid "This address"
-msgstr ""
+msgstr "Ang address na ito"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): tooltip of a suggested mask matching the person's username on their host.
 #: client/js/helpers/channelBans.ts
 msgctxt "ban.suggest.identHost"
 msgid "This username at this address"
-msgstr ""
+msgstr "Ang username na ito sa address na ito"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): tooltip of a suggested mask an IRC operator can see.
 #: client/js/helpers/channelBans.ts
 msgctxt "ban.suggest.ip"
 msgid "Their real IP address"
-msgstr ""
+msgstr "Ang kanilang tunay na IP address"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): tooltip of a suggested mask matching the nick alone.
 #: client/js/helpers/channelBans.ts
@@ -222,19 +229,19 @@ msgstr ""
 #: client/components/BanDialog.vue
 msgctxt "ban.titleAdd"
 msgid "Add a ban to {channel}"
-msgstr ""
+msgstr "Magdagdag ng ban sa {channel}"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): title when changing a ban already set. {channel} is verbatim.
 #: client/components/BanDialog.vue
 msgctxt "ban.titleEdit"
 msgid "Edit ban in {channel}"
-msgstr ""
+msgstr "I-edit ang ban sa {channel}"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): title when it is about someone. {nick} and {channel} are verbatim.
 #: client/components/BanDialog.vue
 msgctxt "ban.titleNick"
 msgid "Ban {nick} from {channel}"
-msgstr ""
+msgstr "I-ban si {nick} sa {channel}"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): the server accepted the command and did nothing.
 #: client/components/BanDialog.vue
@@ -278,7 +285,7 @@ msgstr[1] ""
 #: client/components/Windows/BanList.vue
 msgctxt "bans.edit"
 msgid "Edit…"
-msgstr ""
+msgstr "I-edit…"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): the channel has no bans. {channel} is the channel's name, verbatim.
 #: client/components/Windows/BanList.vue
@@ -290,7 +297,7 @@ msgstr ""
 #: client/components/Windows/BanList.vue
 msgctxt "bans.filter.account"
 msgid "Accounts"
-msgstr ""
+msgstr "Mga Account"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): filter chip showing bans on a nick, user or host.
 #: client/components/Windows/BanList.vue
@@ -302,7 +309,7 @@ msgstr ""
 #: client/components/Windows/BanList.vue
 msgctxt "bans.filter.all"
 msgid "All"
-msgstr ""
+msgstr "Lahat"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): filter chip showing the bans the reader set.
 #: client/components/Windows/BanList.vue
@@ -310,11 +317,12 @@ msgctxt "bans.filter.mine"
 msgid "Set by you"
 msgstr ""
 
+# reused-from: oper.check.section.other
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): filter chip showing every other kind of ban (real name, channel, muted…).
 #: client/components/Windows/BanList.vue
 msgctxt "bans.filter.other"
 msgid "Other"
-msgstr ""
+msgstr "Iba pa"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): accessible name of the row of filter chips.
 #: client/components/Windows/BanList.vue
@@ -322,6 +330,7 @@ msgctxt "bans.filters"
 msgid "Filter bans"
 msgstr ""
 
+# no-reuse: the other keys' text is the account-name field label, not this tag
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): tag on a ban that matches a logged-in account.
 #: client/js/irc/profiles/nefarious/extbans.ts
 msgctxt "bans.kind.account"
@@ -368,7 +377,7 @@ msgstr ""
 #: client/js/irc/profiles/nefarious/extbans.ts
 msgctxt "bans.kind.realname"
 msgid "Real name"
-msgstr ""
+msgstr "Tunay na pangalan"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): how many of the bans the server allows a channel are taken. {used} and {limit} are numbers.
 #: client/components/Windows/BanList.vue
@@ -380,13 +389,14 @@ msgstr ""
 #: client/components/Windows/BanList.vue
 msgctxt "bans.loading"
 msgid "Loading…"
-msgstr ""
+msgstr "Naglo-load…"
 
+# reused-from: oper.action.serverSilent oper.report.noAnswer search.window.errorTimeout
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): shown when the list never came.
 #: client/js/irc/banList.ts
 msgctxt "bans.noAnswer"
 msgid "The server did not answer."
-msgstr ""
+msgstr "Hindi sumagot ang server."
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): empty result of a search. {query} is what was typed, verbatim.
 #: client/components/Windows/BanList.vue
@@ -486,11 +496,12 @@ msgctxt "bans.theServer"
 msgid "the server"
 msgstr ""
 
+# reused-from: oper.check.section.bans oper.investigate.card.bans
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): the window's heading, next to the channel's name.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.title"
 msgid "Bans"
-msgstr ""
+msgstr "Mga ban"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): the button on each row, and the same entry on a row's menu: removes that ban.
 #: client/components/Windows/BanList.vue
@@ -520,10 +531,67 @@ msgctxt "bans.unbanMask"
 msgid "Unban {mask}"
 msgstr ""
 
+# reused-from: mentions.undo
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): button next to the note that a ban was removed: puts it back.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.undo"
 msgid "Undo"
+msgstr "I-undo"
+
+#. Error in the bouncer panel when a change (add, edit or delete a network) cannot be sent: the connection to the bouncer is closed, or the server cannot answer requests.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.cannotChange"
+msgid "The bouncer cannot take changes from here right now."
+msgstr "Hindi makatanggap ng mga pagbabago mula rito ang bouncer sa ngayon."
+
+#. Lobby error on a network bound to one of a bouncer's networks (soju) when the bouncer says that network no longer exists (it was deleted there). The connection stopped and the network no longer connects at startup.
+#: client/js/irc/client.ts
+msgctxt "bouncer.networkGone"
+msgid "This network was deleted on the bouncer, so it no longer connects. You can remove it here."
+msgstr "Na-delete ang network na ito sa bouncer, kaya hindi na ito kumokonekta. Maaari mo itong alisin dito."
+
+#. Lobby line on a bouncer's control connection (soju) after Seance added the networks the bouncer listed, each as a network of its own. {names} is a comma-separated list of network names.
+#: client/js/irc/bouncer.ts:164
+msgctxt "bouncer.networksAdded"
+msgid "Added this bouncer's networks: {names}"
+msgstr "Naidagdag ang mga network ng bouncer na ito: {names}"
+
+#. Lobby line on a bouncer's control connection (soju) when it lists more networks than Seance adds for one bouncer account. {names} is a comma-separated list of the network names left out; {count} is the limit (50 today).
+#: client/js/irc/bouncer.ts:173
+msgctxt "bouncer.networksOver"
+msgid "Not added: {names}. This bouncer already has {count} network saved here, the most Seance adds; remove one to make room."
+msgid_plural "Not added: {names}. This bouncer already has {count} networks saved here, the most Seance adds; remove one to make room."
+msgstr[0] "Hindi naidagdag: {names}. Mayroon nang {count} network na naka-save dito ang bouncer na ito, ang pinakamaraming idinadagdag ng Seance; mag-alis ng isa para magkaroon ng puwang."
+msgstr[1] "Hindi naidagdag: {names}. Mayroon nang {count} network na naka-save dito ang bouncer na ito, ang pinakamaraming idinadagdag ng Seance; mag-alis ng isa para magkaroon ng puwang."
+
+#. Error in the bouncer panel when the connection closed before the bouncer replied to a request.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.noAnswer"
+msgid "No answer."
+msgstr "Walang sagot."
+
+#. Lobby note on a bouncer's control connection (soju) that logged in without SASL: the bouncer lists networks, but they can only be added as networks of their own after a SASL login. Shown once per connection.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.saslNeeded"
+msgid "This bouncer has networks, but they are added here only after a SASL login. Turn on SASL in this network's settings to get them."
+msgstr "May mga network ang bouncer na ito, pero idinadagdag lang ang mga ito rito pagkatapos mag-login gamit ang SASL. I-on ang SASL sa mga setting ng network na ito para makuha ang mga ito."
+
+#. Error in the bouncer panel when the bouncer sent no reply to a request in time.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.timeout"
+msgid "The bouncer did not answer."
+msgstr "Hindi sumagot ang bouncer."
+
+#. Error in the bouncer panel when the network's details together are too long for one IRC line (500 bytes).
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.tooLong"
+msgid "Too long to send in one line: shorten some fields."
+msgstr "Masyadong mahaba para ipadala sa iisang linya: paikliin ang ilang field."
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): aria-label and tooltip of the key icon button on the join-by-name row; it reveals the field for the channel's password (key), which private channels need.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.addKey"
+msgid "Add a password"
 msgstr ""
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading of the full list.
@@ -544,17 +612,18 @@ msgctxt "browse.ask"
 msgid "Load channels"
 msgstr ""
 
+# reused-from: reactions.clearSearch
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): label of the button that empties the search field.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.clear"
 msgid "Clear search"
-msgstr ""
+msgstr "I-clear ang paghahanap"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the close button's label.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.close"
 msgid "Close"
-msgstr ""
+msgstr "Isara"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): how many channels the list shows after filtering.
 #: client/components/Windows/ChannelBrowser.vue
@@ -564,23 +633,19 @@ msgid_plural "{count} channels"
 msgstr[0] ""
 msgstr[1] ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button offering to join a channel that does not exist yet, which creates it; {name} is the channel name, verbatim.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the server refuses the list because the connection is too new, a rule servers have to keep bots from harvesting channel names.
 #: client/components/Windows/ChannelBrowser.vue
-msgctxt "browse.create"
-msgid "Start {name}"
-msgstr ""
-
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the server refuses the list because the connection is too new.
-#: client/components/Windows/ChannelBrowser.vue
+#, fuzzy
 msgctxt "browse.delayed"
-msgid "The server is making you wait"
+msgid "Server anti-bot protection"
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): countdown under 'The server is making you wait'; {count} is the seconds left.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): countdown under the heading 'Server anti-bot protection'; {count} is the seconds left before the server will send the list.
 #: client/components/Windows/ChannelBrowser.vue
+#, fuzzy
 msgctxt "browse.delayedNote"
-msgid "New connections can list channels in {count} second."
-msgid_plural "New connections can list channels in {count} seconds."
+msgid "Please wait {count} second for the full channel list."
+msgid_plural "Please wait {count} seconds for the full channel list."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -596,6 +661,12 @@ msgctxt "browse.featured"
 msgid "Featured"
 msgstr ""
 
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note beside the Featured heading while the server is making a new connection wait for the full list; the channels under it (the ones the network puts forward) can be joined right away.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.featuredMeanwhile"
+msgid "Meanwhile, you can join these"
+msgstr ""
+
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note beside the Featured heading saying who chose these channels.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.featuredNote"
@@ -606,13 +677,13 @@ msgstr ""
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.filter.all"
 msgid "All"
-msgstr ""
+msgstr "Lahat"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing channels with at least {count} users; {count} is a number.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.filter.busy"
 msgid "{count}+ people"
-msgstr ""
+msgstr "{count}+ na tao"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing only the channels the network puts forward.
 #: client/components/Windows/ChannelBrowser.vue
@@ -626,11 +697,12 @@ msgctxt "browse.filter.topic"
 msgid "With a topic"
 msgstr ""
 
+# reused-from: search.window.filters
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the row of filter chips.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.filters"
 msgid "Filters"
-msgstr ""
+msgstr "Mga filter"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown before the list was ever asked for on this connection.
 #: client/components/Windows/ChannelBrowser.vue
@@ -638,17 +710,18 @@ msgctxt "browse.idle"
 msgid "No list yet"
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is not in. One word.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is not in, and the submit button of the join-by-name row. One word.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.join"
 msgid "Join"
-msgstr ""
+msgstr "Sumali"
 
+# reused-from: search.window.asking
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): status while the list is requested and no row has arrived yet.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.loading"
 msgid "Asking the server…"
-msgstr ""
+msgstr "Tinatanong ang server…"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): status while the list arrives; {count} is the rows received so far.
 #: client/components/Windows/ChannelBrowser.vue
@@ -674,13 +747,14 @@ msgstr ""
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.noTopic"
 msgid "No topic"
-msgstr ""
+msgstr "Walang paksa"
 
+# reused-from: composer.notConnected search.window.offline
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the network is disconnected.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.offline"
 msgid "Not connected"
-msgstr ""
+msgstr "Hindi nakakonekta"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note under 'Not connected'.
 #: client/components/Windows/ChannelBrowser.vue
@@ -688,11 +762,11 @@ msgctxt "browse.offlineNote"
 msgid "The list comes from the server; it loads once the network is back."
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is already in. One word.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is already in, and on the join-by-name row for such a channel. One word.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.open"
 msgid "Open"
-msgstr ""
+msgstr "Buksan"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): number of users in a channel, shown on every row and card.
 #: client/components/Windows/ChannelBrowser.vue
@@ -702,11 +776,12 @@ msgid_plural "{count} people"
 msgstr[0] ""
 msgstr[1] ""
 
+# reused-from: oper.investigate.card.refresh oper.me.refresh
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that asks the server for the list again.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.refresh"
 msgid "Refresh"
-msgstr ""
+msgstr "I-refresh"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): tooltip on the Refresh button while it is disabled right after an update.
 #: client/components/Windows/ChannelBrowser.vue
@@ -720,11 +795,12 @@ msgctxt "browse.refused"
 msgid "The server refused the list"
 msgstr ""
 
+# reused-from: oper.investigate.card.lookupRetry search.window.retry
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that asks the server again after a refusal.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.retry"
 msgid "Try again"
-msgstr ""
+msgstr "Subukan ulit"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the search field.
 #: client/components/Windows/ChannelBrowser.vue
@@ -748,13 +824,7 @@ msgstr ""
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.showing"
 msgid "Showing {shown} of {total}"
-msgstr ""
-
-#. Sidebar join form: button under the channel name field that opens the channel browser window.
-#: client/components/JoinChannel.vue
-msgctxt "browse.sidebarButton"
-msgid "Browse channels"
-msgstr ""
+msgstr "Ipinapakita ang {shown} sa {total}"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the sort order select.
 #: client/components/Windows/ChannelBrowser.vue
@@ -774,10 +844,17 @@ msgctxt "browse.sort.people"
 msgid "Most people"
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the window's heading. Two words.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the window's heading, and the first line under each network in the sidebar, which opens it. Two words.
+#: client/components/ChannelBrowserRow.vue
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.title"
 msgid "Browse channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note under a channel name typed in the search that the server's list does not have (nobody has started it yet, or the server keeps it out of the list); the row beside it joins it anyway.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.unlisted"
+msgid "Not in the list"
 msgstr ""
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): when the list was last fetched; {when} is a relative time like '5 minutes ago', verbatim.
@@ -894,11 +971,12 @@ msgctxt "channel.type.channel"
 msgid "Channel"
 msgstr ""
 
+# reused-from: oper.snomask.NETWORK.label
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr ""
+msgstr "Ang network"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
@@ -935,6 +1013,18 @@ msgstr "Buksan ang context menu"
 msgctxt "chat.currentlyOpen"
 msgid "Currently open {type}"
 msgstr "Kasalukuyang bukas: {type}"
+
+#. Label of the button on the missing-messages divider in a chat window's message list (next to 'Some messages here were not loaded'). Clicking fetches the missing messages from the server.
+#: client/components/MessageList.vue:58
+msgctxt "chat.gapLoad"
+msgid "Load them"
+msgstr ""
+
+#. Text of a divider between two rows of a chat window's message list. It marks a place where messages are missing: the app caught up on the newest messages after being away but did not fetch everything in between. A button next to it loads them.
+#: client/components/MessageList.vue:49
+msgctxt "chat.gapMarker"
+msgid "Some messages here were not loaded"
+msgstr ""
 
 #. Text of the 'load older messages' button at the top of the scrollback while earlier history is being fetched.
 #: client/components/MessageList.vue:10
@@ -1070,11 +1160,11 @@ msgctxt "cmd.alias.tooLong"
 msgid "That alias is too long ({length} of at most {max} characters)."
 msgstr "Masyadong mahaba ang alias na iyan ({length} sa hanggang {max} karakter)."
 
-#. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Aliases' names the settings tab where aliases are edited.
+#. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Scripts → Aliases' is the way to the aliases page: the Scripts tab of Settings, then its Aliases row (use the same words as settings.tabs.scripts and settings.scripts.aliases).
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooMany"
-msgid "You already have {max} aliases; delete one in Settings → Aliases first."
-msgstr "Mayroon ka nang {max} na alias; mag-delete muna ng isa sa Mga setting → Mga alias."
+msgid "You already have {max} aliases; delete one in Settings → Scripts → Aliases first."
+msgstr "Mayroon ka nang {max} na alias; mag-delete muna ng isa sa Mga setting → Mga script → Mga alias."
 
 #. Confirmation after /alias <name> <commands> overwrote an existing alias. {name} is the alias name as typed, verbatim.
 #: client/js/irc/commands/alias.ts
@@ -1082,15 +1172,16 @@ msgctxt "cmd.alias.updated"
 msgid "Alias /{name} updated."
 msgstr "Na-update ang alias na /{name}."
 
-#. Error when /connect is typed for a network that is already up.
-#: client/js/irc/commands/connect.ts
+#. Error when /server is typed with no arguments for a network that is already up.
+#: client/js/irc/commands/server.ts
 msgctxt "cmd.alreadyConnected"
 msgid "You are already connected."
 msgstr "Nakaconnect ka na."
 
-#. Error when a command that needs a conversation is typed in a network's lobby. {cmd} is the command as typed, user input, verbatim.
+#. Error when a command that needs a conversation is typed in a network's lobby or a list window (Ignored users, the mode lists). {cmd} is the command as typed, user input, verbatim; 'say' also for a plain message typed in a list window.
 #: client/js/irc/commands/me.ts
 #: client/js/irc/commands/react.ts
+#: client/js/irc/commands/msg.ts
 msgctxt "cmd.channelsAndQueriesOnly"
 msgid "{cmd} command can only be used in channels and queries."
 msgstr "Magagamit lang ang command na {cmd} sa mga channel at pribadong usapan."
@@ -1153,8 +1244,9 @@ msgctxt "cmd.ignorelistTitle"
 msgid "Ignored users"
 msgstr "Mga user na ini-ignore"
 
-#. Error when a plain message is typed in a network's lobby instead of a channel or query; the lobby's input is for commands.
+#. Error when a plain message, or /say, is typed in a network's lobby instead of a channel or query; the lobby's input is for commands.
 #: client/js/irc/commands/index.ts
+#: client/js/irc/commands/msg.ts
 msgctxt "cmd.lobbySend"
 msgid "Messages can not be sent to lobbies."
 msgstr "Hindi maaaring magpadala ng mensahe sa window ng network."
@@ -1609,12 +1701,13 @@ msgctxt "connect.connectingToAttempt"
 msgid "Connecting to {host}:{port}… (attempt {attempt})"
 msgstr "Kumokonekta sa {host}:{port}… (pagsubok {attempt})"
 
+# reused-from: oper.check.section.connection oper.stats.col.connection
 #. Label of the select choosing how the app reaches the IRC server: over WebSocket or over a raw TCP connection. Shown only in the app.
 #: client/components/Windows/Connect.vue
 #: client/components/NetworkForm.vue
 msgctxt "connect.connection"
 msgid "Connection"
-msgstr ""
+msgstr "Koneksyon"
 
 #. Option of the Connection select: a classic IRC connection over raw TCP, ports 6667 or 6697. Only the app can make it.
 #: client/components/Windows/Connect.vue
@@ -1694,11 +1787,12 @@ msgctxt "connect.linkSuggestJoin"
 msgid "This link suggests connecting to {host}:{port} and joining {channels}. Nothing is saved until you choose to connect."
 msgstr "Iminumungkahi ng link na ito na kumonekta sa {host}:{port} at sumali sa {channels}. Walang nase-save hangga't hindi ka pumipiling kumonekta."
 
+# reused-from: oper.snomask.NETWORK.label
 #. Read-only row label on the connect form of a deploy that pins the server, above the name of the network being connected to (shown instead of an editable server field).
 #: client/components/Windows/Connect.vue
 msgctxt "connect.network"
 msgid "Network"
-msgstr ""
+msgstr "Ang network"
 
 #. Heading of the connect form when it opened from a web+irc:// link that proposes a server the user has not approved yet.
 #: client/components/Windows/Connect.vue:118
@@ -2246,12 +2340,14 @@ msgstr "hanggang {day} {time}"
 
 #. Join refusal (475) phrased by the client. {channel} is the refused channel name, user data, never translated; the '- <cause>.' layout follows the server's cause ordering.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.badChannelKey"
 msgid "Cannot join {channel} - Bad channel key."
 msgstr "Hindi makasali sa {channel} - Maling key ng channel."
 
 #. Join refusal (474) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.bannedFromChannel"
 msgid "Cannot join {channel} - You have been banned from the channel."
 msgstr "Hindi makasali sa {channel} - Naka-ban ka sa channel."
@@ -2264,6 +2360,7 @@ msgstr "Hindi makapagpadala sa channel na {channel}"
 
 #. Join refusal (471) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.channelIsFull"
 msgid "Cannot join {channel} - Channel is full."
 msgstr "Hindi makasali sa {channel} - Puno na ang channel."
@@ -2276,6 +2373,7 @@ msgstr "Hindi magawa ang aksyon: Hindi ka operator ng channel."
 
 #. Join refusal (473) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.inviteOnlyChannel"
 msgid "Cannot join {channel} - Channel is invite only."
 msgstr "Hindi makasali sa {channel} - Para lang sa mga inimbita ang channel."
@@ -2586,12 +2684,13 @@ msgctxt "form.serverAddress"
 msgid "Server address"
 msgstr "Address ng server"
 
+# reused-from: windows.bouncer.fieldPassword
 #. Label of the server password field (IRC PASS), separate from the services account password.
 #: client/components/NetworkForm.vue
 #: client/components/Windows/Connect.vue
 msgctxt "form.serverPassword"
 msgid "Server password"
-msgstr ""
+msgstr "Password ng server"
 
 #. Tooltip on the server password switch. 'username/network:password' is literal syntax the user types: keep it untranslated.
 #: client/components/NetworkForm.vue
@@ -2727,11 +2826,12 @@ msgctxt "form.trustedCertificates.help"
 msgid "These certificates are accepted for this network although they did not pass the usual checks. Removing one makes the app ask again."
 msgstr ""
 
+# reused-from: menu.closeLobby oper.alertBuilder.form.remove reactions.hintRemove translate.model.delete
 #. Tooltip and screen-reader name of the trash icon button next to one trusted certificate: stops trusting it (takes effect on Save).
 #: client/components/NetworkForm.vue
 msgctxt "form.trustedCertificates.remove"
 msgid "Remove"
-msgstr ""
+msgstr "Alisin"
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -2854,7 +2954,7 @@ msgctxt "help.commands.collapse"
 msgid "Collapse all previews in the current channel (opposite of {command})"
 msgstr "Itinitiklop ang lahat ng preview sa kasalukuyang channel (kabaligtaran ng {command})"
 
-#. Description of the /connect command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
+#. Description of the /server command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connect"
 msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
@@ -3901,35 +4001,17 @@ msgctxt "irc.colorYellow"
 msgid "Yellow"
 msgstr "Dilaw"
 
-#. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
-#: client/components/JoinChannel.vue:20
-msgctxt "join.channelHint"
-msgid "The channel name may not contain spaces"
-msgstr "Hindi puwedeng may espasyo ang pangalan ng channel"
-
-#. Placeholder of the channel name input in the join-channel form that opens under a network in the sidebar.
-#: client/components/JoinChannel.vue:17
-msgctxt "join.channelPlaceholder"
-msgid "Channel"
-msgstr "Pangalan ng channel"
-
-#. Title (hover hint) of the channel key input in the sidebar's join-channel form, shown when the typed key is invalid.
-#: client/components/JoinChannel.vue:31
+#. Title (hover hint) of the channel key field in the channel browser's join-by-name row, shown when the typed key is invalid.
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "join.passwordHint"
 msgid "The channel password may not contain spaces"
 msgstr "Hindi puwedeng may espasyo ang password ng channel"
 
-#. Placeholder of the channel key (password) input in the sidebar's join-channel form; private channels need one.
-#: client/components/JoinChannel.vue:28
+#. Placeholder and accessible name of the channel key (password) field in the channel browser's join-by-name row (a channel typed in the search, or one the server refused); private channels need one.
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "join.passwordPlaceholder"
 msgid "Password (optional)"
 msgstr "Password (opsyonal)"
-
-#. Submit button of the join-channel form under a network in the sidebar.
-#: client/components/JoinChannel.vue:34
-msgctxt "join.submit"
-msgid "Join"
-msgstr "Sumali"
 
 #. Title on the placeholder of a media preview that failed to load. {kind} is the media kind as a lowercase English word: 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -4176,6 +4258,7 @@ msgctxt "loading.starting"
 msgid "Loading the app…"
 msgstr "Nilo-load ang app…"
 
+# no-reuse: the other keys' text is the account-name field label, not this button
 #. Tooltip and screen-reader label of the gear button on a chat network's home row, on a deploy that keeps its network as it set it; opens the Account settings page (connect, disconnect, sign in, sign out) instead of the network's edit form.
 #: client/components/NetworkLobby.vue
 #: client/components/DormantNetwork.vue
@@ -4183,11 +4266,11 @@ msgctxt "lobby.account"
 msgid "Account"
 msgstr ""
 
-#. aria-label of the plus button on a sidebar network row while the join-channel form is open: clicking closes it again.
-#: client/components/NetworkLobby.vue:156
-msgctxt "lobby.cancel"
-msgid "Cancel"
-msgstr "Kanselahin"
+#. aria-label and tooltip of the server button in a bouncer connection's network header: opens the bouncer panel listing the networks the bouncer keeps.
+#: client/components/NetworkLobby.vue
+msgctxt "lobby.bouncerPanel"
+msgid "Bouncer networks…"
+msgstr "Mga network ng bouncer…"
 
 #. aria-label of the chevron that collapses a network's channel list in the sidebar.
 #: client/components/NetworkLobby.vue:176
@@ -4225,12 +4308,6 @@ msgstr "I-edit ang network na ito…"
 msgctxt "lobby.expand"
 msgid "Expand"
 msgstr "Buklatin"
-
-#. aria-label of the plus button on a sidebar network row: opens the small join-channel form under the network.
-#: client/components/NetworkLobby.vue:156
-msgctxt "lobby.joinChannel"
-msgid "Join a channel…"
-msgstr "Sumali sa isang channel…"
 
 #. Tooltip of the nick shown at the right of a sidebar network row before the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:164
@@ -4447,7 +4524,7 @@ msgstr ""
 #: client/js/helpers/banMenu.ts
 msgctxt "menu.banFrom"
 msgid "Ban from {channel}…"
-msgstr ""
+msgstr "I-ban mula sa {channel}…"
 
 #. The word for a group chat room, filling {type} in the context-menu mute items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -4550,12 +4627,6 @@ msgstr "Pumunta sa channel"
 msgctxt "menu.ignore"
 msgid "Ignore user"
 msgstr "I-ignore ang user"
-
-#. Context-menu item on a chat network's home row; opens the field to join a channel on that network. Ellipsis is part of the copy.
-#: client/js/helpers/contextMenu.ts
-msgctxt "menu.joinChannel"
-msgid "Join a channel…"
-msgstr "Sumali sa isang channel…"
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is not open yet; clicking joins it.
 #: client/js/helpers/contextMenu.ts
@@ -6329,6 +6400,12 @@ msgctxt "oper.alerts.o3.expiresHours"
 msgid "expires in {hours} h"
 msgstr "mag-e-expire sa loob ng {hours} oras"
 
+#. Part of an oper service alert's summary row: it expires in less than an hour. Keep the '<' sign; 'h' is the hour symbol, use the language's own abbreviation. Lower case.
+#: client/components/Oper/OperAlerts.vue
+msgctxt "oper.alerts.o3.expiresUnderHour"
+msgid "expires in < 1 h"
+msgstr ""
+
 #. Section heading in the oper panel's Alerts tab: the alerts kept by the oper service bot (X3's O3 'addalert' alerts, which react to users matching criteria). ≤ 25 characters.
 #. Keep as is: {bot} — the name of the network's oper service bot, usually O3 (X3 services).
 #: client/components/Oper/OperAlerts.vue
@@ -6418,11 +6495,12 @@ msgctxt "oper.alerts.position.hereTitle"
 msgid "In the window you are looking at"
 msgstr "Sa window na tinitingnan mo"
 
+# reused-from: oper.snomask.NETWORK.label
 #. Segment of a Here / Network / Off control on a line of the oper panel's Alerts tab: show these notices in the network's own window. One short word.
 #: client/components/Oper/OperAlerts.vue
 msgctxt "oper.alerts.position.network"
 msgid "Network"
-msgstr ""
+msgstr "Ang network"
 
 #. Oper panel, Alerts tab, on a touchscreen: one item of the legend above the Here / Network / Off controls, saying what 'Network' means: the notices show in the network's own window without raising its unread count. {label} is the segment's name (oper.alerts.position.network, shown bold).
 #: client/components/Oper/OperAlerts.vue
@@ -6681,6 +6759,13 @@ msgctxt "oper.ban.check.channelGlineOnly"
 msgid "Only a G-line can ban a channel name."
 msgstr "G-line lang ang makakapag-ban ng pangalan ng channel."
 
+#. Error under the mask field of the oper's ban dialog: the server would refuse this ban mask. An address range written as address/bits must give the address in full (all four numbers of an IPv4 address) and no * or ? wildcard. 192.0.2.0/24 is an example: keep it exactly.
+#. Keep as is (IRC jargon): CIDR.
+#: client/js/irc/profiles/nefarious/bans.ts
+msgctxt "oper.ban.check.cidrAddress"
+msgid "A CIDR needs the whole address, without wildcards (e.g. 192.0.2.0/24)."
+msgstr ""
+
 #. Error under the mask field of the oper's ban dialog: the server would refuse this ban mask. The /bits after the address are more than the address has.
 #. Keep as is (IRC jargon): CIDR.
 #: client/js/irc/profiles/nefarious/bans.ts
@@ -6798,11 +6883,12 @@ msgctxt "oper.check.alias.local"
 msgid "local"
 msgstr "lokal"
 
+# reused-from: connect.account form.account
 #. Column heading in a table in the report card of an oper's /check reply. Short, at most ~20 characters. Keep IRC jargon as is (CHECK, oper, opered, TLS, IP, TS, nick, SendQ, RecvQ, EOB, bouncer if no common word exists).
 #: client/js/irc/profiles/nefarious/check.ts
 msgctxt "oper.check.col.account"
 msgid "Account"
-msgstr ""
+msgstr "Pangalan ng account"
 
 #. Column heading in a table in the report card of an oper's /check reply. Short, at most ~20 characters. Keep IRC jargon as is (CHECK, oper, opered, TLS, IP, TS, nick, SendQ, RecvQ, EOB, bouncer if no common word exists).
 #: client/js/irc/profiles/nefarious/check.ts
@@ -7028,11 +7114,12 @@ msgctxt "oper.check.of"
 msgid "of"
 msgstr "sa"
 
+# reused-from: connect.account form.account
 #. Row label in the report card of an oper's /check reply (a CHECK of a user, channel or server). Short, at most ~25 characters. Keep IRC jargon as is (CHECK, oper, opered, TLS, IP, TS, nick, SendQ, RecvQ, EOB, bouncer if no common word exists).
 #: client/js/irc/profiles/nefarious/check.ts
 msgctxt "oper.check.row.account"
 msgid "Account"
-msgstr ""
+msgstr "Pangalan ng account"
 
 #. Row label in the report card of an oper's /check reply (a CHECK of a user, channel or server): the away message. Short, at most ~25 characters. Keep IRC jargon as is (CHECK, oper, opered, TLS, IP, TS, nick, SendQ, RecvQ, EOB, bouncer if no common word exists).
 #: client/js/irc/profiles/nefarious/check.ts
@@ -7492,11 +7579,12 @@ msgctxt "oper.check.subtitle.server"
 msgid "Server"
 msgstr ""
 
+# reused-from: connect.user
 #. Subtitle of a CHECK report card: the card is about a user. One word.
 #: client/js/irc/profiles/nefarious/check.ts
 msgctxt "oper.check.subtitle.user"
 msgid "User"
-msgstr ""
+msgstr "Gumagamit"
 
 #. Row label in the Totals section of a CHECK channel card: how many members are bouncer alias connections. One word.
 #: client/js/irc/profiles/nefarious/check.ts
@@ -8604,11 +8692,12 @@ msgctxt "oper.investigate.tag.version"
 msgid "version"
 msgstr "bersyon"
 
+# reused-from: connect.account form.account
 #. Oper tools, user investigation card (also shown twice side by side by Compare). Row label in the user's facts grid: the services account they are logged in to. One or two words. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/InvestigateUser.vue
 msgctxt "oper.investigate.user.account"
 msgid "Account"
-msgstr ""
+msgstr "Pangalan ng account"
 
 #. Oper tools, user investigation card (also shown twice side by side by Compare). Muted placeholder while the server or a services bot is still being asked. Lower case, one word and an ellipsis. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/InvestigateUser.vue
@@ -12674,6 +12763,14 @@ msgctxt "scripting.storage.noRoom"
 msgid "There isn't room on this device to save that."
 msgstr "Walang sapat na espasyo sa device na ito para i-save iyon."
 
+#. Error when New script, Import .lua…, an example or Duplicate would add a Lua script past the limit: in Settings → Scripts, or after 'Not saved:' in the script editor. {count} is the limit, a number.
+#: client/js/irc/scripting/storage.ts
+msgctxt "scripting.storage.tooMany"
+msgid "You can keep at most {count} script. Delete one to make room."
+msgid_plural "You can keep at most {count} scripts. Delete one to make room."
+msgstr[0] ""
+msgstr[1] ""
+
 #. Error raised inside a Lua script when what all scripts saved through seance.storage (verbatim, the API's name) is too long together. {max} is the limit, a number.
 #: client/js/irc/scripting/storage.ts
 msgctxt "scripting.storage.totalDataTooLong"
@@ -12686,23 +12783,11 @@ msgctxt "scripting.template.responderDescription"
 msgid "Replies pong! to !ping"
 msgstr "Sumasagot ng pong! sa !ping"
 
-#. Folder name given to the Auto-responder example script when it is added (stored with the script; the user can rename it). Short, a label.
-#: client/js/irc/scripting/library.ts
-msgctxt "scripting.template.responderFolder"
-msgid "Automation"
-msgstr "Awtomasyon"
-
 #. Description given to the /slap example Lua script when it is added. Keep '/slap' verbatim (the command's name).
 #: client/js/irc/scripting/library.ts
 msgctxt "scripting.template.slapDescription"
 msgid "Adds a /slap command"
 msgstr "Nagdaragdag ng /slap na command"
-
-#. Folder name given to the /slap example script when it is added (stored with the script; the user can rename it). Short, a label: slash commands.
-#: client/js/irc/scripting/library.ts
-msgctxt "scripting.template.slapFolder"
-msgid "Commands"
-msgstr "Mga command"
 
 #. Search window, the filters sheet (narrows a history search): placeholder of the Account field: an account is one person whatever nick they use.
 #: client/components/SearchFilterSheet.vue
@@ -12774,7 +12859,7 @@ msgstr "Larawan"
 #: client/js/helpers/searchLabels.ts
 msgctxt "search.filters.hasLink"
 msgid "Link"
-msgstr ""
+msgstr "May link"
 
 #. Search window, the filters sheet (narrows a history search): label of the select that picks where to search (one channel, or all of them). One short word.
 #: client/components/SearchFilterSheet.vue
@@ -12854,13 +12939,14 @@ msgstr "pabalik hanggang {when}"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.window.cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "Kanselahin"
 
+# reused-from: connect.account form.account
 #. Search window (searching the chat history of the server, or of what is loaded on this device): name of a filter: messages from one services account (the identity a user is logged in as, whatever their nick). Also the field's label in the filters sheet. One word.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.window.chip.account"
 msgid "Account"
-msgstr ""
+msgstr "Pangalan ng account"
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): name of a filter: messages from a range of days. Also the field's label in the filters sheet. One word.
 #: client/components/Windows/SearchResults.vue
@@ -12998,7 +13084,7 @@ msgstr "Sa {scope}"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.window.joinToRead"
 msgid "Join {target} to read this message."
-msgstr ""
+msgstr "Sumali sa {target} para mabasa ang mensaheng ito."
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): under a warning that the server cannot search (or is not connected): the search runs over what this device has loaded. {count} is a number.
 #: client/components/Windows/SearchResults.vue
@@ -13186,29 +13272,32 @@ msgctxt "send.tagsTooLong"
 msgid "Not sent: the tags do not fit on one line"
 msgstr "Hindi naipadala: hindi kasya sa isang linya ang mga tag"
 
+# reused-from: form.actionDisconnect menu.disconnect
 #. Button on the Account settings page while the chat network is connected or connecting; clicking hangs up the connection, which stays in the sidebar to connect again.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.disconnect"
 msgid "Disconnect"
-msgstr ""
+msgstr "Idiskonekta"
 
 #. Line on the Account settings page under the network's name, when the user came in as a guest without an account. {nick} is the chat nickname the guest uses.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.guest"
 msgid "Guest: {nick}"
-msgstr ""
+msgstr "Bisita: {nick}"
 
+# no-reuse: the other keys' text is the account-name field label, not this heading
 #. Heading of the Account page in the settings: the one chat network this app is for, who this device signs in to it as, and its connect and sign-in buttons.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.heading"
 msgid "Account"
 msgstr ""
 
+# reused-from: connect.signInSubmit connect.signInTitle
 #. Button on the Account settings page for a guest or a signed-out user; opens the sign-in screen, where an account name and password are entered.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.signIn"
 msgid "Sign in"
-msgstr ""
+msgstr "Mag-sign in"
 
 #. Button on the Account settings page while the device signs in with an account; opens a confirmation before signing out.
 #: client/components/Settings/Account.vue
@@ -13232,13 +13321,13 @@ msgstr ""
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.signOutTitle"
 msgid "Sign out of {name}?"
-msgstr ""
+msgstr "Mag-sign out sa {name}?"
 
 #. Line on the Account settings page under the network's name. {account} is the user's account name on the chat network, which this device signs in with.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.signedIn"
 msgid "Signed in as {account}"
-msgstr ""
+msgstr "Naka-sign in bilang {account}"
 
 #. Line on the Account settings page under the network's name, when this device has no account and no guest session on the chat network.
 #: client/components/Settings/Account.vue
@@ -13264,8 +13353,15 @@ msgctxt "settings.aliases.bodyPlaceholder"
 msgid "/me waves at $1"
 msgstr "/me kumakaway kay $1"
 
-#. Shown in place of the alias table when no aliases are defined.
+#. aria-label of the ✕ button in the corner of the command-aliases page (a layer over Settings > Scripts); closes it back to the Scripts list.
+#: client/components/Settings/AliasesOverlay.vue
+msgctxt "settings.aliases.close"
+msgid "Close aliases"
+msgstr "Isara ang mga alias"
+
+#. Shown in place of the alias table when no aliases are defined, and as the second line of the Aliases row in Settings > Scripts.
 #: client/components/Settings/Aliases.vue
+#: client/components/Settings/Scripts.vue
 msgctxt "settings.aliases.empty"
 msgid "No aliases yet."
 msgstr "Wala pang alias."
@@ -13336,8 +13432,8 @@ msgctxt "settings.aliases.nested"
 msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
 msgstr "Puwedeng tumawag ng ibang alias ang isang linya, at pinapalitan ng alias na kapangalan ng built-in na command ang command na iyon — puwedeng maging {expansion} ang {command} nang hindi umiikot."
 
-#. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
-#: client/components/Settings/Aliases.vue
+#. aria-label of the command-aliases page (a dialog layered over Settings > Scripts); heard by screen readers when it opens.
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "settings.aliases.paneAria"
 msgid "Command aliases"
 msgstr "Mga alias ng command"
@@ -13370,8 +13466,8 @@ msgid_plural "{count} aliases saved."
 msgstr[0] "{count} alias ang na-save."
 msgstr[1] "{count} alias ang na-save."
 
-#. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
-#: client/components/Settings/Aliases.vue
+#. Title of the command-aliases page, a layer opened from the Aliases row of Settings > Scripts, where the user defines their own slash commands.
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "settings.aliases.titleHeading"
 msgid "Command aliases"
 msgstr "Mga alias ng command"
@@ -14152,16 +14248,18 @@ msgctxt "settings.general.keepAliveNotificationsOff"
 msgid "Notifications are off for {appName} in Android's settings, so the connection notification is hidden. Android may still stop the app."
 msgstr "Naka-off ang mga notification para sa {appName} sa mga setting ng Android, kaya nakatago ang notification ng koneksyon. Maaari pa ring ihinto ng Android ang app."
 
-#. Checkbox in Settings > General; when ticked, the recent lines of private (one-to-one) conversations are stored in this browser so they come back after the page is reloaded.
+#. Label of a checkbox in Settings > General. When on, the recent lines of every channel and private conversation are stored in this browser, so each window shows them at once after a reload, even before the connection is back.
 #: client/components/Settings/General.vue
+#, fuzzy
 msgctxt "settings.general.keepPrivate"
-msgid "Keep private conversations on this device"
+msgid "Keep conversations on this device"
 msgstr "Itago ang mga pribadong usapan sa device na ito"
 
-#. Tooltip on the keep-private-conversations checkbox in Settings > General. {lines} and {queries} are numbers (200 and 30 today). Make clear that turning the setting off deletes what is stored.
+#. Tooltip on the keep-conversations checkbox in Settings > General. {lines} is a number (1000 today). Make clear that turning the setting off deletes what is stored.
 #: client/components/Settings/General.vue
+#, fuzzy
 msgctxt "settings.general.keepPrivateHelp"
-msgid "Private conversations come back after a reload: the newest {lines} lines of your {queries} most recent ones, stored in this browser. Turning this off deletes them from this device."
+msgid "Channels and private conversations are there at once after a reload: the newest {lines} lines of each, stored in this browser. Turning this off deletes them from this device."
 msgstr "Bumabalik ang mga pribadong usapan pagkatapos mag-reload: ang pinakabagong {lines} linya ng iyong {queries} pinakabagong usapan, na nakatago sa browser na ito. Kapag in-off ito, mabubura ang mga ito sa device na ito."
 
 #. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
@@ -14338,17 +14436,19 @@ msgctxt "settings.notifications.commaList"
 msgid "Comma-separated, e.g.: word, some more words, anotherword"
 msgstr "Pinaghihiwalay ng kuwit, hal.: salita, ilan pang salita, ibangsalita"
 
+# reused-from: message.copied oper.report.copied
 #. The Copy button's label for a moment after the diagnostics report was copied to the clipboard.
 #: client/components/Settings/Notifications.vue:130
 msgctxt "settings.notifications.copied"
 msgid "Copied"
-msgstr ""
+msgstr "Nakopya"
 
+# reused-from: oper.menu.copy
 #. Button in the push diagnostics fold: copies the diagnostics report to the clipboard.
 #: client/components/Settings/Notifications.vue:130
 msgctxt "settings.notifications.copyDiagnostics"
 msgid "Copy"
-msgstr ""
+msgstr "Kopyahin"
 
 #. Settings → Notifications, in the desktop app (the native shell for Windows, macOS, Linux): why the push options are missing there.
 #: client/components/Settings/Notifications.vue
@@ -14482,11 +14582,12 @@ msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
 msgstr "Kada network ang pag-set up ng push — i-on o i-off ito sa mga setting ng bawat network (I-edit ang network → “Mga push notification para sa network na ito”), kung saan makikita rin ang status ng enrollment. Ang browser ang naghahatid ng mga notification; ang bawat server na may push ang nagpapasya kung gigisingin ang app na ito."
 
+# reused-from: oper.investigate.card.refresh oper.me.refresh
 #. Button in the push diagnostics fold: builds the diagnostics report again.
 #: client/components/Settings/Notifications.vue:130
 msgctxt "settings.notifications.refreshDiagnostics"
 msgid "Refresh"
-msgstr ""
+msgstr "I-refresh"
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
@@ -14664,12 +14765,6 @@ msgctxt "settings.scriptEdit.export"
 msgid "Export .lua"
 msgstr "I-export bilang .lua"
 
-#. Label of the folder field in the Lua script editor: a free-text label that groups scripts in the list.
-#: client/components/Settings/ScriptEdit.vue
-msgctxt "settings.scriptEdit.folder"
-msgid "Folder"
-msgstr ""
-
 #. Number of lines of the Lua script, the {lines} in settings.scriptEdit.size ('12 lines · 340 characters'). {count} is the number of lines.
 #: client/components/Settings/ScriptEdit.vue
 msgctxt "settings.scriptEdit.lineCount"
@@ -14732,12 +14827,11 @@ msgctxt "settings.scriptEdit.title"
 msgid "Edit script"
 msgstr "I-edit ang script"
 
-#. Name of the folder scripts are filed under when they have none: a heading in the Settings > Scripts list, and the placeholder of the editor's Folder field.
+#. Name on the first row of Settings > Scripts, above the Lua switch: tapping it opens the user's command aliases (their own slash commands, which are not Lua and work with Lua off). Under it, a line lists the alias names. Same word as the former Aliases tab; not oper.check.total.aliases, which counts bouncer connections on an oper card.
 #: client/components/Settings/Scripts.vue
-#: client/components/Settings/ScriptEdit.vue
-msgctxt "settings.scripts.defaultFolder"
-msgid "Unsorted"
-msgstr "Hindi nakaayos"
+msgctxt "settings.scripts.aliases"
+msgid "Aliases"
+msgstr "Mga alias"
 
 #. Shown in Settings > Scripts in place of the list while the user has no Lua scripts.
 #: client/components/Settings/Scripts.vue
@@ -14745,11 +14839,11 @@ msgctxt "settings.scripts.empty"
 msgid "No scripts yet."
 msgstr "Wala pang script."
 
-#. Label of the switch in Settings > Scripts that turns Lua scripting on for the whole app (off by default).
+#. Label of the switch in Settings > Scripts that turns Lua scripting on for the whole app (off by default). It sits below the Aliases row and governs only the Lua scripts under it: aliases work either way. Lua is the scripting language's name; keep it.
 #: client/components/Settings/Scripts.vue
 msgctxt "settings.scripts.enable"
-msgid "Enable scripting"
-msgstr "I-enable ang pag-script"
+msgid "Enable Lua"
+msgstr "I-enable ang Lua"
 
 #. Button after 'Or try an example:' in Settings > Scripts: adds an example script that answers a chat message automatically (it replies pong! to !ping).
 #: client/components/Settings/Scripts.vue
@@ -14829,11 +14923,11 @@ msgctxt "settings.scripts.searchAria"
 msgid "Search scripts"
 msgstr "Maghanap ng script"
 
-#. Placeholder of the search field above the script list in Settings > Scripts (shown once there are many scripts); it searches the scripts' names, folders and code.
+#. Placeholder of the search field above the script list in Settings > Scripts (shown once there are many scripts); it searches the scripts' names, descriptions and code.
 #: client/components/Settings/Scripts.vue
 msgctxt "settings.scripts.searchPlaceholder"
-msgid "Search name, folder, text…"
-msgstr "Hanapin ang pangalan, folder, teksto…"
+msgid "Search name, description, text…"
+msgstr "Hanapin ang pangalan, paglalarawan, teksto…"
 
 #. State of a Lua script in the Settings > Scripts list: its last run failed with an error.
 #: client/components/Settings/Scripts.vue
@@ -14853,21 +14947,15 @@ msgctxt "settings.scripts.stateRunning"
 msgid "Running"
 msgstr "Tumatakbo"
 
+# no-reuse: the other keys' text is the account-name field label, not this tab
 #. Settings tab label on a deploy that is one network's own client and keeps that network as it set it; the tab shows who this device signs in as, with buttons to connect, disconnect, sign in and sign out. Replaces the Networks tab there.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.account"
 msgid "Account"
 msgstr ""
 
-#. Label of the Settings modal's Aliases tab (tab strip); switching tabs navigates to the Aliases settings pane.
-#: client/components/Settings/Navigation.vue
-#: client/components/Settings/SettingTabItem.vue
-msgctxt "settings.tabs.aliases"
-msgid "Aliases"
-msgstr "Mga alias"
-
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
@@ -14880,40 +14968,40 @@ msgid "Settings tabs"
 msgstr "Mga tab ng mga setting"
 
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.general"
 msgid "General"
 msgstr "Pangkalahatan"
 
 #. Name of the Translation tab in the Settings tab strip while translation is switched off: the tab then holds only the interface-language picker (and the switch that turns translation on). As short as the other tab labels.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.language"
 msgid "Language"
 msgstr "Wika"
 
 #. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.networks"
 msgid "Networks"
 msgstr "Mga network"
 
 #. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.notifications"
 msgid "Notifications"
 msgstr "Mga notification"
 
 #. Label of the Settings modal's Scripts tab (tab strip); opens the pane where the user turns Lua scripting on and manages their Lua scripts.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.scripts"
 msgid "Scripts"
 msgstr "Mga script"
 
 #. Name of the Translation tab in the Settings tab strip: on-device translation of messages.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.translation"
 msgid "Translation"
 msgstr "Pagsasalin"
@@ -14997,13 +15085,14 @@ msgstr ""
 #: client/components/DormantNetwork.vue:122
 msgctxt "sidebar.savedNetworkConnect"
 msgid "Connect to {name}"
-msgstr ""
+msgstr "Kumonekta sa {name}"
 
+# reused-from: composer.notConnected search.window.offline
 #. Second line of a greyed sidebar row for a saved network that is not connected; clicking the row connects it.
 #: client/components/DormantNetwork.vue:124
 msgctxt "sidebar.savedNetworkOff"
 msgid "Not connected"
-msgstr ""
+msgstr "Hindi nakakonekta"
 
 #. Second line of a greyed sidebar row for a saved network whose login password was not remembered; clicking the row opens the connect form to type it.
 #: client/components/DormantNetwork.vue:124
@@ -15470,7 +15559,7 @@ msgstr "Nilimitahan sa {size} para sa pagsubok ({key} sa storage ng browser na i
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.from"
 msgid "from {language}"
-msgstr ""
+msgstr "mula sa {language}"
 
 #. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
 #: client/components/TranslationLine.vue
@@ -15482,7 +15571,7 @@ msgstr "{languages}. Mga opsyon sa pagsasalin"
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.sentIn"
 msgid "sent in {language}"
-msgstr ""
+msgstr "ipinadala sa {language}"
 
 #. Tooltip and aria-label of the composer's translate button while the channel corrects every message (spelling and grammar) in {language}, the user's own language, before sending; a click opens the language sheet, where it can be changed or turned off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
@@ -15544,7 +15633,7 @@ msgstr ""
 #: client/js/translate/index.ts
 msgctxt "translate.consent.titlePlain"
 msgid "Download language data?"
-msgstr ""
+msgstr "I-download ang data ng wika?"
 
 #. Settings → Translation: the main processor, as the choice after "Run on" and as the label in front of a model copy line ("CPU  Not downloaded · 1 GiB"). Use the usual abbreviation in your language (most keep CPU). Very short.
 #: client/components/Settings/Translation.vue
@@ -15653,7 +15742,7 @@ msgstr ""
 #: client/components/TranslationFlip.vue
 msgctxt "translate.flip.translatedFrom"
 msgid "Translated from {language}. Show the original"
-msgstr ""
+msgstr "Isinalin mula sa {language}. Ipakita ang orihinal"
 
 #. Choice for how formally a translation addresses people: keep whatever the original message did.
 #: client/components/Settings/Translation.vue
@@ -15754,7 +15843,7 @@ msgstr ""
 #: client/components/TranslationLine.vue
 msgctxt "translate.line.download"
 msgid "Download"
-msgstr ""
+msgstr "I-download"
 
 #. Shown under a line in a channel whose translation needs a model that is not on this device yet, in place of a failure, followed by a Download button. The app did not download it by itself because it is large. {size} is its download size with its unit, e.g. '620 MiB'.
 #: client/components/TranslationLine.vue
@@ -15778,7 +15867,7 @@ msgstr "Nilo-load ang {model} sa memory… {percent}%"
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.menu.byApple"
 msgid "Translated on this device by Apple Translation"
-msgstr ""
+msgstr "Isinalin sa device na ito gamit ang Apple Translation"
 
 #. Quiet line at the foot of a translated message's menu: which model translated it. {model} is the model's full name, e.g. 'OPUS-MT English → German' or 'Qwen3 1.7B'.
 #: client/js/helpers/modelLabel.ts
@@ -15868,7 +15957,7 @@ msgstr "Alisin"
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.model.down"
 msgid "Failed to load: {error}. Reload the page to try it again."
-msgstr ""
+msgstr "Hindi na-load: {error}. I-reload ang pahina para subukan itong muli."
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
@@ -15975,7 +16064,7 @@ msgstr "Walang makapagsasalin sa device na ito mula {from} papuntang {to}."
 #: client/components/TranslationSheet.vue
 msgctxt "translate.panel.enable"
 msgid "Translate messages into {language}"
-msgstr ""
+msgstr "Isalin ang mga mensahe sa {language}"
 
 #. Line under the button that switches translation on. Translation runs locally; models are downloaded when first needed.
 #: client/components/TranslationSheet.vue
@@ -16141,7 +16230,7 @@ msgstr ""
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.alsoReadAdd"
 msgid "Add a language…"
-msgstr ""
+msgstr "Magdagdag ng wika…"
 
 #. Hint under the I also read list in Settings → Language.
 #: client/components/Settings/Translation.vue
@@ -16153,7 +16242,7 @@ msgstr ""
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.alsoReadRemove"
 msgid "Remove {language}"
-msgstr ""
+msgstr "Alisin ang {language}"
 
 #. Settings → Translation, the line under "Run on" for OPUS-MT on a phone while Auto is chosen: the graphics processor (GPU) could run it, but the app runs it on the main processor (CPU) so that the GPU's memory stays free for the language model (the large AI model, e.g. Qwen3). "Auto" is the choice of that name; "here" means on this device. One sentence.
 #: client/components/Settings/Translation.vue
@@ -16268,7 +16357,7 @@ msgstr "Wika ng interface"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.into"
 msgid "Translate into"
-msgstr ""
+msgstr "Isalin sa"
 
 #. The first and default option of the Translate into select: follow the interface language. {language} is the interface language's name.
 #: client/components/Settings/Translation.vue
@@ -16375,13 +16464,13 @@ msgstr "Hindi maabot ang proseso ng pagsasalin: {error}"
 #: client/components/TranslationSheet.vue
 msgctxt "translate.sheet.choose"
 msgid "Choose…"
-msgstr ""
+msgstr "Pumili…"
 
 #. Tooltip and aria-label of the ✕ button that closes the composer's language sheet without changing anything.
 #: client/components/TranslationSheet.vue
 msgctxt "translate.sheet.close"
 msgid "Close"
-msgstr ""
+msgstr "Isara"
 
 #. Status beside the language the user writes in, in the language sheet's 'They read' list: picking it corrects spelling and grammar rather than translating. Short.
 #: client/components/TranslationSheet.vue
@@ -16411,7 +16500,7 @@ msgstr ""
 #: client/components/TranslationSheet.vue:268
 msgctxt "translate.sheet.more"
 msgid "More"
-msgstr ""
+msgstr "Higit pa"
 
 #. Shown in the language sheet's list when the search finds nothing. {query} is what the user typed.
 #: client/components/TranslationSheet.vue
@@ -16495,7 +16584,7 @@ msgstr "awtomatiko"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.translating"
 msgid "Translating…"
-msgstr ""
+msgstr "Isinasalin…"
 
 #. Status line in the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable. {from} and {to} are language names. Shown while the system's download sheet is open.
 #: client/components/Settings/TranslationOptions.vue
@@ -16503,11 +16592,12 @@ msgctxt "translate.system.asking"
 msgid "{from} → {to}: waiting for the download…"
 msgstr ""
 
+# reused-from: translate.line.download translate.model.download
 #. Button in the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable. Opens the system's own sheet that downloads the picked language's pack.
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.system.download"
 msgid "Download"
-msgstr ""
+msgstr "I-download"
 
 #. Heading of the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable.
 #: client/components/Settings/TranslationOptions.vue
@@ -16748,11 +16838,12 @@ msgctxt "translate.writePanel.asTyped"
 msgid "Already in {language}: Insert puts it in as typed"
 msgstr ""
 
+# reused-from: composer.cancel confirm.cancel form.actionCancel install.art.cancel lobby.cancel oper.action.cancel oper.alertBuilder.form.cancel oper.investigate.card.cancel search.filters.cancel search.window.cancel translate.picker.cancel upload.cancel windows.bouncer.cancel
 #. Closes the translate panel without changing the message box.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "Kanselahin"
 
 #. The translate panel's translation failed. A short reason may follow. {language} is the target language's name.
 #: client/components/TranslatePanel.vue
@@ -16770,25 +16861,26 @@ msgstr ""
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.inputLabel"
 msgid "What to translate"
-msgstr ""
+msgstr "Ano ang isasalin"
 
+# reused-from: reactions.insert
 #. Puts the translation into the message box and closes the translate panel. The user then sends it as usual.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.insert"
 msgid "Insert"
-msgstr ""
+msgstr "Ilagay"
 
 #. The translate panel's heading, beside a button with the language's name that opens the language list.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.into"
 msgid "Translate into"
-msgstr ""
+msgstr "Isalin sa"
 
 #. The translate panel's accessible name: the panel above the message box where the user types in their own language and gets a translation to insert. {language} is the target language's name.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.label"
 msgid "Translate into {language}"
-msgstr ""
+msgstr "Isalin sa {language}"
 
 #. Placeholder of the translate panel's text box. {language} is the language the user writes in (usually their own).
 #: client/components/TranslatePanel.vue
@@ -16802,11 +16894,12 @@ msgctxt "translate.writePanel.readsAs"
 msgid "Reads as: “{text}”"
 msgstr ""
 
+# reused-from: oper.investigate.card.lookupRetry search.window.retry
 #. Button in the translate panel after a failed translation: translate the same text again.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.tryAgain"
 msgid "Try again"
-msgstr ""
+msgstr "Subukan ulit"
 
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 #: client/components/TypingIndicator.vue:31
@@ -17030,11 +17123,12 @@ msgctxt "userlist.title"
 msgid "User list for {name}"
 msgstr "Listahan ng user para sa {name}"
 
+# reused-from: connect.account form.account
 #. The /who result table in the chat (IRC WHO reply). Column heading: the services account the user is logged in to.
 #: client/components/MessageTypes/who.vue
 msgctxt "who.account"
 msgid "Account"
-msgstr ""
+msgstr "Pangalan ng account"
 
 #. The /who result table in the chat (IRC WHO reply). How many users matched, after the title.
 #: client/components/MessageTypes/who.vue
@@ -17272,6 +17366,198 @@ msgctxt "whois.yes"
 msgid "Yes"
 msgstr "Oo"
 
+#. Button under the list in the bouncer panel: opens the form to add a new network to the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.addOpen"
+msgid "Add a network…"
+msgstr "Magdagdag ng network…"
+
+#. Submit button of the bouncer panel's form when adding: asks the bouncer to add the network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.addSubmit"
+msgid "Add network"
+msgstr "Magdagdag ng network"
+
+#. Heading of the bouncer panel's form when adding a new network to the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.addTitle"
+msgid "Add a network"
+msgstr "Magdagdag ng network"
+
+#. Button of the bouncer panel's form: closes the form without sending anything.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.cancel"
+msgid "Cancel"
+msgstr "Kanselahin"
+
+#. aria-label of the ✕ button at the top right of the bouncer panel; clicking closes it and returns to the chat.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.close"
+msgid "Close the bouncer panel"
+msgstr "Isara ang panel ng bouncer"
+
+#. Confirmation button in the bouncer panel: removes the network from the bouncer for good.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.delete"
+msgid "Delete"
+msgstr "I-delete"
+
+#. Button on a network's row in the bouncer panel: asks for confirmation (Delete / Keep appear in its place) before removing the network from the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.deleteAsk"
+msgid "Delete…"
+msgstr "Burahin…"
+
+#. aria-label of the bouncer panel (a modal listing the networks an IRC bouncer such as soju keeps for the user). {network} is the bouncer connection's name, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.dialog"
+msgid "Bouncer networks on {network}"
+msgstr "Mga network ng bouncer sa {network}"
+
+#. Button at the bottom of the bouncer panel: closes it.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.done"
+msgid "Done"
+msgstr "Tapos na"
+
+#. Button on a network's row in the bouncer panel: opens the form to change that network's settings on the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.edit"
+msgid "Edit"
+msgstr "I-edit"
+
+#. Heading of the bouncer panel's form when changing a network. {network} is the network's name, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.editTitle"
+msgid "Edit {network}"
+msgstr "I-edit ang {network}"
+
+#. Shown in the bouncer panel when the bouncer keeps no networks.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.empty"
+msgid "No networks yet."
+msgstr "Wala pang network."
+
+#. Field label in the bouncer panel's form: the network's display name.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldName"
+msgid "Name"
+msgstr "Pangalan"
+
+#. Field label in the bouncer panel's form: the nickname to use on that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldNick"
+msgid "Nick"
+msgstr ""
+
+#. Field label in the bouncer panel's form: the IRC server's connection password, if it needs one.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldPassword"
+msgid "Server password"
+msgstr "Password ng server"
+
+#. Field label in the bouncer panel's form: the IRC server's port number.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldPort"
+msgid "Port"
+msgstr ""
+
+#. Field label in the bouncer panel's form: the IRC "real name" (free text shown in WHOIS) to use on that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldRealname"
+msgid "Real name"
+msgstr "Tunay na pangalan"
+
+#. Field label in the bouncer panel's form: the IRC server's host name the bouncer connects to.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldServer"
+msgid "Server"
+msgstr ""
+
+#. Field label in the bouncer panel's form: the IRC username (ident) to use on that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldUsername"
+msgid "Username"
+msgstr ""
+
+#. Button beside the delete confirmation in the bouncer panel: cancels the deletion and keeps the network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.keep"
+msgid "Keep"
+msgstr "Panatilihin"
+
+#. Placeholder of the nick field in the bouncer panel's form: left empty, the bouncer uses its own default nickname.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.nickPlaceholder"
+msgid "the bouncer's default"
+msgstr "default ng bouncer"
+
+#. Shown in the bouncer panel when the connection has not announced bouncer support (yet). {network} is the connection's name, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.notBouncer"
+msgid "{network} is not a bouncer, or has not said so yet."
+msgstr "Ang {network} ay hindi bouncer, o hindi pa ito nagsasabi."
+
+#. Footer note of the bouncer panel: the networks listed are kept on the bouncer, and each one shows in the sidebar as a separate network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.note"
+msgid "The bouncer keeps these; each appears here as a network of its own."
+msgstr "Hawak ito ng bouncer; bawat isa ay lumalabas dito bilang sariling network."
+
+#. Placeholder of the port field in the bouncer panel's form: the usual port numbers with and without TLS. Keep the numbers.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.portPlaceholder"
+msgid "6697 with TLS, 6667 without"
+msgstr "6697 kung may TLS, 6667 kung wala"
+
+#. Note in the bouncer panel, in place of the add button, when the bouncer lacks labeled-response: the list is shown but cannot be changed from here. BouncerServ is the bouncer's service bot, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.readOnly"
+msgid "This server cannot answer requests, so its networks are changed from another client or through BouncerServ."
+msgstr "Hindi makasagot sa mga kahilingan ang server na ito, kaya binabago ang mga network nito mula sa ibang client o sa pamamagitan ng BouncerServ."
+
+#. Error in the bouncer panel when the bouncer turned a request down without saying why.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.refused"
+msgid "The bouncer refused."
+msgstr "Tumanggi ang bouncer."
+
+#. Submit button of the bouncer panel's form when editing: sends the changes to the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.save"
+msgid "Save"
+msgstr "I-save"
+
+#. Tooltip of the status dot beside a network in the bouncer panel: the bouncer is connected to that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.stateConnected"
+msgid "Connected"
+msgstr "Nakakonekta"
+
+#. Tooltip of the status dot beside a network in the bouncer panel: the bouncer is connecting to that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.stateConnecting"
+msgid "Connecting"
+msgstr "Kumokonekta"
+
+#. Tooltip of the status dot beside a network in the bouncer panel: the bouncer is not connected to that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.stateDisconnected"
+msgid "Disconnected"
+msgstr "Nadiskonekta"
+
+#. Heading of the bouncer panel, a modal listing the networks an IRC bouncer (a server that stays connected on the user's behalf) keeps for the user. The connection's name follows it after a dot, outside this label.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.title"
+msgid "Bouncer"
+msgstr ""
+
+#. Switch in the bouncer panel's form: whether the bouncer uses an encrypted (TLS) connection to this IRC network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.tls"
+msgid "The bouncer connects with TLS"
+msgstr "Kumokonekta ang bouncer gamit ang TLS"
+
 #. Text of the link in the changelog window that opens the list of every release.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.allReleasesLink"
@@ -17343,12 +17629,14 @@ msgstr "Isara ang mga setting"
 #: client/components/Windows/Help.vue
 #: client/components/Windows/Changelog.vue
 #: client/components/Settings/ScriptEdit.vue
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "windows.settings.done"
 msgid "Done"
 msgstr "Tapos na"
 
-#. Line in the footer of the settings window, beside the Done button; explains that settings apply instantly and nothing needs saving.
+#. Line in the footer of the settings window (and of the command-aliases page over it), beside the Done button; explains that settings apply instantly and nothing needs saving.
 #: client/components/Windows/Settings.vue
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "windows.settings.note"
 msgid "Changes are saved as you make them."
 msgstr "Sine-save ang mga pagbabago habang ginagawa mo ang mga ito."
@@ -17358,3 +17646,9 @@ msgstr "Sine-save ang mga pagbabago habang ginagawa mo ang mga ito."
 msgctxt "windows.settings.title"
 msgid "Settings"
 msgstr "Mga setting"
+
+#. Title of the settings window on a narrow screen (a phone), where the tab strip shows icons only: it names the open tab. {section} is that tab's label (settings.tabs.*, already translated), shown in bold; the rest is shown muted. Keep the › separator if your text runs left to right. Browsers do not turn › around in right-to-left text, so there use a separator that points onward the way the text runs (Arabic writes ←, as in its other paths through Settings).
+#: client/components/Windows/Settings.vue
+msgctxt "windows.settings.titleIn"
+msgid "Settings › {section}"
+msgstr "Mga setting › {section}"

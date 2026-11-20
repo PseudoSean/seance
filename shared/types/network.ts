@@ -21,6 +21,12 @@ export type SharedServerOptions = {
 	NETWORK: string;
 	/** The network's upload host (`draft/FILEHOST` ISUPPORT), when usable. */
 	FILEHOST?: string;
+	/**
+	 * How the server folds nick and channel names (`CASEMAPPING` ISUPPORT,
+	 * client/js/irc/casemap.ts), so the page compares them as it does.
+	 * Absent means rfc1459, the default.
+	 */
+	CASEMAPPING?: "rfc1459" | "rfc1459-strict" | "ascii";
 };
 
 export type SharedNetworkStatus = {
@@ -85,6 +91,13 @@ export type SharedNetworkPresence = {
 	dnd: boolean;
 	/** The server shows the user away from this connection (`AWAY *` or `/away`). */
 	away: boolean;
+};
+
+/** One of a bouncer's networks, as `soju.im/bouncer-networks` lists it (irc/bouncer.ts). */
+export type SharedBouncerNetwork = {
+	netid: string;
+	/** `name`, `state`, `error`, `host`, `port`, `tls`, `nickname`, `username`, `realname`, … */
+	attrs: Record<string, string>;
 };
 
 export type SharedNetwork = {

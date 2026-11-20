@@ -22,13 +22,14 @@ msgstr ""
 #: client/components/BanDialog.vue
 msgctxt "ban.cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "Cancelar"
 
+# reused-from: oper.ban.check.empty
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): the mask field is empty.
 #: client/js/helpers/channelBans.ts
 msgctxt "ban.check.empty"
 msgid "Enter a mask."
-msgstr ""
+msgstr "Digite uma máscara."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): why a typed mask cannot be sent.
 #: client/js/helpers/channelBans.ts
@@ -59,8 +60,8 @@ msgstr ""
 msgctxt "ban.kickTooMany"
 msgid "More than {count} person matches, so nobody will be kicked."
 msgid_plural "More than {count} people match, so nobody will be kicked."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Mais de {count} pessoa corresponde, então ninguém será expulso."
+msgstr[1] "Mais de {count} pessoas correspondem, então ninguém será expulso."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): said after a kick with no new ban, before the dialog closes.
 #: client/components/BanDialog.vue
@@ -68,17 +69,19 @@ msgctxt "ban.kicked"
 msgid "Kicked."
 msgstr ""
 
+# reused-from: oper.investigate.user.lookingUp
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): shown while the server is asked for the person's address.
 #: client/components/BanDialog.vue
 msgctxt "ban.lookingUp"
 msgid "Looking them up…"
-msgstr ""
+msgstr "Consultando…"
 
+# reused-from: oper.action.mask oper.alerts.raw.mask oper.check.col.mask oper.stats.col.mask
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): label of the mask field.
 #: client/components/BanDialog.vue
 msgctxt "ban.mask"
 msgid "Mask"
-msgstr ""
+msgstr "Máscara"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): placeholder of the mask field: the shape of a mask. Leave it as it is unless your language writes these differently.
 #: client/components/BanDialog.vue
@@ -90,15 +93,15 @@ msgstr ""
 #: client/components/BanDialog.vue
 msgctxt "ban.notConnected"
 msgid "Not sent: the connection is down."
-msgstr ""
+msgstr "Não enviado: a conexão está inativa."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): who in the channel matches the mask, when there are too many to name. {nicks} is a list of nicks; {more} is a number.
 #: client/components/BanDialog.vue
 msgctxt "ban.preview.more"
 msgid "Matches {count} person here now: {nicks} and {more} more"
 msgid_plural "Matches {count} people here now: {nicks} and {more} more"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Corresponde a {count} pessoa aqui agora: {nicks} e mais {more}"
+msgstr[1] "Corresponde a {count} pessoas aqui agora: {nicks} e mais {more}"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): nobody in the channel matches the mask.
 #: client/components/BanDialog.vue
@@ -111,8 +114,8 @@ msgstr ""
 msgctxt "ban.preview.some"
 msgid "Matches {count} person here now: {nicks}"
 msgid_plural "Matches {count} people here now: {nicks}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Corresponde a {count} pessoa aqui agora: {nicks}"
+msgstr[1] "Corresponde a {count} pessoas aqui agora: {nicks}"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): label of the reason field. A ban has no reason of its own; this goes with the kick.
 #: client/components/BanDialog.vue
@@ -136,7 +139,7 @@ msgstr ""
 #: client/components/BanDialog.vue
 msgctxt "ban.removed"
 msgid "Removed."
-msgstr ""
+msgstr "Removido."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): warning that the server will delete bans this wider one covers.
 #: client/components/BanDialog.vue
@@ -146,29 +149,30 @@ msgid_plural "Replaces {count} narrower bans."
 msgstr[0] ""
 msgstr[1] ""
 
+# reused-from: oper.investigate.card.noteSave windows.bouncer.save
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): button that replaces the ban with the edited mask.
 #: client/components/BanDialog.vue
 msgctxt "ban.save"
 msgid "Save"
-msgstr ""
+msgstr "Salvar"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): said after an edit worked, before the dialog closes.
 #: client/components/BanDialog.vue
 msgctxt "ban.saved"
 msgid "Saved."
-msgstr ""
+msgstr "Salvo."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): the button's text while the server answers.
 #: client/components/BanDialog.vue
 msgctxt "ban.sending"
 msgid "Sending…"
-msgstr ""
+msgstr "Enviando…"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): no answer in time.
 #: client/components/BanDialog.vue
 msgctxt "ban.silent"
 msgid "The server did not answer."
-msgstr ""
+msgstr "O servidor não respondeu."
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): button that sets the ban.
 #: client/components/BanDialog.vue
@@ -176,11 +180,12 @@ msgctxt "ban.submit"
 msgid "Ban"
 msgstr ""
 
+# reused-from: menu.kick
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): the same button when the ban is already covered and only the kick is left to do.
 #: client/components/BanDialog.vue
 msgctxt "ban.submitKick"
 msgid "Kick"
-msgstr ""
+msgstr "Expulsar"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): tooltip of a suggested mask matching a logged-in account.
 #: client/js/helpers/channelBans.ts
@@ -216,7 +221,7 @@ msgstr ""
 #: client/js/helpers/channelBans.ts
 msgctxt "ban.suggest.wide"
 msgid "Everyone on this provider"
-msgstr ""
+msgstr "Todos neste provedor"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): title when opened with nobody in mind. {channel} is verbatim.
 #: client/components/BanDialog.vue
@@ -228,7 +233,7 @@ msgstr ""
 #: client/components/BanDialog.vue
 msgctxt "ban.titleEdit"
 msgid "Edit ban in {channel}"
-msgstr ""
+msgstr "Editar banimento em {channel}"
 
 #. Ban dialog (a form that adds, changes or removes one channel ban; a mask is the pattern such as *!*@host that says who is banned): title when it is about someone. {nick} and {channel} are verbatim.
 #: client/components/BanDialog.vue
@@ -271,14 +276,14 @@ msgstr ""
 msgctxt "bans.count"
 msgid "{count} ban"
 msgid_plural "{count} bans"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{count} banimento"
+msgstr[1] "{count} banimentos"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): entry on a row's menu: opens the ban in the ban dialog.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.edit"
 msgid "Edit…"
-msgstr ""
+msgstr "Editar…"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): the channel has no bans. {channel} is the channel's name, verbatim.
 #: client/components/Windows/BanList.vue
@@ -298,23 +303,24 @@ msgctxt "bans.filter.address"
 msgid "Addresses"
 msgstr ""
 
+# reused-from: oper.investigate.card.showAll
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): filter chip showing every ban.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.filter.all"
 msgid "All"
-msgstr ""
+msgstr "Tudo"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): filter chip showing the bans the reader set.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.filter.mine"
 msgid "Set by you"
-msgstr ""
+msgstr "Definido por você"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): filter chip showing every other kind of ban (real name, channel, muted…).
 #: client/components/Windows/BanList.vue
 msgctxt "bans.filter.other"
 msgid "Other"
-msgstr ""
+msgstr "Outros"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): accessible name of the row of filter chips.
 #: client/components/Windows/BanList.vue
@@ -322,11 +328,12 @@ msgctxt "bans.filters"
 msgid "Filter bans"
 msgstr ""
 
+# reused-from: connect.account form.account oper.check.col.account oper.check.row.account oper.investigate.user.account search.window.chip.account who.account
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): tag on a ban that matches a logged-in account.
 #: client/js/irc/profiles/nefarious/extbans.ts
 msgctxt "bans.kind.account"
 msgid "Account"
-msgstr ""
+msgstr "Conta"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): tag on a ban that matches people in another channel.
 #: client/js/irc/profiles/nefarious/extbans.ts
@@ -364,29 +371,30 @@ msgctxt "bans.kind.quiet"
 msgid "Muted"
 msgstr ""
 
+# reused-from: oper.check.col.realName oper.check.row.realName who.realName windows.bouncer.fieldRealname
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): tag on a ban that matches the real name field.
 #: client/js/irc/profiles/nefarious/extbans.ts
 msgctxt "bans.kind.realname"
 msgid "Real name"
-msgstr ""
+msgstr "Nome real"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): how many of the bans the server allows a channel are taken. {used} and {limit} are numbers.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.limit"
 msgid "{used} of {limit} used"
-msgstr ""
+msgstr "{used} de {limit} usados"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): shown while the server sends the list.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.loading"
 msgid "Loading…"
-msgstr ""
+msgstr "Carregando…"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): shown when the list never came.
 #: client/js/irc/banList.ts
 msgctxt "bans.noAnswer"
 msgid "The server did not answer."
-msgstr ""
+msgstr "O servidor não respondeu."
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): empty result of a search. {query} is what was typed, verbatim.
 #: client/components/Windows/BanList.vue
@@ -448,13 +456,13 @@ msgstr ""
 #: client/js/helpers/banMenu.ts
 msgctxt "bans.setBy"
 msgid "Set by {who}"
-msgstr ""
+msgstr "Definido por {who}"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): under a ban's mask. {who} is a nick, verbatim; {when} is a relative time such as "3 days ago".
 #: client/js/helpers/banMenu.ts
 msgctxt "bans.setByWhen"
 msgid "Set by {who}, {when}"
-msgstr ""
+msgstr "Definido por {who}, {when}"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): sort choice, alphabetical by the ban's mask.
 #: client/components/Windows/BanList.vue
@@ -466,13 +474,13 @@ msgstr ""
 #: client/components/Windows/BanList.vue
 msgctxt "bans.sort.newest"
 msgid "Newest first"
-msgstr ""
+msgstr "Mais recentes primeiro"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): sort choice.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.sort.oldest"
 msgid "Oldest first"
-msgstr ""
+msgstr "Mais antigos primeiro"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): sort choice, alphabetical by who set the ban.
 #: client/components/Windows/BanList.vue
@@ -486,11 +494,12 @@ msgctxt "bans.theServer"
 msgid "the server"
 msgstr ""
 
+# reused-from: oper.check.section.bans oper.investigate.card.bans
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): the window's heading, next to the channel's name.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.title"
 msgid "Bans"
-msgstr ""
+msgstr "Banimentos"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): the button on each row, and the same entry on a row's menu: removes that ban.
 #: client/components/Windows/BanList.vue
@@ -511,8 +520,8 @@ msgstr[1] ""
 msgctxt "bans.unbanAllText"
 msgid "Remove {count} ban from {channel}?"
 msgid_plural "Remove {count} bans from {channel}?"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Remover {count} banimento de {channel}?"
+msgstr[1] "Remover {count} banimentos de {channel}?"
 
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): accessible name of a row's Unban button. {mask} is the ban's mask, verbatim.
 #: client/components/Windows/BanList.vue
@@ -520,17 +529,74 @@ msgctxt "bans.unbanMask"
 msgid "Unban {mask}"
 msgstr ""
 
+# reused-from: mentions.undo
 #. Bans window (a window listing one channel's bans, searched on the device; a ban keeps matching people out of the channel): button next to the note that a ban was removed: puts it back.
 #: client/components/Windows/BanList.vue
 msgctxt "bans.undo"
 msgid "Undo"
+msgstr "Desfazer"
+
+#. Error in the bouncer panel when a change (add, edit or delete a network) cannot be sent: the connection to the bouncer is closed, or the server cannot answer requests.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.cannotChange"
+msgid "The bouncer cannot take changes from here right now."
+msgstr "O bouncer não pode aceitar alterações daqui agora."
+
+#. Lobby error on a network bound to one of a bouncer's networks (soju) when the bouncer says that network no longer exists (it was deleted there). The connection stopped and the network no longer connects at startup.
+#: client/js/irc/client.ts
+msgctxt "bouncer.networkGone"
+msgid "This network was deleted on the bouncer, so it no longer connects. You can remove it here."
+msgstr "Esta rede foi excluída no bouncer, então não se conecta mais. Você pode removê-la aqui."
+
+#. Lobby line on a bouncer's control connection (soju) after Seance added the networks the bouncer listed, each as a network of its own. {names} is a comma-separated list of network names.
+#: client/js/irc/bouncer.ts:164
+msgctxt "bouncer.networksAdded"
+msgid "Added this bouncer's networks: {names}"
+msgstr "Redes deste bouncer adicionadas: {names}"
+
+#. Lobby line on a bouncer's control connection (soju) when it lists more networks than Seance adds for one bouncer account. {names} is a comma-separated list of the network names left out; {count} is the limit (50 today).
+#: client/js/irc/bouncer.ts:173
+msgctxt "bouncer.networksOver"
+msgid "Not added: {names}. This bouncer already has {count} network saved here, the most Seance adds; remove one to make room."
+msgid_plural "Not added: {names}. This bouncer already has {count} networks saved here, the most Seance adds; remove one to make room."
+msgstr[0] "Não adicionadas: {names}. Este bouncer já tem {count} rede salva aqui, o máximo que o Seance adiciona; remova uma para abrir espaço."
+msgstr[1] "Não adicionadas: {names}. Este bouncer já tem {count} redes salvas aqui, o máximo que o Seance adiciona; remova uma para abrir espaço."
+
+#. Error in the bouncer panel when the connection closed before the bouncer replied to a request.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.noAnswer"
+msgid "No answer."
+msgstr "Sem resposta."
+
+#. Lobby note on a bouncer's control connection (soju) that logged in without SASL: the bouncer lists networks, but they can only be added as networks of their own after a SASL login. Shown once per connection.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.saslNeeded"
+msgid "This bouncer has networks, but they are added here only after a SASL login. Turn on SASL in this network's settings to get them."
+msgstr "Este bouncer tem redes, mas elas só são adicionadas aqui após um login SASL. Ative o SASL nas configurações desta rede para obtê-las."
+
+#. Error in the bouncer panel when the bouncer sent no reply to a request in time.
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.timeout"
+msgid "The bouncer did not answer."
+msgstr "O bouncer não respondeu."
+
+#. Error in the bouncer panel when the network's details together are too long for one IRC line (500 bytes).
+#: client/js/irc/bouncer.ts
+msgctxt "bouncer.tooLong"
+msgid "Too long to send in one line: shorten some fields."
+msgstr "Longo demais para enviar em uma linha: encurte alguns campos."
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): aria-label and tooltip of the key icon button on the join-by-name row; it reveals the field for the channel's password (key), which private channels need.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.addKey"
+msgid "Add a password"
 msgstr ""
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading of the full list.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.all"
 msgid "All channels"
-msgstr ""
+msgstr "Todos os canais"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the window. {network} is the network's name, verbatim.
 #: client/components/Windows/ChannelBrowser.vue
@@ -544,17 +610,18 @@ msgctxt "browse.ask"
 msgid "Load channels"
 msgstr ""
 
+# reused-from: reactions.clearSearch
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): label of the button that empties the search field.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.clear"
 msgid "Clear search"
-msgstr ""
+msgstr "Limpar busca"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the close button's label.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.close"
 msgid "Close"
-msgstr ""
+msgstr "Fechar"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): how many channels the list shows after filtering.
 #: client/components/Windows/ChannelBrowser.vue
@@ -564,23 +631,19 @@ msgid_plural "{count} channels"
 msgstr[0] ""
 msgstr[1] ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button offering to join a channel that does not exist yet, which creates it; {name} is the channel name, verbatim.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the server refuses the list because the connection is too new, a rule servers have to keep bots from harvesting channel names.
 #: client/components/Windows/ChannelBrowser.vue
-msgctxt "browse.create"
-msgid "Start {name}"
-msgstr ""
-
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): heading when the server refuses the list because the connection is too new.
-#: client/components/Windows/ChannelBrowser.vue
+#, fuzzy
 msgctxt "browse.delayed"
-msgid "The server is making you wait"
+msgid "Server anti-bot protection"
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): countdown under 'The server is making you wait'; {count} is the seconds left.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): countdown under the heading 'Server anti-bot protection'; {count} is the seconds left before the server will send the list.
 #: client/components/Windows/ChannelBrowser.vue
+#, fuzzy
 msgctxt "browse.delayedNote"
-msgid "New connections can list channels in {count} second."
-msgid_plural "New connections can list channels in {count} seconds."
+msgid "Please wait {count} second for the full channel list."
+msgid_plural "Please wait {count} seconds for the full channel list."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -596,23 +659,30 @@ msgctxt "browse.featured"
 msgid "Featured"
 msgstr ""
 
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note beside the Featured heading while the server is making a new connection wait for the full list; the channels under it (the ones the network puts forward) can be joined right away.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.featuredMeanwhile"
+msgid "Meanwhile, you can join these"
+msgstr ""
+
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note beside the Featured heading saying who chose these channels.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.featuredNote"
 msgid "Picked by the network"
 msgstr ""
 
+# reused-from: oper.investigate.card.showAll
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing every channel.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.filter.all"
 msgid "All"
-msgstr ""
+msgstr "Tudo"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing channels with at least {count} users; {count} is a number.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.filter.busy"
 msgid "{count}+ people"
-msgstr ""
+msgstr "{count}+ pessoas"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): filter chip showing only the channels the network puts forward.
 #: client/components/Windows/ChannelBrowser.vue
@@ -626,11 +696,12 @@ msgctxt "browse.filter.topic"
 msgid "With a topic"
 msgstr ""
 
+# reused-from: search.window.filters
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the row of filter chips.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.filters"
 msgid "Filters"
-msgstr ""
+msgstr "Filtros"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown before the list was ever asked for on this connection.
 #: client/components/Windows/ChannelBrowser.vue
@@ -638,17 +709,17 @@ msgctxt "browse.idle"
 msgid "No list yet"
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is not in. One word.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is not in, and the submit button of the join-by-name row. One word.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.join"
 msgid "Join"
-msgstr ""
+msgstr "Entrar"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): status while the list is requested and no row has arrived yet.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.loading"
 msgid "Asking the server…"
-msgstr ""
+msgstr "Solicitando ao servidor…"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): status while the list arrives; {count} is the rows received so far.
 #: client/components/Windows/ChannelBrowser.vue
@@ -662,7 +733,7 @@ msgstr[1] ""
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.noMatches"
 msgid "Nothing matches {query}"
-msgstr ""
+msgstr "Nada corresponde a {query}"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): shown when the network the window was opened for no longer exists.
 #: client/components/Windows/ChannelBrowser.vue
@@ -688,11 +759,11 @@ msgctxt "browse.offlineNote"
 msgid "The list comes from the server; it loads once the network is back."
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is already in. One word.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): action on a channel row the user is already in, and on the join-by-name row for such a channel. One word.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.open"
 msgid "Open"
-msgstr ""
+msgstr "Abrir"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): number of users in a channel, shown on every row and card.
 #: client/components/Windows/ChannelBrowser.vue
@@ -702,11 +773,12 @@ msgid_plural "{count} people"
 msgstr[0] ""
 msgstr[1] ""
 
+# reused-from: oper.investigate.card.refresh oper.me.refresh
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that asks the server for the list again.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.refresh"
 msgid "Refresh"
-msgstr ""
+msgstr "Atualizar"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): tooltip on the Refresh button while it is disabled right after an update.
 #: client/components/Windows/ChannelBrowser.vue
@@ -720,11 +792,12 @@ msgctxt "browse.refused"
 msgid "The server refused the list"
 msgstr ""
 
+# reused-from: oper.investigate.card.lookupRetry search.window.retry
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): button that asks the server again after a refusal.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.retry"
 msgid "Try again"
-msgstr ""
+msgstr "Tentar de novo"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the search field.
 #: client/components/Windows/ChannelBrowser.vue
@@ -748,13 +821,7 @@ msgstr ""
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.showing"
 msgid "Showing {shown} of {total}"
-msgstr ""
-
-#. Sidebar join form: button under the channel name field that opens the channel browser window.
-#: client/components/JoinChannel.vue
-msgctxt "browse.sidebarButton"
-msgid "Browse channels"
-msgstr ""
+msgstr "Exibindo {shown} de {total}"
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): accessible name of the sort order select.
 #: client/components/Windows/ChannelBrowser.vue
@@ -774,17 +841,24 @@ msgctxt "browse.sort.people"
 msgid "Most people"
 msgstr ""
 
-#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the window's heading. Two words.
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): the window's heading, and the first line under each network in the sidebar, which opens it. Two words.
+#: client/components/ChannelBrowserRow.vue
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.title"
 msgid "Browse channels"
+msgstr ""
+
+#. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): note under a channel name typed in the search that the server's list does not have (nobody has started it yet, or the server keeps it out of the list); the row beside it joins it anyway.
+#: client/components/Windows/ChannelBrowser.vue
+msgctxt "browse.unlisted"
+msgid "Not in the list"
 msgstr ""
 
 #. Channel browser (a window listing the channels a network has, from the server's LIST, searched on the device): when the list was last fetched; {when} is a relative time like '5 minutes ago', verbatim.
 #: client/components/Windows/ChannelBrowser.vue
 msgctxt "browse.updated"
 msgid "Updated {when}"
-msgstr ""
+msgstr "Atualizado {when}"
 
 #. Button: saves this exact certificate as trusted for this network. A different certificate is asked about again.
 #: client/js/certificatePrompt.ts
@@ -796,7 +870,7 @@ msgstr ""
 #: client/js/certificatePrompt.ts
 msgctxt "certificate.prompt.expired"
 msgid "{host}'s certificate has expired. Trust it only if you know why: someone may be pretending to be the server."
-msgstr ""
+msgstr "O certificado de {host} expirou. Confie nele apenas se você souber o motivo: alguém pode estar se passando pelo servidor."
 
 #. Second line of the certificate question, under the warning. {date} is the day the server's certificate expired.
 #: client/js/certificatePrompt.ts
@@ -820,7 +894,7 @@ msgstr ""
 #: client/js/certificatePrompt.ts
 msgctxt "certificate.prompt.name"
 msgid "{host}'s certificate was issued for a different name. Trust it only if you know why: someone may be pretending to be the server."
-msgstr ""
+msgstr "O certificado de {host} foi emitido para um nome diferente. Confie nele apenas se você souber o motivo: alguém pode estar se passando pelo servidor."
 
 #. Second line of the certificate question, under the warning. {names} is a comma-separated list of host names read from the certificate, shown verbatim.
 #: client/js/certificatePrompt.ts
@@ -844,7 +918,7 @@ msgstr ""
 #: client/js/certificatePrompt.ts
 msgctxt "certificate.prompt.other"
 msgid "{host}'s certificate could not be verified. Trust it only if you know why: someone may be pretending to be the server."
-msgstr ""
+msgstr "O certificado de {host} não pôde ser verificado. Confie nele apenas se você souber o motivo: alguém pode estar se passando pelo servidor."
 
 #. {host} is the IRC server's host name.
 #: client/js/certificatePrompt.ts
@@ -936,6 +1010,18 @@ msgctxt "chat.currentlyOpen"
 msgid "Currently open {type}"
 msgstr "Aberto atualmente: {type}"
 
+#. Label of the button on the missing-messages divider in a chat window's message list (next to 'Some messages here were not loaded'). Clicking fetches the missing messages from the server.
+#: client/components/MessageList.vue:58
+msgctxt "chat.gapLoad"
+msgid "Load them"
+msgstr ""
+
+#. Text of a divider between two rows of a chat window's message list. It marks a place where messages are missing: the app caught up on the newest messages after being away but did not fetch everything in between. A button next to it loads them.
+#: client/components/MessageList.vue:49
+msgctxt "chat.gapMarker"
+msgid "Some messages here were not loaded"
+msgstr ""
+
 #. Text of the 'load older messages' button at the top of the scrollback while earlier history is being fetched.
 #: client/components/MessageList.vue:10
 msgctxt "chat.historyLoading"
@@ -990,7 +1076,7 @@ msgstr ""
 #: client/components/Chat.vue
 msgctxt "chat.past.loading"
 msgid "Loading that message…"
-msgstr ""
+msgstr "Carregando essa mensagem…"
 
 #. Error toast: an older message the reader asked to go to could not be fetched from the server.
 #: client/js/socket-events/past.ts
@@ -1070,11 +1156,11 @@ msgctxt "cmd.alias.tooLong"
 msgid "That alias is too long ({length} of at most {max} characters)."
 msgstr "Esse alias é muito longo ({length} de no máximo {max} caracteres)."
 
-#. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Aliases' names the settings tab where aliases are edited.
+#. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Scripts → Aliases' is the way to the aliases page: the Scripts tab of Settings, then its Aliases row (use the same words as settings.tabs.scripts and settings.scripts.aliases).
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooMany"
-msgid "You already have {max} aliases; delete one in Settings → Aliases first."
-msgstr "Você já tem {max} aliases; exclua um em Configurações → Alias primeiro."
+msgid "You already have {max} aliases; delete one in Settings → Scripts → Aliases first."
+msgstr "Você já tem {max} aliases; exclua um em Configurações → Scripts → Alias primeiro."
 
 #. Confirmation after /alias <name> <commands> overwrote an existing alias. {name} is the alias name as typed, verbatim.
 #: client/js/irc/commands/alias.ts
@@ -1082,15 +1168,16 @@ msgctxt "cmd.alias.updated"
 msgid "Alias /{name} updated."
 msgstr "Alias /{name} atualizado."
 
-#. Error when /connect is typed for a network that is already up.
-#: client/js/irc/commands/connect.ts
+#. Error when /server is typed with no arguments for a network that is already up.
+#: client/js/irc/commands/server.ts
 msgctxt "cmd.alreadyConnected"
 msgid "You are already connected."
 msgstr "Você já está conectado."
 
-#. Error when a command that needs a conversation is typed in a network's lobby. {cmd} is the command as typed, user input, verbatim.
+#. Error when a command that needs a conversation is typed in a network's lobby or a list window (Ignored users, the mode lists). {cmd} is the command as typed, user input, verbatim; 'say' also for a plain message typed in a list window.
 #: client/js/irc/commands/me.ts
 #: client/js/irc/commands/react.ts
+#: client/js/irc/commands/msg.ts
 msgctxt "cmd.channelsAndQueriesOnly"
 msgid "{cmd} command can only be used in channels and queries."
 msgstr "O comando {cmd} só pode ser usado em canais e conversas privadas."
@@ -1153,8 +1240,9 @@ msgctxt "cmd.ignorelistTitle"
 msgid "Ignored users"
 msgstr "Usuários ignorados"
 
-#. Error when a plain message is typed in a network's lobby instead of a channel or query; the lobby's input is for commands.
+#. Error when a plain message, or /say, is typed in a network's lobby instead of a channel or query; the lobby's input is for commands.
 #: client/js/irc/commands/index.ts
+#: client/js/irc/commands/msg.ts
 msgctxt "cmd.lobbySend"
 msgid "Messages can not be sent to lobbies."
 msgstr "Não é possível enviar mensagens para a janela da rede."
@@ -1609,12 +1697,13 @@ msgctxt "connect.connectingToAttempt"
 msgid "Connecting to {host}:{port}… (attempt {attempt})"
 msgstr "Conectando a {host}:{port}… (tentativa {attempt})"
 
+# reused-from: oper.check.section.connection oper.stats.col.connection
 #. Label of the select choosing how the app reaches the IRC server: over WebSocket or over a raw TCP connection. Shown only in the app.
 #: client/components/Windows/Connect.vue
 #: client/components/NetworkForm.vue
 msgctxt "connect.connection"
 msgid "Connection"
-msgstr ""
+msgstr "Conexão"
 
 #. Option of the Connection select: a classic IRC connection over raw TCP, ports 6667 or 6697. Only the app can make it.
 #: client/components/Windows/Connect.vue
@@ -1674,7 +1763,7 @@ msgstr "Não tem conta?"
 #: client/components/Windows/Connect.vue:122
 msgctxt "connect.linkCleartext"
 msgid "This connection will not be encrypted: anyone between you and the server can read what you send, your password included."
-msgstr ""
+msgstr "Esta conexão não será criptografada: qualquer pessoa entre você e o servidor pode ler o que você envia, incluindo sua senha."
 
 #. Notice at the top of the connect form when a web+irc:// link named a server the deploy does not allow; {network} is this deploy's network name, {host} the refused server.
 #: client/components/Windows/Connect.vue:608
@@ -1906,7 +1995,7 @@ msgstr ""
 #: client/js/irc/client.ts
 msgctxt "connect.serverPasswordRefused"
 msgid "{host} refused the server password."
-msgstr ""
+msgstr "{host} recusou a senha do servidor."
 
 #. aria-label of the numeric port input next to the server host field on the connect form.
 #: client/components/Windows/Connect.vue:156
@@ -2246,12 +2335,14 @@ msgstr "até {day} {time}"
 
 #. Join refusal (475) phrased by the client. {channel} is the refused channel name, user data, never translated; the '- <cause>.' layout follows the server's cause ordering.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.badChannelKey"
 msgid "Cannot join {channel} - Bad channel key."
 msgstr "Não é possível entrar no canal {channel} - Chave de canal inválida."
 
 #. Join refusal (474) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.bannedFromChannel"
 msgid "Cannot join {channel} - You have been banned from the channel."
 msgstr "Não é possível entrar no canal {channel} - Você foi banido do canal."
@@ -2264,6 +2355,7 @@ msgstr "Não é possível enviar para o canal {channel}."
 
 #. Join refusal (471) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.channelIsFull"
 msgid "Cannot join {channel} - Channel is full."
 msgstr "Não é possível entrar no canal {channel} - O canal está cheio."
@@ -2276,6 +2368,7 @@ msgstr "Não é possível executar a ação: você não é operador do canal."
 
 #. Join refusal (473) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "error.inviteOnlyChannel"
 msgid "Cannot join {channel} - Channel is invite only."
 msgstr "Não é possível entrar no canal {channel} - O canal é somente para convidados."
@@ -2586,12 +2679,13 @@ msgctxt "form.serverAddress"
 msgid "Server address"
 msgstr "Endereço do servidor"
 
+# reused-from: windows.bouncer.fieldPassword
 #. Label of the server password field (IRC PASS), separate from the services account password.
 #: client/components/NetworkForm.vue
 #: client/components/Windows/Connect.vue
 msgctxt "form.serverPassword"
 msgid "Server password"
-msgstr ""
+msgstr "Senha do servidor"
 
 #. Tooltip on the server password switch. 'username/network:password' is literal syntax the user types: keep it untranslated.
 #: client/components/NetworkForm.vue
@@ -2727,11 +2821,12 @@ msgctxt "form.trustedCertificates.help"
 msgid "These certificates are accepted for this network although they did not pass the usual checks. Removing one makes the app ask again."
 msgstr ""
 
+# reused-from: menu.closeLobby oper.alertBuilder.form.remove reactions.hintRemove translate.model.delete
 #. Tooltip and screen-reader name of the trash icon button next to one trusted certificate: stops trusting it (takes effect on Save).
 #: client/components/NetworkForm.vue
 msgctxt "form.trustedCertificates.remove"
 msgid "Remove"
-msgstr ""
+msgstr "Remover"
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -2854,7 +2949,7 @@ msgctxt "help.commands.collapse"
 msgid "Collapse all previews in the current channel (opposite of {command})"
 msgstr "Recolhe todas as pré-visualizações do canal atual (o oposto de {command})"
 
-#. Description of the /connect command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
+#. Description of the /server command in the help window. {port} is the command's port parameter (the word 'port' as a code element) and {plus} the plus sign '+' as a code element; TLS stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connect"
 msgid "Connect to a new IRC network. If {port} starts with a {plus} sign, the connection will be made secure using TLS."
@@ -3901,35 +3996,17 @@ msgctxt "irc.colorYellow"
 msgid "Yellow"
 msgstr "Amarelo"
 
-#. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
-#: client/components/JoinChannel.vue:20
-msgctxt "join.channelHint"
-msgid "The channel name may not contain spaces"
-msgstr "O nome do canal não pode conter espaços"
-
-#. Placeholder of the channel name input in the join-channel form that opens under a network in the sidebar.
-#: client/components/JoinChannel.vue:17
-msgctxt "join.channelPlaceholder"
-msgid "Channel"
-msgstr "Canal"
-
-#. Title (hover hint) of the channel key input in the sidebar's join-channel form, shown when the typed key is invalid.
-#: client/components/JoinChannel.vue:31
+#. Title (hover hint) of the channel key field in the channel browser's join-by-name row, shown when the typed key is invalid.
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "join.passwordHint"
 msgid "The channel password may not contain spaces"
 msgstr "A senha do canal não pode conter espaços"
 
-#. Placeholder of the channel key (password) input in the sidebar's join-channel form; private channels need one.
-#: client/components/JoinChannel.vue:28
+#. Placeholder and accessible name of the channel key (password) field in the channel browser's join-by-name row (a channel typed in the search, or one the server refused); private channels need one.
+#: client/components/Windows/ChannelBrowser.vue
 msgctxt "join.passwordPlaceholder"
 msgid "Password (optional)"
 msgstr "Senha (opcional)"
-
-#. Submit button of the join-channel form under a network in the sidebar.
-#: client/components/JoinChannel.vue:34
-msgctxt "join.submit"
-msgid "Join"
-msgstr "Entrar"
 
 #. Title on the placeholder of a media preview that failed to load. {kind} is the media kind as a lowercase English word: 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -4176,18 +4253,19 @@ msgctxt "loading.starting"
 msgid "Loading the app…"
 msgstr "Carregando o aplicativo…"
 
+# reused-from: connect.account form.account oper.check.col.account oper.check.row.account oper.investigate.user.account search.window.chip.account who.account
 #. Tooltip and screen-reader label of the gear button on a chat network's home row, on a deploy that keeps its network as it set it; opens the Account settings page (connect, disconnect, sign in, sign out) instead of the network's edit form.
 #: client/components/NetworkLobby.vue
 #: client/components/DormantNetwork.vue
 msgctxt "lobby.account"
 msgid "Account"
-msgstr ""
+msgstr "Conta"
 
-#. aria-label of the plus button on a sidebar network row while the join-channel form is open: clicking closes it again.
-#: client/components/NetworkLobby.vue:156
-msgctxt "lobby.cancel"
-msgid "Cancel"
-msgstr "Cancelar"
+#. aria-label and tooltip of the server button in a bouncer connection's network header: opens the bouncer panel listing the networks the bouncer keeps.
+#: client/components/NetworkLobby.vue
+msgctxt "lobby.bouncerPanel"
+msgid "Bouncer networks…"
+msgstr "Redes do bouncer…"
 
 #. aria-label of the chevron that collapses a network's channel list in the sidebar.
 #: client/components/NetworkLobby.vue:176
@@ -4225,12 +4303,6 @@ msgstr "Editar esta rede…"
 msgctxt "lobby.expand"
 msgid "Expand"
 msgstr "Expandir"
-
-#. aria-label of the plus button on a sidebar network row: opens the small join-channel form under the network.
-#: client/components/NetworkLobby.vue:156
-msgctxt "lobby.joinChannel"
-msgid "Join a channel…"
-msgstr "Entrar em um canal…"
 
 #. Tooltip of the nick shown at the right of a sidebar network row before the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:164
@@ -4447,7 +4519,7 @@ msgstr ""
 #: client/js/helpers/banMenu.ts
 msgctxt "menu.banFrom"
 msgid "Ban from {channel}…"
-msgstr ""
+msgstr "Banir de {channel}…"
 
 #. The word for a group chat room, filling {type} in the context-menu mute items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -4550,12 +4622,6 @@ msgstr "Ir para o canal"
 msgctxt "menu.ignore"
 msgid "Ignore user"
 msgstr "Ignorar usuário"
-
-#. Context-menu item on a chat network's home row; opens the field to join a channel on that network. Ellipsis is part of the copy.
-#: client/js/helpers/contextMenu.ts
-msgctxt "menu.joinChannel"
-msgid "Join a channel…"
-msgstr "Entrar em um canal…"
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is not open yet; clicking joins it.
 #: client/js/helpers/contextMenu.ts
@@ -4669,7 +4735,7 @@ msgstr "Ações da mensagem"
 #: client/components/Message.vue
 msgctxt "message.connectToLoad"
 msgid "Connect to load that message."
-msgstr ""
+msgstr "Conecte-se para carregar essa mensagem."
 
 #. Short label shown for a moment over a chat message after its text or code was copied to the clipboard from the message toolbar.
 #: client/components/MessageActions.vue:34
@@ -4768,7 +4834,7 @@ msgstr ""
 #: client/components/Message.vue
 msgctxt "message.machineTranslatedBadge"
 msgid "(machine translated)"
-msgstr ""
+msgstr "(tradução automática)"
 
 #. Drawn before the sender's nick of an IRC NOTICE message in the chat (a label, then the nick).
 #: client/components/Message.vue
@@ -6329,6 +6395,12 @@ msgctxt "oper.alerts.o3.expiresHours"
 msgid "expires in {hours} h"
 msgstr "expira em {hours} h"
 
+#. Part of an oper service alert's summary row: it expires in less than an hour. Keep the '<' sign; 'h' is the hour symbol, use the language's own abbreviation. Lower case.
+#: client/components/Oper/OperAlerts.vue
+msgctxt "oper.alerts.o3.expiresUnderHour"
+msgid "expires in < 1 h"
+msgstr ""
+
 #. Section heading in the oper panel's Alerts tab: the alerts kept by the oper service bot (X3's O3 'addalert' alerts, which react to users matching criteria). ≤ 25 characters.
 #. Keep as is: {bot} — the name of the network's oper service bot, usually O3 (X3 services).
 #: client/components/Oper/OperAlerts.vue
@@ -6680,6 +6752,13 @@ msgstr "Onde aparecem…"
 msgctxt "oper.ban.check.channelGlineOnly"
 msgid "Only a G-line can ban a channel name."
 msgstr "Só uma G-line pode banir um nome de canal."
+
+#. Error under the mask field of the oper's ban dialog: the server would refuse this ban mask. An address range written as address/bits must give the address in full (all four numbers of an IPv4 address) and no * or ? wildcard. 192.0.2.0/24 is an example: keep it exactly.
+#. Keep as is (IRC jargon): CIDR.
+#: client/js/irc/profiles/nefarious/bans.ts
+msgctxt "oper.ban.check.cidrAddress"
+msgid "A CIDR needs the whole address, without wildcards (e.g. 192.0.2.0/24)."
+msgstr ""
 
 #. Error under the mask field of the oper's ban dialog: the server would refuse this ban mask. The /bits after the address are more than the address has.
 #. Keep as is (IRC jargon): CIDR.
@@ -12674,6 +12753,14 @@ msgctxt "scripting.storage.noRoom"
 msgid "There isn't room on this device to save that."
 msgstr "Não há espaço neste dispositivo para salvar isso."
 
+#. Error when New script, Import .lua…, an example or Duplicate would add a Lua script past the limit: in Settings → Scripts, or after 'Not saved:' in the script editor. {count} is the limit, a number.
+#: client/js/irc/scripting/storage.ts
+msgctxt "scripting.storage.tooMany"
+msgid "You can keep at most {count} script. Delete one to make room."
+msgid_plural "You can keep at most {count} scripts. Delete one to make room."
+msgstr[0] ""
+msgstr[1] ""
+
 #. Error raised inside a Lua script when what all scripts saved through seance.storage (verbatim, the API's name) is too long together. {max} is the limit, a number.
 #: client/js/irc/scripting/storage.ts
 msgctxt "scripting.storage.totalDataTooLong"
@@ -12686,23 +12773,11 @@ msgctxt "scripting.template.responderDescription"
 msgid "Replies pong! to !ping"
 msgstr "Responde pong! a !ping"
 
-#. Folder name given to the Auto-responder example script when it is added (stored with the script; the user can rename it). Short, a label.
-#: client/js/irc/scripting/library.ts
-msgctxt "scripting.template.responderFolder"
-msgid "Automation"
-msgstr "Automação"
-
 #. Description given to the /slap example Lua script when it is added. Keep '/slap' verbatim (the command's name).
 #: client/js/irc/scripting/library.ts
 msgctxt "scripting.template.slapDescription"
 msgid "Adds a /slap command"
 msgstr "Adiciona um comando /slap"
-
-#. Folder name given to the /slap example script when it is added (stored with the script; the user can rename it). Short, a label: slash commands.
-#: client/js/irc/scripting/library.ts
-msgctxt "scripting.template.slapFolder"
-msgid "Commands"
-msgstr "Comandos"
 
 #. Search window, the filters sheet (narrows a history search): placeholder of the Account field: an account is one person whatever nick they use.
 #: client/components/SearchFilterSheet.vue
@@ -12854,7 +12929,7 @@ msgstr "até {when}"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.window.cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "Cancelar"
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): name of a filter: messages from one services account (the identity a user is logged in as, whatever their nick). Also the field's label in the filters sheet. One word.
 #: client/components/Windows/SearchResults.vue
@@ -12909,7 +12984,7 @@ msgstr ""
 #: client/components/MessageSearchForm.vue
 msgctxt "search.window.close"
 msgid "Close search"
-msgstr ""
+msgstr "Fechar pesquisa"
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): a day and a time together, in the status line (how far back the search went) and beside each result older than yesterday. {day} is a short date ('Nov 4' in English, 'Nov 4, 2025' in another year) or, for a result from the last week, a short weekday ('Tue'); {time} a clock time. Order and punctuation are your language's.
 #: client/components/Windows/SearchResults.vue
@@ -13056,7 +13131,7 @@ msgstr "Buscar mais antigos"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.window.openToRead"
 msgid "Open a conversation with {target} to read this message."
-msgstr ""
+msgstr "Abra uma conversa com {target} para ler esta mensagem."
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): placeholder of the search field. {scope} is a channel name (verbatim) or 'all my channels' (search.window.allChannels).
 #: client/components/Windows/SearchResults.vue
@@ -13092,7 +13167,7 @@ msgstr "Tentar de novo"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.window.scopeEmpty"
 msgid "The server found nothing in {scope}."
-msgstr ""
+msgstr "O servidor não encontrou nada em {scope}."
 
 #. Search window (searching the chat history of the server, or of what is loaded on this device): the 'Search older' button's label while older matches are being asked for.
 #: client/components/Windows/SearchResults.vue
@@ -13186,29 +13261,32 @@ msgctxt "send.tagsTooLong"
 msgid "Not sent: the tags do not fit on one line"
 msgstr "Não enviado: as tags não cabem em uma linha"
 
+# reused-from: form.actionDisconnect menu.disconnect
 #. Button on the Account settings page while the chat network is connected or connecting; clicking hangs up the connection, which stays in the sidebar to connect again.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.disconnect"
 msgid "Disconnect"
-msgstr ""
+msgstr "Desconectar"
 
 #. Line on the Account settings page under the network's name, when the user came in as a guest without an account. {nick} is the chat nickname the guest uses.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.guest"
 msgid "Guest: {nick}"
-msgstr ""
+msgstr "Convidado: {nick}"
 
+# reused-from: connect.account form.account oper.check.col.account oper.check.row.account oper.investigate.user.account search.window.chip.account who.account
 #. Heading of the Account page in the settings: the one chat network this app is for, who this device signs in to it as, and its connect and sign-in buttons.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.heading"
 msgid "Account"
-msgstr ""
+msgstr "Conta"
 
+# reused-from: connect.signInSubmit connect.signInTitle
 #. Button on the Account settings page for a guest or a signed-out user; opens the sign-in screen, where an account name and password are entered.
 #: client/components/Settings/Account.vue
 msgctxt "settings.account.signIn"
 msgid "Sign in"
-msgstr ""
+msgstr "Entrar"
 
 #. Button on the Account settings page while the device signs in with an account; opens a confirmation before signing out.
 #: client/components/Settings/Account.vue
@@ -13264,8 +13342,15 @@ msgctxt "settings.aliases.bodyPlaceholder"
 msgid "/me waves at $1"
 msgstr "/me acena para $1"
 
-#. Shown in place of the alias table when no aliases are defined.
+#. aria-label of the ✕ button in the corner of the command-aliases page (a layer over Settings > Scripts); closes it back to the Scripts list.
+#: client/components/Settings/AliasesOverlay.vue
+msgctxt "settings.aliases.close"
+msgid "Close aliases"
+msgstr "Fechar alias"
+
+#. Shown in place of the alias table when no aliases are defined, and as the second line of the Aliases row in Settings > Scripts.
 #: client/components/Settings/Aliases.vue
+#: client/components/Settings/Scripts.vue
 msgctxt "settings.aliases.empty"
 msgid "No aliases yet."
 msgstr "Nenhum alias ainda."
@@ -13336,8 +13421,8 @@ msgctxt "settings.aliases.nested"
 msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it — {command} can become {expansion} without looping."
 msgstr "Uma linha pode chamar outro alias, e um alias com o nome de um comando embutido o substitui — {command} pode virar {expansion} sem entrar em loop."
 
-#. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
-#: client/components/Settings/Aliases.vue
+#. aria-label of the command-aliases page (a dialog layered over Settings > Scripts); heard by screen readers when it opens.
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "settings.aliases.paneAria"
 msgid "Command aliases"
 msgstr "Aliases de comando"
@@ -13370,8 +13455,8 @@ msgid_plural "{count} aliases saved."
 msgstr[0] "{count} alias salvo."
 msgstr[1] "{count} aliases salvos."
 
-#. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
-#: client/components/Settings/Aliases.vue
+#. Title of the command-aliases page, a layer opened from the Aliases row of Settings > Scripts, where the user defines their own slash commands.
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "settings.aliases.titleHeading"
 msgid "Command aliases"
 msgstr "Aliases de comando"
@@ -14152,16 +14237,18 @@ msgctxt "settings.general.keepAliveNotificationsOff"
 msgid "Notifications are off for {appName} in Android's settings, so the connection notification is hidden. Android may still stop the app."
 msgstr "As notificações do {appName} estão desativadas nas configurações do Android, então a notificação de conexão fica oculta. O Android ainda pode encerrar o app."
 
-#. Checkbox in Settings > General; when ticked, the recent lines of private (one-to-one) conversations are stored in this browser so they come back after the page is reloaded.
+#. Label of a checkbox in Settings > General. When on, the recent lines of every channel and private conversation are stored in this browser, so each window shows them at once after a reload, even before the connection is back.
 #: client/components/Settings/General.vue
+#, fuzzy
 msgctxt "settings.general.keepPrivate"
-msgid "Keep private conversations on this device"
+msgid "Keep conversations on this device"
 msgstr "Guardar conversas privadas neste dispositivo"
 
-#. Tooltip on the keep-private-conversations checkbox in Settings > General. {lines} and {queries} are numbers (200 and 30 today). Make clear that turning the setting off deletes what is stored.
+#. Tooltip on the keep-conversations checkbox in Settings > General. {lines} is a number (1000 today). Make clear that turning the setting off deletes what is stored.
 #: client/components/Settings/General.vue
+#, fuzzy
 msgctxt "settings.general.keepPrivateHelp"
-msgid "Private conversations come back after a reload: the newest {lines} lines of your {queries} most recent ones, stored in this browser. Turning this off deletes them from this device."
+msgid "Channels and private conversations are there at once after a reload: the newest {lines} lines of each, stored in this browser. Turning this off deletes them from this device."
 msgstr "As conversas privadas voltam depois de recarregar: as {lines} linhas mais recentes das suas {queries} conversas mais recentes, guardadas neste navegador. Desativar esta opção as apaga deste dispositivo."
 
 #. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
@@ -14338,17 +14425,19 @@ msgctxt "settings.notifications.commaList"
 msgid "Comma-separated, e.g.: word, some more words, anotherword"
 msgstr "Separados por vírgula, por exemplo: palavra, mais algumas palavras, outrapalavra"
 
+# reused-from: message.copied oper.report.copied
 #. The Copy button's label for a moment after the diagnostics report was copied to the clipboard.
 #: client/components/Settings/Notifications.vue:130
 msgctxt "settings.notifications.copied"
 msgid "Copied"
-msgstr ""
+msgstr "Copiado"
 
+# reused-from: oper.menu.copy
 #. Button in the push diagnostics fold: copies the diagnostics report to the clipboard.
 #: client/components/Settings/Notifications.vue:130
 msgctxt "settings.notifications.copyDiagnostics"
 msgid "Copy"
-msgstr ""
+msgstr "Copiar"
 
 #. Settings → Notifications, in the desktop app (the native shell for Windows, macOS, Linux): why the push options are missing there.
 #: client/components/Settings/Notifications.vue
@@ -14482,11 +14571,12 @@ msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
 msgstr "O push é configurado por rede — ative ou desative nas configurações de cada rede (Editar rede → “Notificações push para esta rede”), onde também aparece o status da inscrição. O navegador entrega as notificações; cada servidor com push decide se acorda este app."
 
+# reused-from: oper.investigate.card.refresh oper.me.refresh
 #. Button in the push diagnostics fold: builds the diagnostics report again.
 #: client/components/Settings/Notifications.vue:130
 msgctxt "settings.notifications.refreshDiagnostics"
 msgid "Refresh"
-msgstr ""
+msgstr "Atualizar"
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
@@ -14664,12 +14754,6 @@ msgctxt "settings.scriptEdit.export"
 msgid "Export .lua"
 msgstr "Exportar .lua"
 
-#. Label of the folder field in the Lua script editor: a free-text label that groups scripts in the list.
-#: client/components/Settings/ScriptEdit.vue
-msgctxt "settings.scriptEdit.folder"
-msgid "Folder"
-msgstr "Pasta"
-
 #. Number of lines of the Lua script, the {lines} in settings.scriptEdit.size ('12 lines · 340 characters'). {count} is the number of lines.
 #: client/components/Settings/ScriptEdit.vue
 msgctxt "settings.scriptEdit.lineCount"
@@ -14732,12 +14816,11 @@ msgctxt "settings.scriptEdit.title"
 msgid "Edit script"
 msgstr "Editar script"
 
-#. Name of the folder scripts are filed under when they have none: a heading in the Settings > Scripts list, and the placeholder of the editor's Folder field.
+#. Name on the first row of Settings > Scripts, above the Lua switch: tapping it opens the user's command aliases (their own slash commands, which are not Lua and work with Lua off). Under it, a line lists the alias names. Same word as the former Aliases tab; not oper.check.total.aliases, which counts bouncer connections on an oper card.
 #: client/components/Settings/Scripts.vue
-#: client/components/Settings/ScriptEdit.vue
-msgctxt "settings.scripts.defaultFolder"
-msgid "Unsorted"
-msgstr "Sem pasta"
+msgctxt "settings.scripts.aliases"
+msgid "Aliases"
+msgstr "Alias"
 
 #. Shown in Settings > Scripts in place of the list while the user has no Lua scripts.
 #: client/components/Settings/Scripts.vue
@@ -14745,11 +14828,11 @@ msgctxt "settings.scripts.empty"
 msgid "No scripts yet."
 msgstr "Nenhum script ainda."
 
-#. Label of the switch in Settings > Scripts that turns Lua scripting on for the whole app (off by default).
+#. Label of the switch in Settings > Scripts that turns Lua scripting on for the whole app (off by default). It sits below the Aliases row and governs only the Lua scripts under it: aliases work either way. Lua is the scripting language's name; keep it.
 #: client/components/Settings/Scripts.vue
 msgctxt "settings.scripts.enable"
-msgid "Enable scripting"
-msgstr "Ativar scripts"
+msgid "Enable Lua"
+msgstr "Ativar Lua"
 
 #. Button after 'Or try an example:' in Settings > Scripts: adds an example script that answers a chat message automatically (it replies pong! to !ping).
 #: client/components/Settings/Scripts.vue
@@ -14829,11 +14912,11 @@ msgctxt "settings.scripts.searchAria"
 msgid "Search scripts"
 msgstr "Pesquisar scripts"
 
-#. Placeholder of the search field above the script list in Settings > Scripts (shown once there are many scripts); it searches the scripts' names, folders and code.
+#. Placeholder of the search field above the script list in Settings > Scripts (shown once there are many scripts); it searches the scripts' names, descriptions and code.
 #: client/components/Settings/Scripts.vue
 msgctxt "settings.scripts.searchPlaceholder"
-msgid "Search name, folder, text…"
-msgstr "Pesquisar nome, pasta, texto…"
+msgid "Search name, description, text…"
+msgstr "Pesquisar nome, descrição, texto…"
 
 #. State of a Lua script in the Settings > Scripts list: its last run failed with an error.
 #: client/components/Settings/Scripts.vue
@@ -14853,21 +14936,15 @@ msgctxt "settings.scripts.stateRunning"
 msgid "Running"
 msgstr "Em execução"
 
+# reused-from: connect.account form.account oper.check.col.account oper.check.row.account oper.investigate.user.account search.window.chip.account who.account
 #. Settings tab label on a deploy that is one network's own client and keeps that network as it set it; the tab shows who this device signs in as, with buttons to connect, disconnect, sign in and sign out. Replaces the Networks tab there.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.account"
 msgid "Account"
-msgstr ""
-
-#. Label of the Settings modal's Aliases tab (tab strip); switching tabs navigates to the Aliases settings pane.
-#: client/components/Settings/Navigation.vue
-#: client/components/Settings/SettingTabItem.vue
-msgctxt "settings.tabs.aliases"
-msgid "Aliases"
-msgstr "Alias"
+msgstr "Conta"
 
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
@@ -14880,40 +14957,40 @@ msgid "Settings tabs"
 msgstr "Abas de configurações"
 
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.general"
 msgid "General"
 msgstr "Geral"
 
 #. Name of the Translation tab in the Settings tab strip while translation is switched off: the tab then holds only the interface-language picker (and the switch that turns translation on). As short as the other tab labels.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.language"
 msgid "Language"
 msgstr "Idioma"
 
 #. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.networks"
 msgid "Networks"
 msgstr "Redes"
 
 #. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.notifications"
 msgid "Notifications"
 msgstr "Notificações"
 
 #. Label of the Settings modal's Scripts tab (tab strip); opens the pane where the user turns Lua scripting on and manages their Lua scripts.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.scripts"
 msgid "Scripts"
 msgstr ""
 
 #. Name of the Translation tab in the Settings tab strip: on-device translation of messages.
-#: client/components/Settings/Navigation.vue
+#: client/js/hooks/use-settings-tabs.ts
 msgctxt "settings.tabs.translation"
 msgid "Translation"
 msgstr "Tradução"
@@ -15482,7 +15559,7 @@ msgstr "{languages}. Opções de tradução"
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.sentIn"
 msgid "sent in {language}"
-msgstr ""
+msgstr "enviado em {language}"
 
 #. Tooltip and aria-label of the composer's translate button while the channel corrects every message (spelling and grammar) in {language}, the user's own language, before sending; a click opens the language sheet, where it can be changed or turned off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
@@ -15544,7 +15621,7 @@ msgstr ""
 #: client/js/translate/index.ts
 msgctxt "translate.consent.titlePlain"
 msgid "Download language data?"
-msgstr ""
+msgstr "Baixar dados do idioma?"
 
 #. Settings → Translation: the main processor, as the choice after "Run on" and as the label in front of a model copy line ("CPU  Not downloaded · 1 GiB"). Use the usual abbreviation in your language (most keep CPU). Very short.
 #: client/components/Settings/Translation.vue
@@ -15568,7 +15645,7 @@ msgstr ""
 #: client/components/TranslationDiscovery.vue
 msgctxt "translate.discover.decline"
 msgid "Not now"
-msgstr ""
+msgstr "Agora não"
 
 #. Card above the message box while translation is off: most recent lines from others here are in {language}, which the user does not read; {reading} is the language they read.
 #: client/components/TranslationDiscovery.vue
@@ -15653,7 +15730,7 @@ msgstr ""
 #: client/components/TranslationFlip.vue
 msgctxt "translate.flip.translatedFrom"
 msgid "Translated from {language}. Show the original"
-msgstr ""
+msgstr "Traduzido de {language}. Mostrar o original"
 
 #. Choice for how formally a translation addresses people: keep whatever the original message did.
 #: client/components/Settings/Translation.vue
@@ -15750,11 +15827,12 @@ msgctxt "translate.line.applePackNeeded"
 msgid "{language} needs Apple's language pack"
 msgstr ""
 
+# reused-from: translate.model.download
 #. Button after 'Needs a {size} download' under a line in a channel: downloads the translation model and translates the line.
 #: client/components/TranslationLine.vue
 msgctxt "translate.line.download"
 msgid "Download"
-msgstr ""
+msgstr "Baixar"
 
 #. Shown under a line in a channel whose translation needs a model that is not on this device yet, in place of a failure, followed by a Download button. The app did not download it by itself because it is large. {size} is its download size with its unit, e.g. '620 MiB'.
 #: client/components/TranslationLine.vue
@@ -15784,7 +15862,7 @@ msgstr ""
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.menu.byModel"
 msgid "Translated on this device by {model}"
-msgstr ""
+msgstr "Traduzido neste dispositivo por {model}"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
@@ -15868,7 +15946,7 @@ msgstr "Remover"
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.model.down"
 msgid "Failed to load: {error}. Reload the page to try it again."
-msgstr ""
+msgstr "Falha ao carregar: {error}. Recarregue a página para tentar novamente."
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
@@ -16007,7 +16085,7 @@ msgstr ""
 #: client/components/TranslationSheet.vue
 msgctxt "translate.panel.readHere"
 msgid "Translate messages here into {language}"
-msgstr ""
+msgstr "Traduzir as mensagens daqui para {language}"
 
 #. Link at the foot of the translation panel; it opens the application's Translation settings page.
 #: client/components/TranslationSheet.vue
@@ -16063,7 +16141,7 @@ msgstr "Corrigir uma mensagem requer o modelo de linguagem."
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.prefer.auto"
 msgid "Automatic (recommended)"
-msgstr ""
+msgstr "Automático (recomendado)"
 
 #. Hint under Automatic in the model-preference choice (Settings → Translation → Advanced).
 #: client/components/Settings/TranslationOptions.vue
@@ -16093,7 +16171,7 @@ msgstr ""
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.prefer.small"
 msgid "Smaller models first"
-msgstr ""
+msgstr "Modelos menores primeiro"
 
 #. Hint under 'Smaller models first' in the model-preference choice (Settings → Translation → Advanced).
 #: client/components/Settings/TranslationOptions.vue
@@ -16211,10 +16289,9 @@ msgstr "Traduzir mensagens neste dispositivo"
 
 #. Under the Settings switch that turns translation on: what switching it on agrees to.
 #: client/components/Settings/Translation.vue
-#, fuzzy
 msgctxt "translate.settings.enableHint"
 msgid "Runs on this device and downloads language data as you need it."
-msgstr "Traduz os canais e as suas mensagens neste dispositivo. Os modelos são baixados no primeiro uso: de algumas centenas de MB a mais de 1 GB cada."
+msgstr "Funciona neste dispositivo e baixa os dados de idioma conforme você precisar."
 
 #. The first option of the language model picker in Settings → Translation: the client picks the largest model the device can run.
 #: client/components/Settings/Translation.vue
@@ -16268,7 +16345,7 @@ msgstr "Idioma da interface"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.into"
 msgid "Translate into"
-msgstr ""
+msgstr "Traduzir para"
 
 #. The first and default option of the Translate into select: follow the interface language. {language} is the interface language's name.
 #: client/components/Settings/Translation.vue
@@ -16278,10 +16355,9 @@ msgstr ""
 
 #. Introduction at the top of Settings → Language while translation is on.
 #: client/components/Settings/Translation.vue
-#, fuzzy
 msgctxt "translate.settings.intro"
 msgid "Messages in other languages are translated on this device, in every conversation; nothing is sent to a translation service."
-msgstr "As mensagens são traduzidas neste dispositivo por um modelo que ele baixa uma vez; nada é enviado a um serviço de tradução. Ative-a por canal no botão de tradução do cabeçalho do canal."
+msgstr "Mensagens em outros idiomas são traduzidas neste dispositivo, em todas as conversas; nada é enviado para um serviço de tradução."
 
 #. One option of the language model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
 #: client/components/Settings/Translation.vue
@@ -16333,7 +16409,7 @@ msgstr "Executar em"
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.settings.storage"
 msgid "Language data on this device: {size} in total."
-msgstr ""
+msgstr "Dados de idioma neste dispositivo: {size} no total."
 
 #. Top of Settings' Advanced section when nothing for translation is downloaded.
 #: client/components/Settings/TranslationOptions.vue
@@ -16377,11 +16453,12 @@ msgctxt "translate.sheet.choose"
 msgid "Choose…"
 msgstr ""
 
+# reused-from: browse.close channel.close image.close install.close menu.closeQuery reactions.close
 #. Tooltip and aria-label of the ✕ button that closes the composer's language sheet without changing anything.
 #: client/components/TranslationSheet.vue
 msgctxt "translate.sheet.close"
 msgid "Close"
-msgstr ""
+msgstr "Fechar"
 
 #. Status beside the language the user writes in, in the language sheet's 'They read' list: picking it corrects spelling and grammar rather than translating. Short.
 #: client/components/TranslationSheet.vue
@@ -16393,7 +16470,7 @@ msgstr ""
 #: client/components/TranslationSheet.vue
 msgctxt "translate.sheet.detect"
 msgid "Detect automatically"
-msgstr ""
+msgstr "Detectar automaticamente"
 
 #. Status beside a language in the language sheet whose translation model is not on this device yet. {size} is a file size such as '312.5 MiB'. Short.
 #: client/components/TranslationSheet.vue
@@ -16483,7 +16560,7 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeSystem"
 msgid "{from} → {to} · Apple Translation (built into the system)"
-msgstr ""
+msgstr "{from} → {to} · Tradução da Apple (integrada ao sistema)"
 
 #. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
 #: client/components/ChatInput.vue
@@ -16495,25 +16572,26 @@ msgstr "automático"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.translating"
 msgid "Translating…"
-msgstr ""
+msgstr "Traduzindo…"
 
 #. Status line in the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable. {from} and {to} are language names. Shown while the system's download sheet is open.
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.system.asking"
 msgid "{from} → {to}: waiting for the download…"
-msgstr ""
+msgstr "{from} → {to}: aguardando o download…"
 
+# reused-from: translate.model.download
 #. Button in the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable. Opens the system's own sheet that downloads the picked language's pack.
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.system.download"
 msgid "Download"
-msgstr ""
+msgstr "Baixar"
 
 #. Heading of the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable.
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.system.heading"
 msgid "Apple Translation"
-msgstr ""
+msgstr "Tradução da Apple"
 
 #. Explanation under the switch in the settings → Translation, the section for the device's own translator (Apple's Translation framework, iPhone and iPad app only). "Apple Translation" is the feature's name; keep it recognisable. "Language packs" are the system's downloadable languages.
 #: client/components/Settings/TranslationOptions.vue
@@ -16531,7 +16609,7 @@ msgstr ""
 #: client/components/Settings/TranslationOptions.vue
 msgctxt "translate.system.notDownloaded"
 msgid "{from} → {to}: not downloaded. You can also download languages in Settings → Apps → Translate."
-msgstr ""
+msgstr "{from} → {to}: não baixado. Você também pode baixar idiomas em Ajustes → Apps → Traduzir."
 
 #. Status line in the settings → Translation, the section for the device's own translator (Apple's Translation framework), in the Mac app. "Apple Translation" is the feature's name; keep it recognisable. {from} and {to} are language names. Shown when the download sheet closed without the pack. "System Settings → General → Language & Region → Translation Languages" is the path in the Mac's System Settings; use the system's own names for it.
 #: client/components/Settings/TranslationOptions.vue
@@ -16748,11 +16826,12 @@ msgctxt "translate.writePanel.asTyped"
 msgid "Already in {language}: Insert puts it in as typed"
 msgstr ""
 
+# reused-from: ban.cancel composer.cancel confirm.cancel form.actionCancel install.art.cancel lobby.cancel oper.action.cancel oper.alertBuilder.form.cancel oper.investigate.card.cancel search.filters.cancel search.window.cancel translate.picker.cancel upload.cancel windows.bouncer.cancel
 #. Closes the translate panel without changing the message box.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "Cancelar"
 
 #. The translate panel's translation failed. A short reason may follow. {language} is the target language's name.
 #: client/components/TranslatePanel.vue
@@ -16772,17 +16851,18 @@ msgctxt "translate.writePanel.inputLabel"
 msgid "What to translate"
 msgstr ""
 
+# reused-from: reactions.insert
 #. Puts the translation into the message box and closes the translate panel. The user then sends it as usual.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.insert"
 msgid "Insert"
-msgstr ""
+msgstr "Inserir"
 
 #. The translate panel's heading, beside a button with the language's name that opens the language list.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.into"
 msgid "Translate into"
-msgstr ""
+msgstr "Traduzir para"
 
 #. The translate panel's accessible name: the panel above the message box where the user types in their own language and gets a translation to insert. {language} is the target language's name.
 #: client/components/TranslatePanel.vue
@@ -16794,7 +16874,7 @@ msgstr ""
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.placeholder"
 msgid "Type in {language}"
-msgstr ""
+msgstr "Digite em {language}"
 
 #. Under the translation in the translate panel: the translation translated back into the user's language, so they can check it. {text} is that read-back.
 #: client/components/TranslatePanel.vue
@@ -16802,11 +16882,12 @@ msgctxt "translate.writePanel.readsAs"
 msgid "Reads as: “{text}”"
 msgstr ""
 
+# reused-from: oper.investigate.card.lookupRetry search.window.retry
 #. Button in the translate panel after a failed translation: translate the same text again.
 #: client/components/TranslatePanel.vue
 msgctxt "translate.writePanel.tryAgain"
 msgid "Try again"
-msgstr ""
+msgstr "Tentar de novo"
 
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 #: client/components/TypingIndicator.vue:31
@@ -17272,6 +17353,198 @@ msgctxt "whois.yes"
 msgid "Yes"
 msgstr "Sim"
 
+#. Button under the list in the bouncer panel: opens the form to add a new network to the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.addOpen"
+msgid "Add a network…"
+msgstr "Adicionar uma rede…"
+
+#. Submit button of the bouncer panel's form when adding: asks the bouncer to add the network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.addSubmit"
+msgid "Add network"
+msgstr "Adicionar rede"
+
+#. Heading of the bouncer panel's form when adding a new network to the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.addTitle"
+msgid "Add a network"
+msgstr "Adicionar uma rede"
+
+#. Button of the bouncer panel's form: closes the form without sending anything.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.cancel"
+msgid "Cancel"
+msgstr "Cancelar"
+
+#. aria-label of the ✕ button at the top right of the bouncer panel; clicking closes it and returns to the chat.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.close"
+msgid "Close the bouncer panel"
+msgstr "Fechar o painel do bouncer"
+
+#. Confirmation button in the bouncer panel: removes the network from the bouncer for good.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.delete"
+msgid "Delete"
+msgstr "Excluir"
+
+#. Button on a network's row in the bouncer panel: asks for confirmation (Delete / Keep appear in its place) before removing the network from the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.deleteAsk"
+msgid "Delete…"
+msgstr "Excluir…"
+
+#. aria-label of the bouncer panel (a modal listing the networks an IRC bouncer such as soju keeps for the user). {network} is the bouncer connection's name, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.dialog"
+msgid "Bouncer networks on {network}"
+msgstr "Redes do bouncer em {network}"
+
+#. Button at the bottom of the bouncer panel: closes it.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.done"
+msgid "Done"
+msgstr "Concluído"
+
+#. Button on a network's row in the bouncer panel: opens the form to change that network's settings on the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.edit"
+msgid "Edit"
+msgstr "Editar"
+
+#. Heading of the bouncer panel's form when changing a network. {network} is the network's name, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.editTitle"
+msgid "Edit {network}"
+msgstr "Editar {network}"
+
+#. Shown in the bouncer panel when the bouncer keeps no networks.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.empty"
+msgid "No networks yet."
+msgstr "Nenhuma rede ainda."
+
+#. Field label in the bouncer panel's form: the network's display name.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldName"
+msgid "Name"
+msgstr "Nome"
+
+#. Field label in the bouncer panel's form: the nickname to use on that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldNick"
+msgid "Nick"
+msgstr "Apelido"
+
+#. Field label in the bouncer panel's form: the IRC server's connection password, if it needs one.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldPassword"
+msgid "Server password"
+msgstr "Senha do servidor"
+
+#. Field label in the bouncer panel's form: the IRC server's port number.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldPort"
+msgid "Port"
+msgstr "Porta"
+
+#. Field label in the bouncer panel's form: the IRC "real name" (free text shown in WHOIS) to use on that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldRealname"
+msgid "Real name"
+msgstr "Nome real"
+
+#. Field label in the bouncer panel's form: the IRC server's host name the bouncer connects to.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldServer"
+msgid "Server"
+msgstr "Servidor"
+
+#. Field label in the bouncer panel's form: the IRC username (ident) to use on that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.fieldUsername"
+msgid "Username"
+msgstr "Nome de usuário"
+
+#. Button beside the delete confirmation in the bouncer panel: cancels the deletion and keeps the network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.keep"
+msgid "Keep"
+msgstr "Manter"
+
+#. Placeholder of the nick field in the bouncer panel's form: left empty, the bouncer uses its own default nickname.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.nickPlaceholder"
+msgid "the bouncer's default"
+msgstr "o padrão do bouncer"
+
+#. Shown in the bouncer panel when the connection has not announced bouncer support (yet). {network} is the connection's name, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.notBouncer"
+msgid "{network} is not a bouncer, or has not said so yet."
+msgstr "{network} não é um bouncer, ou ainda não o indicou."
+
+#. Footer note of the bouncer panel: the networks listed are kept on the bouncer, and each one shows in the sidebar as a separate network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.note"
+msgid "The bouncer keeps these; each appears here as a network of its own."
+msgstr "O bouncer as mantém; cada uma aparece aqui como uma rede própria."
+
+#. Placeholder of the port field in the bouncer panel's form: the usual port numbers with and without TLS. Keep the numbers.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.portPlaceholder"
+msgid "6697 with TLS, 6667 without"
+msgstr "6697 com TLS, 6667 sem"
+
+#. Note in the bouncer panel, in place of the add button, when the bouncer lacks labeled-response: the list is shown but cannot be changed from here. BouncerServ is the bouncer's service bot, VERBATIM.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.readOnly"
+msgid "This server cannot answer requests, so its networks are changed from another client or through BouncerServ."
+msgstr "Este servidor não consegue responder a solicitações, então suas redes são alteradas por outro cliente ou pelo BouncerServ."
+
+#. Error in the bouncer panel when the bouncer turned a request down without saying why.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.refused"
+msgid "The bouncer refused."
+msgstr "O bouncer recusou."
+
+#. Submit button of the bouncer panel's form when editing: sends the changes to the bouncer.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.save"
+msgid "Save"
+msgstr "Salvar"
+
+#. Tooltip of the status dot beside a network in the bouncer panel: the bouncer is connected to that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.stateConnected"
+msgid "Connected"
+msgstr "Conectado"
+
+#. Tooltip of the status dot beside a network in the bouncer panel: the bouncer is connecting to that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.stateConnecting"
+msgid "Connecting"
+msgstr "Conectando"
+
+#. Tooltip of the status dot beside a network in the bouncer panel: the bouncer is not connected to that network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.stateDisconnected"
+msgid "Disconnected"
+msgstr "Desconectado"
+
+#. Heading of the bouncer panel, a modal listing the networks an IRC bouncer (a server that stays connected on the user's behalf) keeps for the user. The connection's name follows it after a dot, outside this label.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.title"
+msgid "Bouncer"
+msgstr ""
+
+#. Switch in the bouncer panel's form: whether the bouncer uses an encrypted (TLS) connection to this IRC network.
+#: client/components/Windows/BouncerPanel.vue
+msgctxt "windows.bouncer.tls"
+msgid "The bouncer connects with TLS"
+msgstr "O bouncer se conecta com TLS"
+
 #. Text of the link in the changelog window that opens the list of every release.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.allReleasesLink"
@@ -17343,12 +17616,14 @@ msgstr "Fechar configurações"
 #: client/components/Windows/Help.vue
 #: client/components/Windows/Changelog.vue
 #: client/components/Settings/ScriptEdit.vue
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "windows.settings.done"
 msgid "Done"
 msgstr "Concluído"
 
-#. Line in the footer of the settings window, beside the Done button; explains that settings apply instantly and nothing needs saving.
+#. Line in the footer of the settings window (and of the command-aliases page over it), beside the Done button; explains that settings apply instantly and nothing needs saving.
 #: client/components/Windows/Settings.vue
+#: client/components/Settings/AliasesOverlay.vue
 msgctxt "windows.settings.note"
 msgid "Changes are saved as you make them."
 msgstr "As alterações são salvas à medida que você as faz."
@@ -17358,3 +17633,9 @@ msgstr "As alterações são salvas à medida que você as faz."
 msgctxt "windows.settings.title"
 msgid "Settings"
 msgstr "Configurações"
+
+#. Title of the settings window on a narrow screen (a phone), where the tab strip shows icons only: it names the open tab. {section} is that tab's label (settings.tabs.*, already translated), shown in bold; the rest is shown muted. Keep the › separator if your text runs left to right. Browsers do not turn › around in right-to-left text, so there use a separator that points onward the way the text runs (Arabic writes ←, as in its other paths through Settings).
+#: client/components/Windows/Settings.vue
+msgctxt "windows.settings.titleIn"
+msgid "Settings › {section}"
+msgstr "Configurações › {section}"

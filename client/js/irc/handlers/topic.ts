@@ -7,6 +7,7 @@ import {t} from "../../i18n/core";
 import {msgidOf} from "../message";
 import type {Handler} from "../types";
 import {scriptManager} from "../scripting/manager";
+import {fromIgnored} from "../../ignore";
 
 const topicChange: Handler = (client, msg) => {
 	const [name, topic = ""] = msg.params;
@@ -30,13 +31,15 @@ const topicChange: Handler = (client, msg) => {
 		return; // history: the current topic came from 332
 	}
 
-	scriptManager.dispatchTopic({
-		network: client.name,
-		networkUuid: client.uuid,
-		channel: chan.name,
-		topic,
-		nick,
-	});
+	if (!fromIgnored(client.uuid, msg.source, client.isSelf(nick))) {
+		scriptManager.dispatchTopic({
+			network: client.name,
+			networkUuid: client.uuid,
+			channel: chan.name,
+			topic,
+			nick,
+		});
+	}
 
 	chan.shared.topic = topic;
 	client.dispatch("topic", {chan: chan.id, topic});
@@ -61,17 +64,28 @@ const rplTopic: Handler = (client, msg) => {
 		return;
 	}
 
-	// Every join burst repeats the topic, and one reconnect can bring
-	// several: the server restoring a held session, our own re-JOIN, and —
-	// while another client of the account holds the session and we are
-	// attached as an alias — nefarious2's answer to that JOIN (m_join.c,
-	// "already a member"). Say it when it is news, or when asked (/topic).
+	// The topic in a join burst is state: the header shows it. Every join
+	// burst repeats it and one reconnect can bring several — the server
+	// restoring a held session, our own re-JOIN, and, attached as an alias,
+	// nefarious2's answer to that JOIN (m_join.c, "already a member") — and a
+	// page that was reloaded, or killed in the background, remembers none of
+	// them to compare with. A topic changed while we were away is the TOPIC
+	// event in the history (draft/event-playback), with who and when. A line
+	// only when the user asked: a channel joined by hand (`topicWanted`; the
+	// header truncates a long topic) or `/topic` (`topicAsked`).
 	const asked = chan.topicAsked;
-	chan.topicQuiet = topic === chan.shared.topic && !asked;
+	const shown = asked || chan.topicWanted;
 	chan.topicAsked = false;
+	chan.topicWanted = false;
 	chan.topicAskedActive = asked;
+	chan.topicQuiet = !shown;
 
-	if (chan.topicQuiet) {
+	if (topic !== chan.shared.topic) {
+		chan.shared.topic = topic;
+		client.dispatch("topic", {chan: chan.id, topic});
+	}
+
+	if (!shown) {
 		return;
 	}
 
@@ -81,8 +95,6 @@ const rplTopic: Handler = (client, msg) => {
 		text: topic,
 		showInActive: asked || undefined,
 	});
-	chan.shared.topic = topic;
-	client.dispatch("topic", {chan: chan.id, topic});
 };
 
 // RPL_NOTOPIC: <me> <channel> :No topic is set
@@ -103,6 +115,7 @@ const rplNoTopic: Handler = (client, msg) => {
 	}
 
 	chan.topicQuiet = false;
+	chan.topicWanted = false;
 
 	if (chan.topicAsked) {
 		chan.topicAsked = false;

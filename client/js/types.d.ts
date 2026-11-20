@@ -1,7 +1,7 @@
 import {defineComponent} from "vue";
 
 import {SharedChan} from "../../shared/types/chan";
-import {SharedNetwork} from "../../shared/types/network";
+import {SharedBouncerNetwork, SharedNetwork} from "../../shared/types/network";
 import {SharedUser} from "../../shared/types/user";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
 import {LinkPreview, SharedMsg} from "../../shared/types/msg";
@@ -35,6 +35,10 @@ type PastView = {
 
 type ClientChan = Omit<SharedChan, "messages"> & {
 	moreHistoryAvailable: boolean;
+	/** This device may hold older lines: "show older" works without a connection (`more`). */
+	deviceHistory: boolean;
+	/** The gap dividers being loaded, by the id of the message they stand before (`history:fill`). */
+	gapsLoading: number[];
 	editTopic: boolean;
 	messages: ClientMessage[];
 
@@ -57,6 +61,8 @@ type ClientChan = Omit<SharedChan, "messages"> & {
 	replyTo: ClientMessage | null;
 	/** Own message the next plain-text input replaces (the edit tags, `wire.ts` `editTags`). */
 	editing: ClientMessage | null;
+	/** The composer's draft from before `editing` began, given back when it ends (helpers/compose.ts). */
+	draftBeforeEdit: string;
 	/**
 	 * Escape dismissed an edit: ArrowUp browses input history instead of
 	 * re-entering edit mode, until the user types again.
@@ -86,11 +92,14 @@ type InitClientChan = ClientChan & {
 
 // We omit channels so we can use ClientChan[] instead of Chan[]
 type ClientNetwork = Omit<SharedNetwork, "channels"> & {
-	isJoinChannelShown: boolean;
 	isCollapsed: boolean;
 	channels: ClientChan[];
 	/** Being an oper here (`oper:state`, irc/oper.ts); absent until the first one. */
 	oper?: SharedOperState;
+	/** soju's networks, on a bouncer connection (`bouncer:networks`, irc/bouncer.ts). */
+	bouncer?: SharedBouncerNetwork[];
+	/** The control connection can send labeled requests: the panel may change them. */
+	bouncerEditable?: boolean;
 };
 
 type NetChan = {

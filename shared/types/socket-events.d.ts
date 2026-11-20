@@ -9,6 +9,7 @@ import {InboxEntry} from "./mention";
 import {ChanState, SharedChan} from "./chan";
 import {
 	ServicesConfig,
+	SharedBouncerNetwork,
 	SharedNetwork,
 	SharedNetworkPresence,
 	SharedNetworkChan,
@@ -135,6 +136,12 @@ interface ServerToClientEvents {
 		totalMessages: number;
 		/** Whether older history remains (the server's end tag / page fullness). */
 		moreAvailable?: boolean;
+		/**
+		 * Whether this device may hold older lines of the channel
+		 * (irc/conversationStore.ts): they can be asked for without a
+		 * connection. Absent: no change.
+		 */
+		device?: boolean;
 	}>;
 
 	/** The answer to `search:request`: always one, whatever happened. */
@@ -176,6 +183,11 @@ interface ServerToClientEvents {
 	}>;
 	/** A REDACT resolved to the loaded message it targets. */
 	"msg:redact": EventHandler<{chan: number; id: number; by: string; reason?: string; time: Date}>;
+	/**
+	 * Lines may be missing before message `id` (`gap` true), or no longer are:
+	 * the divider above it is shown or taken away (see bus-contract §1.4).
+	 */
+	"msg:gap": EventHandler<{chan: number; id: number; gap: boolean}>;
 	/** Message `id` (already delivered via `msg`) replaces message `replaces`. */
 	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
 	/**
@@ -205,6 +217,24 @@ interface ServerToClientEvents {
 	}>;
 	/** Being an oper on `network` changed: level, privileges, snomask, features (irc/oper.ts). */
 	"oper:state": EventHandler<{network: string; state: SharedOperState}>;
+	/**
+	 * A bouncer's networks, whole, each time its control connection's list
+	 * changes (irc/bouncer.ts). `editable`: the connection can send labeled
+	 * requests, so the bouncer panel may add, change and delete them.
+	 */
+	"bouncer:networks": EventHandler<{
+		network: string;
+		networks: SharedBouncerNetwork[];
+		editable: boolean;
+	}>;
+	/** The bouncer's verdict on a `bouncer:request` with the same `id`. */
+	"bouncer:replied": EventHandler<{
+		network: string;
+		id: string;
+		ok: boolean;
+		netid?: string;
+		error?: string;
+	}>;
 	/**
 	 * The answer to an `oper:request`: every line of the labeled reply, raw,
 	 * in order. `outcome` says how it ended (`batch`, `lines`, `ack`,
@@ -413,6 +443,14 @@ interface ClientToServerEvents {
 	"oper:notices:get": EventHandler<{network: string}>;
 	/** WHOIS the services bots named in `services` (the edit form's liveness check); answered by `services:checked`. */
 	"services:check": EventHandler<{network: string; id: string; services: ServicesConfig}>;
+	/** Add, change or delete one of a bouncer's networks (irc/bouncer.ts); answered by `bouncer:replied`. */
+	"bouncer:request": EventHandler<{
+		network: string;
+		id: string;
+		subcommand: "ADDNETWORK" | "CHANGENETWORK" | "DELNETWORK";
+		netid?: string;
+		attrs?: Record<string, string>;
+	}>;
 	/** Ask the oper service for a G-line or shun (irc/services.ts); answered by `services:banned`. */
 	"services:ban": EventHandler<{
 		network: string;
@@ -459,6 +497,9 @@ interface ClientToServerEvents {
 	/** The UI dropped these messages from a channel's buffer (see bus-contract § 2). */
 	"history:trim": EventHandler<{target: number; ids: number[]}>;
 
+	/** Load the lines missing before message `id` of a channel (see bus-contract § 2). */
+	"history:fill": EventHandler<{target: number; id: number}>;
+
 	"msg:preview:toggle": EventHandler<{
 		target: number;
 		messageIds?: number[];
@@ -475,5 +516,6 @@ interface ClientToServerEvents {
 
 	"sign-out": (token?: string) => void;
 
+	/** The user cleared a channel's or query's history (client/js/history.ts, see bus-contract § 2): the IRC layer forgets what was shown, zeroes the counters and drops the lines kept on this device. */
 	"history:clear": EventHandler<{target: number}>;
 }

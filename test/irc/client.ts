@@ -314,11 +314,46 @@ describe("IrcClient", function () {
 			expect(options[1].serverOptions.PREFIX.modeToSymbol).to.deep.equal({o: "@", v: "+"});
 			expect(options[1].serverOptions.CHANTYPES).to.deep.equal(["#", "&"]);
 			expect(options[1].serverOptions.NETWORK).to.equal("SeanceDev");
+			expect(options[1].serverOptions.CASEMAPPING).to.equal("rfc1459");
+
+			// The page compares nicks under it (a user menu's lookups)
+			h.transport.line(":irc.test 005 alice CASEMAPPING=ascii :are supported by this server");
+			const latest = payloads<{serverOptions: SharedNetwork["serverOptions"]}>(
+				"network:options"
+			).at(-1);
+			expect(latest?.serverOptions.CASEMAPPING).to.equal("ascii");
 			expect(payloads("network:name")).to.deep.equal([
 				{uuid: h.client.uuid, name: "SeanceDev"},
 			]);
 			expect(h.client.network.name).to.equal("SeanceDev");
 			expect(h.client.lobby.name).to.equal("SeanceDev");
+		});
+
+		it("tells the UI the network's CASEMAPPING, so the store compares names as the server does", function () {
+			const h = setup();
+			register(h);
+			h.transport.line(":irc.test 005 alice CASEMAPPING=ascii :are supported by this server");
+
+			const options = payloads<{serverOptions: SharedNetwork["serverOptions"]}>(
+				"network:options"
+			);
+			expect(options[options.length - 1].serverOptions.CASEMAPPING).to.equal("ascii");
+			expect(h.client.network.serverOptions.CASEMAPPING).to.equal("ascii");
+		});
+
+		it("keeps the name the user saved over 005 NETWORK, never announcing the server's", function () {
+			const h = setup({savedName: () => "Mine"});
+			h.client.setNetworkName("Mine");
+			register(h);
+			// soju resends ISUPPORT on a bound connection when it reconnects
+			// the upstream: the saved name must survive that too.
+			h.transport.line(ISUPPORT_2);
+
+			expect(h.client.network.name).to.equal("Mine");
+			expect(h.client.lobby.name).to.equal("Mine");
+			expect(payloads<{name: string}>("network:name").map((p) => p.name)).to.not.include(
+				"SeanceDev"
+			);
 		});
 
 		it("dispatches init after 422, lobby first, active = first channel, then auto-JOINs", function () {
@@ -781,7 +816,53 @@ describe("IrcClient", function () {
 	});
 
 	describe("TOPIC", function () {
-		it("applies 332/333 on join without a sender", function () {
+		/** `/join #new` typed in the lobby, and the server's answer up to the 366. */
+		function joinByHand(h: Harness, topic?: string): number {
+			register(h);
+			h.client.input(1, "/join #new");
+			h.transport.line(":alice!alice@host.example JOIN #new");
+
+			if (topic !== undefined) {
+				h.transport.lines(
+					`:irc.test 332 alice #new :${topic}`,
+					":irc.test 333 alice #new bob!bob@host 1756000000"
+				);
+			}
+
+			h.transport.lines(
+				":irc.test 353 alice = #new :@alice bob",
+				":irc.test 366 alice #new :End of /NAMES list."
+			);
+			return h.client.findChannel("#new")!.id;
+		}
+
+		it("shows the topic of a channel joined by hand, once, without a sender", function () {
+			const h = setup();
+			const id = joinByHand(h, "Welcome to Seance");
+
+			expect(payloads("topic")).to.deep.equal([{chan: id, topic: "Welcome to Seance"}]);
+			const [topic, setBy] = messages(id).slice(-2);
+			expect(topic.type).to.equal(MessageType.TOPIC);
+			expect(topic.from).to.equal(undefined);
+			expect(topic.text).to.equal("Welcome to Seance");
+			expect(topic.showInActive).to.equal(undefined);
+			expect(setBy.type).to.equal(MessageType.TOPIC_SET_BY);
+			expect(setBy.from?.nick).to.equal("bob");
+			expect(setBy.when?.getTime()).to.equal(1756000000000);
+			expect(h.client.findChannel("#new")!.shared.topic).to.equal("Welcome to Seance");
+
+			// The next join burst (a reconnect, an alias attach) is state.
+			const before = messages(id).length;
+			h.transport.lines(
+				":irc.test 332 alice #new :Welcome to Seance",
+				":irc.test 333 alice #new bob!bob@host 1756000000"
+			);
+			expect(messages(id)).to.have.length(before);
+		});
+
+		it("puts the topic of a channel nobody joined by hand in the header only", function () {
+			// The autojoin, a held session's restore, a reloaded page's first
+			// burst: the page has nothing to compare with, and it is not news.
 			const h = setup();
 			const id = joined(h);
 			h.transport.lines(
@@ -790,14 +871,34 @@ describe("IrcClient", function () {
 			);
 
 			expect(payloads("topic")).to.deep.equal([{chan: id, topic: "Welcome to Seance"}]);
-			const [topic, setBy] = messages(id).slice(-2);
-			expect(topic.type).to.equal(MessageType.TOPIC);
-			expect(topic.from).to.equal(undefined);
-			expect(topic.text).to.equal("Welcome to Seance");
-			expect(setBy.type).to.equal(MessageType.TOPIC_SET_BY);
-			expect(setBy.from?.nick).to.equal("bob");
-			expect(setBy.when?.getTime()).to.equal(1756000000000);
 			expect(h.client.findChannel("#seance")!.shared.topic).to.equal("Welcome to Seance");
+			expect(
+				messages(id).filter(
+					(m) => m.type === MessageType.TOPIC || m.type === MessageType.TOPIC_SET_BY
+				)
+			).to.deep.equal([]);
+
+			// A changed one too: the change itself comes from the history.
+			h.transport.line(":irc.test 332 alice #seance :Changed while away");
+			expect(payloads("topic").slice(-1)).to.deep.equal([
+				{chan: id, topic: "Changed while away"},
+			]);
+			expect(messages(id).filter((m) => m.type === MessageType.TOPIC)).to.deep.equal([]);
+		});
+
+		it("waits for no topic past the join burst of a channel joined by hand without one", function () {
+			const h = setup();
+			const id = joinByHand(h);
+			const before = messages(id).length;
+
+			h.transport.lines(
+				":irc.test 332 alice #new :Set later, seen on a reconnect",
+				":irc.test 333 alice #new bob!bob@host 1756000000"
+			);
+			expect(messages(id)).to.have.length(before);
+			expect(h.client.findChannel("#new")!.shared.topic).to.equal(
+				"Set later, seen on a reconnect"
+			);
 		});
 
 		it("applies a TOPIC change with its sender", function () {
@@ -840,37 +941,41 @@ describe("IrcClient", function () {
 			expect(chan.shared.key).to.equal("secret");
 			expect(lastMessage(id).text).to.equal("+bkl *!*@bad.host secret 42");
 
-			h.transport.line(":irc.test 324 alice #seance +ntk secret");
-			expect(lastMessage(id).type).to.equal(MessageType.MODE_CHANNEL);
-			expect(lastMessage(id).text).to.equal("+ntk secret");
-
 			h.transport.line(":bob!bob@host MODE #seance -k secret");
 			expect(chan.shared.key).to.equal("");
+
+			// The 324 the client asks for itself is state: the key, no line.
+			const before = messages(id).length;
+			h.transport.line(":irc.test 324 alice #seance +ntk secret");
+			expect(chan.shared.key).to.equal("secret");
+			expect(messages(id)).to.have.length(before);
 		});
 
-		it("shows 324 once: a repeat after a reconnect is state, /mode asks again", function () {
+		it("shows a 324 only when the user asked for it (/mode)", function () {
 			const h = setup();
 			const id = joined(h);
 			const chan = h.client.findChannel("#seance")!;
 
+			// Every (re)JOIN asks; a reloaded page has nothing to compare
+			// with, so neither the first answer nor a changed one is a line.
 			h.transport.line(":irc.test 324 alice #seance +tn");
-			expect(lastMessage(id).type).to.equal(MessageType.MODE_CHANNEL);
-			expect(lastMessage(id).text).to.equal("+tn");
-
-			// Every (re)JOIN asks again; the same answer is not news.
-			const before = messages(id).length;
-			h.transport.line(":irc.test 324 alice #seance +tn");
-			expect(messages(id)).to.have.length(before);
-
-			// …but a change is, and so is an answer the user asked for.
 			h.transport.line(":irc.test 324 alice #seance +tnm");
-			expect(lastMessage(id).text).to.equal("+tnm");
+			expect(messages(id).filter((m) => m.type === MessageType.MODE_CHANNEL)).to.deep.equal(
+				[]
+			);
 
 			h.client.input(id, "/mode");
 			expect(chan.modesAsked).to.equal(true);
 			h.transport.line(":irc.test 324 alice #seance +tnm");
-			expect(messages(id).slice(-1)[0].text).to.equal("+tnm");
-			expect(messages(id).filter((m) => m.text === "+tnm")).to.have.length(2);
+			expect(lastMessage(id).type).to.equal(MessageType.MODE_CHANNEL);
+			expect(lastMessage(id).text).to.equal("+tnm");
+			expect(lastMessage(id).showInActive).to.equal(true);
+			expect(chan.modesAsked).to.equal(false);
+
+			// Asked once, answered once.
+			const before = messages(id).length;
+			h.transport.line(":irc.test 324 alice #seance +tnm");
+			expect(messages(id)).to.have.length(before);
 		});
 
 		it("puts our own user modes in the lobby", function () {
@@ -1076,6 +1181,35 @@ describe("IrcClient", function () {
 			expect(h.sentAfter()).to.include("USER alice 0 * :alice");
 		});
 
+		it("forgets a WHOIS the close cut off before its end", function () {
+			const h = setup();
+			joined(h);
+			h.transport.lines(
+				":bob!bob@host PRIVMSG alice :hi",
+				":irc.test 311 alice bob ~bob old.example * :Bob",
+				":irc.test 319 alice bob :#old"
+			);
+			const query = h.client.findChannel("bob")!;
+			h.transport.closed(1006, "", true);
+			register(h);
+			dispatch.resetHistory();
+
+			// No WHOIS of bob is running now: a 301 is the reply to a message.
+			h.transport.line(":irc.test 301 alice bob :gone fishing");
+			expect(messages(query.id).map((m) => [m.type, m.text])).to.deep.equal([
+				[MessageType.AWAY, "gone fishing"],
+			]);
+
+			h.transport.lines(
+				":irc.test 311 alice bob ~bob new.example * :Bob",
+				":irc.test 319 alice bob :#new",
+				":irc.test 318 alice bob :End of /WHOIS list."
+			);
+			const whois = messages(h.client.lobby.id).filter((m) => m.type === MessageType.WHOIS);
+			expect(whois).to.have.length(1);
+			expect(whois[0].whois).to.include({hostname: "new.example", channels: "#new"});
+		});
+
 		it("registers again with the configured ident after a CHGHOST changed it", function () {
 			const h = setup({username: "custom"});
 			joined(h);
@@ -1169,8 +1303,8 @@ describe("IrcClient", function () {
 			]);
 			expect(lastMessage(1).text).to.equal("Reconnect cancelled.");
 
-			// /connect brings it back with a fresh attempt.
-			h.client.input(1, "/connect");
+			// /server brings it back with a fresh attempt.
+			h.client.input(1, "/server");
 			expect(h.transport.connectCalls).to.equal(2);
 			expect(h.client.network.status.connecting).to.equal(true);
 		});

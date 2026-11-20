@@ -7,9 +7,16 @@
  * The rain, the snow and the storm's flash are the plains' own (`.ps-rain`, `.ps-snow`, `.ps-flash`),
  * run and hidden by NG's rules (styles.ts); a pane is their container. DOM-free.
  */
-export const ROOM_MOTION_CSS = `/* One design unit on screen: the svg's xMidYMid slice scale, about the frame's middle (640, 400). */
+import {DESIGN_FRAME} from "../ps/yurt";
+
+/** The design frame's middle and size, as the svg's viewBox (yurt.ts). */
+const F = DESIGN_FRAME;
+const MID_X = F.x + F.width / 2;
+const MID_Y = F.y + F.height / 2;
+
+export const ROOM_MOTION_CSS = `/* One design unit on screen: the svg's xMidYMid slice scale, about the frame's middle (${MID_X}, ${MID_Y}). */
 #theme-scene .ps-indoor {
-	--ps-ym-s: max(calc(100cqw / 1920), calc(100cqh / 800));
+	--ps-ym-s: max(calc(100cqw / ${F.width}), calc(100cqh / ${F.height}));
 }
 
 /* Each moving box at its place in the design frame. Physical left and top, not logical properties:
@@ -17,8 +24,8 @@ export const ROOM_MOTION_CSS = `/* One design unit on screen: the svg's xMidYMid
 #theme-scene .ps-ym-pane,
 #theme-scene .ps-ym-top > * {
 	position: absolute;
-	left: calc(50% + (var(--x) - 640) * var(--ps-ym-s));
-	top: calc(50% + (var(--y) - 400) * var(--ps-ym-s));
+	left: calc(50% + (var(--x) - ${MID_X}) * var(--ps-ym-s));
+	top: calc(50% + (var(--y) - ${MID_Y}) * var(--ps-ym-s));
 	width: calc(var(--w) * var(--ps-ym-s));
 	height: calc(var(--h) * var(--ps-ym-s));
 }
@@ -33,9 +40,12 @@ export const ROOM_MOTION_CSS = `/* One design unit on screen: the svg's xMidYMid
 	position: absolute;
 }
 
+/* A cloud rests where its delay puts it in its loop (--cp), on ps-drift's own path, as the plains' do
+ * (styles.ts): a cloud a frozen scene rebuilds stays on its path, not at the window's edge. */
 #theme-scene .ps-ym-cloud {
 	left: 0;
 	aspect-ratio: 47 / 23;
+	transform: translateX(calc((100cqw + 100% + 0.5rem) * var(--cp) - 100% - 0.25rem));
 }
 
 #theme-scene .ps-ym-cloud > svg {
@@ -119,8 +129,8 @@ export const ROOM_MOTION_CSS = `/* One design unit on screen: the svg's xMidYMid
 
 /* ---- the groups: each moves with its class, in phase ---- */
 /* The hearth: the approved mockup's flicker — the stove's glow on its flick, the lamp's flame on its
- * flick-b (1 written 0.999, as a pose's: never exactly 1 or 0) — and the fire's dance (§16): each tongue
- * licks up from the coals on its own beat, the core breathes, the sparks rise (not in calm). */
+ * flick-b (1 written 0.999, as a pose's: never exactly 1 or 0) — and, at full, the fire's dance (§16): each
+ * tongue licks up from the coals on its own beat, the core breathes, the sparks rise. */
 #theme-scene.psng.psng-m-hearth .ps-ym-fireglow {
 	animation: psng-yt-flick 2.4s ease-in-out infinite;
 	animation-delay: calc(0s - var(--psng-t));
@@ -131,24 +141,46 @@ export const ROOM_MOTION_CSS = `/* One design unit on screen: the svg's xMidYMid
 	animation-delay: calc(0s - var(--psng-t));
 }
 
-#theme-scene.psng.psng-m-hearth .ps-ym-tongue.ps-ym-t1 {
+#theme-scene.psng.psng-m-hearth:not(.psng-calm) .ps-ym-tongue.ps-ym-t1 {
 	animation: psng-yt-lick-a 0.95s ease-in-out infinite;
 	animation-delay: calc(0s - var(--psng-t));
 }
 
-#theme-scene.psng.psng-m-hearth .ps-ym-tongue.ps-ym-t2 {
+#theme-scene.psng.psng-m-hearth:not(.psng-calm) .ps-ym-tongue.ps-ym-t2 {
 	animation: psng-yt-lick-b 1.2s ease-in-out infinite;
 	animation-delay: calc(0s - var(--psng-t));
 }
 
-#theme-scene.psng.psng-m-hearth .ps-ym-tongue.ps-ym-t3 {
+#theme-scene.psng.psng-m-hearth:not(.psng-calm) .ps-ym-tongue.ps-ym-t3 {
 	animation: psng-yt-lick-c 0.8s ease-in-out infinite;
 	animation-delay: calc(0s - var(--psng-t));
 }
 
-#theme-scene.psng.psng-m-hearth .ps-ym-core {
+#theme-scene.psng.psng-m-hearth:not(.psng-calm) .ps-ym-core {
 	animation: psng-yt-core 0.45s ease-in-out infinite alternate;
 	animation-delay: calc(0s - var(--psng-t));
+}
+
+/* Calm: the tongues and the core flicker by opacity instead of dancing, each on its own beat (the user,
+ * 2026-11-16; ps-yurt.md §11.3: the dance's transforms cost a calm phone far more than its flickers). */
+#theme-scene.psng.psng-m-hearth.psng-calm .ps-ym-tongue.ps-ym-t1 {
+	animation: psng-yt-flick-b 1.3s ease-in-out infinite;
+	animation-delay: calc(-0.2s - var(--psng-t));
+}
+
+#theme-scene.psng.psng-m-hearth.psng-calm .ps-ym-tongue.ps-ym-t2 {
+	animation: psng-yt-flick 1.9s ease-in-out infinite;
+	animation-delay: calc(-0.7s - var(--psng-t));
+}
+
+#theme-scene.psng.psng-m-hearth.psng-calm .ps-ym-tongue.ps-ym-t3 {
+	animation: psng-yt-flick-b 1.1s ease-in-out infinite;
+	animation-delay: calc(-0.5s - var(--psng-t));
+}
+
+#theme-scene.psng.psng-m-hearth.psng-calm .ps-ym-core {
+	animation: psng-yt-flick 0.9s ease-in-out infinite;
+	animation-delay: calc(-0.3s - var(--psng-t));
 }
 
 #theme-scene.psng.psng-m-hearth:not(.psng-calm) .ps-ym-spark {
@@ -307,7 +339,7 @@ export const ROOM_MOTION_CSS = `/* One design unit on screen: the svg's xMidYMid
 	display: none;
 }
 
-/* Calm keeps the fire's dance but not its sparks (§16). */
+/* Calm keeps no sparks; its flames flicker instead (above; §16). */
 #theme-scene.psng.psng-calm .ps-ym-spark {
 	display: none;
 }

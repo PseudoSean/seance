@@ -12,7 +12,8 @@
  * Seance uses this to make a reconnect look like nothing happened:
  *
  * - the replayed JOIN / topic / NAMES update the model without producing
- *   lines (`IrcClient.restoring`, honoured by join.ts and topic.ts) and each
+ *   lines (`IrcClient.restoring`, honoured by join.ts; a join burst's topic
+ *   is never a line unless the user asked, topic.ts) and each
  *   restored JOIN starts the usual paced catch-up (`CHATHISTORY LATEST`, then
  *   `BEFORE` back to the newest line we held; history.ts)
  *   (catchup.ts), which is what actually fills the gap — unless the server
@@ -32,7 +33,7 @@
  * {@link bouncerReplayBatch}).
  *
  * Without the cap (another ircd, hold off, not logged in) nothing here runs
- * and a re-JOIN is quiet by `Channel.rejoining` alone.
+ * and a re-JOIN's own JOIN line is quiet by `Channel.rejoining` alone.
  */
 
 import type {CapNegotiator} from "./caps";
@@ -289,9 +290,21 @@ export function persistenceFailed(client: IrcClient, msg: IrcMessage): boolean {
 	const context = (msg.params[2] ?? "").toUpperCase();
 
 	if (code === "CURSOR_UNKNOWN") {
-		// The msgid aged out of the server's index; the replay still happens.
+		// The server could not place our msgid and replays from a point of
+		// its own instead (the session's last activity, which another device
+		// may have kept recent): the replay still happens, but nothing says it
+		// reaches back to what we hold. It arrives behind this line and
+		// behind the restored JOINs, whose catch-up was skipped on its
+		// account: every channel walks for itself after all, and the walk
+		// drops what the replay brought.
 		// eslint-disable-next-line no-console
 		console.debug(`[irc] attach cursor unknown to the server: ${msg.params[2] ?? ""}`);
+
+		if (client.serverReplay && !client.cursorUnknown) {
+			client.cursorUnknown = true;
+			client.catchUpUncovered();
+		}
+
 		return true;
 	}
 
@@ -376,7 +389,9 @@ export function isRoutineReplayNotice(client: IrcClient, msg: IrcMessage): boole
  *
  * Only for the server's own restoration JOINs (inside the `draft/persistence`
  * batch, or while the autojoin is still held for an unbatched burst) and only
- * for a channel we already hold messages for. A channel the autojoin had to
+ * for a channel we already hold messages for, complete up to its newest line
+ * (`Channel.historyFilled`; after a page load that is what the device kept,
+ * conversationStore.ts). A channel the autojoin had to
  * JOIN itself was not in the session when the replay ran, and a channel we
  * have nothing for (a fresh page load) still needs its `CHATHISTORY LATEST`
  * fill — the replay only carries the gap since the cursor, which can be
@@ -389,8 +404,14 @@ export function serverReplayCovers(
 ): boolean {
 	return (
 		client.serverReplay &&
+		!client.cursorUnknown && // it replays from a point of its own (persistenceFailed)
 		(client.restoring || awaitingRestoration(client)) &&
 		chan.historyRequested &&
+		// The cursor is one msgid for the whole network: a channel whose own
+		// catch-up never finished (the page went away mid-walk) has a gap
+		// older than it, which the replay does not carry. Such a channel
+		// walks for itself.
+		chan.historyFilled &&
 		before !== undefined
 	);
 }

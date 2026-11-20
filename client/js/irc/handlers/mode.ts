@@ -1,8 +1,8 @@
 /**
  * MODE (channel and user), 324 (RPL_CHANNELMODEIS), 221 (RPL_UMODEIS).
  * Ported from attic/server/plugins/irc-events/mode.ts. Which modes take a
- * parameter comes from ISUPPORT CHANMODES/PREFIX. An unchanged 324 is state,
- * not news, and is not shown (`Channel.modeText`, like topic.ts).
+ * parameter comes from ISUPPORT CHANMODES/PREFIX. A 324 is state, not news:
+ * it is shown only when the user asked (`/mode #chan`, `Channel.modesAsked`).
  */
 
 import {MessageType} from "../../../../shared/types/msg";
@@ -12,6 +12,7 @@ import {msgidOf} from "../message";
 import {noteUserModes, setUserModes as setOwnModes} from "../oper";
 import type {Handler} from "../types";
 import {scriptManager} from "../scripting/manager";
+import {fromIgnored} from "../../ignore";
 
 interface ModeChange {
 	add: boolean;
@@ -94,7 +95,14 @@ const mode: Handler = (client, msg) => {
 		return;
 	}
 
-	if (!client.replaying) {
+	// Only a mode on us or on a channel we are in: one for any other channel
+	// (our list and the server's disagreeing) is dropped below. Scripts hear
+	// nothing from anyone on the ignore list.
+	if (
+		!client.replaying &&
+		(client.isSelf(target) || client.findChannel(target)) &&
+		!fromIgnored(client.uuid, msg.source, self)
+	) {
 		scriptManager.dispatchMode({
 			network: client.name,
 			networkUuid: client.uuid,
@@ -180,24 +188,24 @@ const channelModeIs: Handler = (client, msg) => {
 	applyChanges(client, chan, parseChannelModes(client, modes, params));
 
 	// The modes are asked for after every (re)JOIN — lazily on first open,
-	// or with the active channel's catch-up (catchup.ts) — so a reconnect
-	// brings the same line back each time. Say it when it is news, or when
-	// asked (/mode #chan) — an asked-for answer follows the user's tab.
+	// or with the active channel's catch-up (catchup.ts) — and that answer
+	// is state: a page that was reloaded, or killed in the background, has
+	// nothing to compare it with, and "Channel mode is +nt" would come back
+	// on every first open after it. Changes are MODE lines (live, or from
+	// the history). A line only when the user asked (`/mode #chan`), and
+	// that answer follows the user's tab.
 	const asked = chan.modesAsked;
-	const text = `${modes} ${params.join(" ")}`.trim();
-	const quiet = text === chan.modeText && !asked;
 	chan.modesAsked = false;
-	chan.modeText = text;
 
-	if (quiet) {
+	if (!asked) {
 		return;
 	}
 
 	client.pushMessage(chan, {
 		type: MessageType.MODE_CHANNEL,
 		time: client.timeOf(msg),
-		text,
-		showInActive: asked || undefined,
+		text: `${modes} ${params.join(" ")}`.trim(),
+		showInActive: true,
 	});
 };
 

@@ -894,7 +894,7 @@ strong,
  * No z-index: a spark paints with its row, over the rows above it, and under
  * whatever floats over the column (the message toolbar, the jump-to-recent
  * disc, the overlaid user list). Channels only: a query shows the yurt's
- * room, still (docs/projects/ps-yurt.md), and .chat-view's data-type is the
+ * room (docs/projects/ps-yurt.md), and .chat-view's data-type is the
  * view the scene is told (App.vue), set in the same render as the rows. Nothing of this
  * exists under reduced motion. */
 @keyframes ps-ember {
@@ -3256,12 +3256,13 @@ select option {
  * wins (style.css's and the components' black and white smudges, coffee's
  * faint and muted tokens): --ps-g-placeholder, the soft ink by day and a
  * lighter one at night, where the soft ink read 3.74 on the glass's field
- * (the jump-to search, the message search, the join form, the channel
- * browser's search). */
+ * (the jump-to search, the message search, the channel browser's search
+ * and its join-by-name password field). */
 ::placeholder,
 .jump-to-input .input::placeholder,
 .reaction-picker-input::placeholder,
-.browse-query input::placeholder {
+.browse-query input::placeholder,
+.browse-direct-key::placeholder {
 	color: var(--ps-g-placeholder);
 }
 

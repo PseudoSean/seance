@@ -129,7 +129,7 @@ Data flow: `transport.ts` (`WsTransport`: one line per frame, PING/PONG, reconne
 - Event names, payload shapes and store expectations are fixed by `docs/resources/bus-contract.md`; when adding a new event, extend `shared/types/socket-events.ts` and a `socket-events/*` consumer together.
 - **Replies, reactions, deletion and edits** — moved to `docs/resources/irc-layer.md` § Replies, reactions, deletion and edits.
 - **Unread counts live in the IRC layer** — moved to `docs/resources/irc-layer.md` § Unread counts live in the IRC layer.
-- **Reconnects are quiet, by content not by context** — moved to `docs/resources/irc-layer.md` § Reconnects are quiet, by content not by context.
+- **Reconnects are quiet: a join burst is state, only what was asked for is a line** — moved to `docs/resources/irc-layer.md` § Reconnects are quiet: a join burst is state, only what was asked for is a line.
 - **A SASL login that was asked for must succeed** — moved to `docs/resources/irc-layer.md` § A SASL login that was asked for must succeed.
 - **The retry schedule spaces automatic retries only; anyone who asks restarts it** — moved to `docs/resources/irc-layer.md` § The retry schedule spaces automatic retries only; anyone who asks restarts it.
 - **The catch-up cursor is offered exactly once per connection, and only then** — moved to `docs/resources/irc-layer.md` § The catch-up cursor is offered exactly once per connection, and only then.
@@ -179,6 +179,7 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - `docs/resources/nefarious2-oper.md` — the IRC-operator surface on the wire: OPER/PRIVS, snomask bits, every server notice format, WALLOPS, CHECK, STATS, bans, server bugs (filed and not).
 - `docs/resources/x3-services.md` — X3 services (O3, AuthServ, ChanServ) on the wire: the snoop feed, the audit lines opers' commands leave in the report channel, alert criteria and TRACE, the G-line commands, WHOIS/CHANINFO/ACCOUNTINFO output, how to recognise the bots.
 - `docs/projects/oper-tools.md` — the oper tools: what was decided, what is built, what is next.
+- `docs/projects/conversation-store.md` — one store on the device for every window's lines, channels and private conversations: the design, what is built (its Status section) and what is left. The built part is `docs/resources/irc-layer.md` § The conversation store.
 - `docs/projects/vite-8-sweep.md` — moving the client build from webpack 5 to Vite 8: every webpack duty and its Vite answer, the spike, the migration plan.
 - `docs/resources/browser-irc-parser.md` — why the parser is hand-rolled.
 - `docs/resources/branding.md` — `config.json` schema, runtime vs build-time branding, uploader contract.

@@ -25,6 +25,7 @@ It replaces the frosted, still plains that private conversations show today (ps-
 | 2026-11-14 | Contrast: the room's darkest colours lighten     | "Lighten the darkest room colours": the iron greyer, the dark wood and the rug's blue lighter, until every floor holds at today's caps; a small departure from the approved mockup, accepted                                                                                            |
 | 2026-11-14 | The room moves like the plains                   | "Moves like the plains": the same tiers, freezing and reduced-motion rules as a channel; a query no longer forces still                                                                                                                                                                 |
 | 2026-11-14 | The stove in the middle                          | "In the middle": the stove centred under the crown                                                                                                                                                                                                                                      |
+| 2026-11-16 | In calm the flames flicker                       | "in calm, make the flames flicker instead of dance" (after §11.3): the tongues and the core fade on the mockup's flickers, each on its own beat                                                                                                                                         |
 
 ## 3. Goals, non-goals, anti-goals
 
@@ -90,7 +91,7 @@ The geometry module is Vue-free and DOM-free: `client/js/scenes/ps/yurt.ts` (pro
 
 **The moon keeps its true phase.** The back window shows it while it is up, drawn from `moonShape`, and a new moon is no moon (the binding rule, ps-theme.md §2). The sun's disc shows in the back window only low in the sky near rising and setting, in clear weather, as the mockup's golden hour does. By day its light falls through the crown as the beam and its pool on the floor.
 
-**The room's light is a set of levels computed every minute,** in `palette.ts`, beside the plains' levels:
+**The room's light is a set of levels computed every minute,** in `indoor.ts` (`indoorLevels`), from the plains' levels:
 
 - **Shade:** 0 by day, about 0.74 at night, from the table's existing `dark` column.
 - **Golden warmth.**
@@ -155,7 +156,7 @@ A query is now just another view to `tierFor`.
 - **Calm:** `hearth` and `clouds`.
 - **Phone:** halves the particles, as outside.
 - **Moving between plains and room is a cut,** as NG's `transition: none` already makes the frost.
-- **Only one picture is in the render tree.** While the room shows, the plains' layers leave it (`.ps-off`); while the plains show, the room does.
+- **Only one picture is in the render tree.** While the room shows, the plains leave it (`ps-private` takes `.ps-frost` out with `display: none`); while the plains show, the room does.
 - **The room's markup is built on the first query,** so a user who never opens one pays nothing. It is kept until the theme unmounts, and rebuilt only for a new day's weather.
 
 **Plan 1 ships the room still** (§13). Under today's rule a query is still anyway, and the still room is needed regardless for reduced motion and hidden pages.
@@ -171,7 +172,7 @@ A query is now just another view to `tierFor`.
 
 One length, `--ps-ym-s`, places the HTML in the design frame as the svg's `slice` does. `psng/room-motion.ts` (`ROOM_MOTION_CSS`, adopted with the room's sheet) hangs the motion on NG's groups, in phase:
 
-- `hearth`, a new group: the glow on the mockup's `flick` and the lamp's flame on its `flick-b`; since plan 3 (§16), the fire's three tongues licking on their own beats (`psng-yt-lick-a`, `-b`, `-c`), its core breathing (`psng-yt-core`) and four sparks rising (`psng-yt-rise`, not in calm), in the door's box clipped to its opening;
+- `hearth`, a new group: the glow on the mockup's `flick` and the lamp's flame on its `flick-b`; since plan 3 (§16), the fire's three tongues licking on their own beats (`psng-yt-lick-a`, `-b`, `-c`), its core breathing (`psng-yt-core`) and four sparks rising (`psng-yt-rise`), in the door's box clipped to its opening; in calm the tongues and the core flicker on the mockup's `flick` and `flick-b` instead, each on its own beat, and no spark rises (the user, 2026-11-16, after §11.3);
 - `steam`, a new group: the smoke's keyframes;
 - `clouds`;
 - `weather`: the plains' own rain tiles, snow and flash, run by NG's rules;
@@ -225,7 +226,7 @@ The rug's blue held without moving. Every held floor then holds over the room: t
 
 ## 10. What the scene publishes
 
-`data-ps-light`, `data-ps-text`, `--ps-halo`, `--ps-rim` and the glass tints are unchanged, subject to §9.
+`data-ps-light`, `--ps-halo` and `--ps-rim` are unchanged. In a query `data-ps-text` is `light` (`grounds.ts`), and the glass tints are the room's own (`glass.ts` `indoorTints`), subject to §9.
 
 **My call:** in a query the top of the screen is the roof, not the sky. `--canvas-bg-color`, the `theme-color` meta and so the iOS status bar take the roof's colour at that minute, which makes `publishMoment` aware of the view. The iPhone status-bar check (ps-theme.md §12) is the user's to do on a device.
 
@@ -335,13 +336,15 @@ The candidates are the user's call:
 - find out what a tick costs in the room (the trace's restyled elements and paint per frame, a calm query against a calm channel): a room-side cause could keep the dance in calm and narrow the full tier's breach too;
 - decide after the iPhone sitting.
 
+**The user's call (2026-11-16): in calm the flames flicker.** "in calm, make the flames flicker instead of dance". The tongues and the core now fade on the mockup's two flickers, each on its own beat and offset, and dance only at full. Measured the same way, a calm query at a clear 21:00, three runs each at a load of 3–4: 0.18 % (0.17–0.18) on the desktop and 1.05 % (1.05–1.13) on the phone profile, with 2 recalculations a second. That is back under the plains' calm (2.2 % and 4.5 %) and level with plan 2 (0.16 % and 0.95 %). Full keeps the dance, and its open breach (above).
+
 Scripts: `tmp/yurt-check/perf3-run.sh`, `perf3-iso.sh`, `probe-anc.mjs` and `trace-fire.mjs` (scratch).
 
 ## 12. Tests and checks
 
 **Mocha:**
 
-- `test/scenes/ps/yurt.ts`: the projection, near-plane clipping, every piece's faces, and a markup census (no SMIL, unique ids, colours through classes or custom properties).
+- `test/scenes/ps/yurt.ts`: the projection and near-plane clipping; `test/scenes/ps/room.ts`: every piece's faces, and a markup census (no SMIL, unique ids, colours through classes or custom properties).
 - The weather mapping for all six weathers.
 - `tiers.ts`'s truth table: a query no longer forces still.
 - `test/helpers/psWords.ts` loses the `wordsFor` test with the withdrawn rule (§15).
@@ -440,7 +443,7 @@ The flames' size and strength follow the fire's level: small at dusk, full by ni
 **Tiers:**
 
 - Full: the flames, the core, the sparks and the glow.
-- Calm: the flames, the core and the glow, without the sparks. Phones on Auto are calm, so they see the fire dance.
+- Calm: the flames, the core and the glow, without the sparks. Phones on Auto are calm. As built, the flames and the core flicker in calm rather than dance (the user, 2026-11-16, after §11.3's cost).
 - Still, reduced motion, a frozen rest or the drawer open: plan 1's still fire while it burns, the embers while it is out.
 
 ### Approaches
@@ -457,7 +460,7 @@ Shown side by side in an Artifact; the user picked A:
   - `indoor.ts` gains a level for the fire's burn, the chimney's smoke value.
   - `--ps-in-fire`, the glow, becomes min(1, burn × (0.8 + 0.18 × storm)). That is 0 by day and the same 0.8 as now at full night.
 - **The swaps and gates:**
-  - The still fire shows only while the fire burns; the embers show only while it is out.
+  - The still fire shows only while the fire burns. As built, the embers are always drawn and the fire burns over them, so by day they are all the door shows.
   - The moving fire, the sparks and the steam take `ps-off` while the stove is out. That is the stars' gate (plan 2): nothing animates unseen.
 - **Legibility:** the sweep loses the day's grounds under the fire's glow, which only removes light. As built it gains the door: the firebox and its coal bed are room colours, as dark as the floors allow by day (about the door's own iron), and the firebox darkens behind the flames only once the night glass is up (`cavity`), each swept at its strength (the final review of plan 3). The night is otherwise unchanged.
 
