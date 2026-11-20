@@ -84,7 +84,7 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 		ROOM_PIECES.forEach((p) => expect(markup.indexOf(p), p).to.be.below(glows));
 		const over = markup.indexOf('class="ps-yt-stove-over"');
 		expect(over).to.be.above(glows);
-		expect(markup.indexOf("url(#ps-yt-fire)")).to.be.above(over);
+		expect(markup.indexOf('class="ps-yt-still-hearth ps-yt-burn"')).to.be.above(over);
 	});
 
 	it("lets the sun through the crown fall over the stove and its pipe, drawn twice or not", function () {
@@ -101,7 +101,7 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			"",
 			"",
 		])[1];
-		expect(still, "plan 1's still fire").to.contain("url(#ps-yt-fire)");
+		expect(still, "the still fire: one frame of the moving one").to.contain("<feGaussianBlur");
 		expect(top).to.match(
 			/<div class="ps-ym-lamp" style="--x:[^"]+"><div class="ps-ym-flame"><svg /
 		);
@@ -210,7 +210,41 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 		);
 	});
 
-	it("draws the stove's flames to dance: three tongues, a core and four sparks, clipped to the door (§16)", function () {
+	describe("the bed (the user, 2026-11-20: a visual pass on its proportions)", function () {
+		const at = markup.indexOf('<g class="ps-yt-p-bed">');
+		const bed = markup.slice(at, markup.indexOf('class="ps-yt-p-', at + 20));
+		const points = (poly: string) =>
+			poly.split(" ").map((p) => p.split(",").map(Number) as [number, number]);
+
+		it("stands on its four corner posts, with no leg beside a post", function () {
+			const posts = [...bed.matchAll(/<g class="ps-yt-bedpost">(.*?)<\/g>/g)].map(
+				(m) => m[1]
+			);
+			expect(posts.length, "four posts").to.equal(4);
+			const inPosts = posts.join("").split("ps-yt-c-furnD").length - 1;
+			expect(
+				bed.split("ps-yt-c-furnD").length - 1,
+				"every dark-wood face is a post's"
+			).to.equal(inPosts);
+		});
+
+		it("turns the quilt's sheet down its side to the hem, not a block at its top", function () {
+			const cuff = points(
+				(/<polygon points="([^"]+)" class="ps-yt-c-sheetSide"/.exec(bed) ?? ["", ""])[1]
+			);
+			const drape = [...bed.matchAll(/<polygon points="([^"]+)" class="ps-yt-c-blue"/g)]
+				.map((m) => points(m[1]))
+				.find((l) => l.length > 40);
+			expect(drape, "the quilt's drape").to.not.equal(undefined);
+			const right = Math.max(...cuff.map(([x]) => x));
+			const hem = Math.max(
+				...(drape ?? []).filter(([x]) => x <= right + 1).map(([, y]) => y)
+			);
+			expect(Math.max(...cuff.map(([, y]) => y)), "down to the hem").to.be.closeTo(hem, 1.5);
+		});
+	});
+
+	it("draws the stove's fire soft and flowing: three blurred layers of six poses, a white-hot core, the embers and the firebox's glow, clipped to the door (the user, 2026-11-21)", function () {
 		const top = markup.slice(markup.indexOf('<div class="ps-ym-top">'));
 		const style = (/<div class="ps-ym-fire" style="([^"]+)">/.exec(top) ?? ["", ""])[1];
 		const clip = (/clip-path:polygon\(([^)]*)\)/.exec(style) ?? ["", ""])[1];
@@ -230,32 +264,29 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			top.indexOf('<div class="ps-ym-steam"')
 		);
 		expect(top).to.match(/<div class="ps-ym-fire" style="[^"]+"><div class="ps-ym-flames">/);
-		const count = (c: string) => flames.split(c).length - 1;
-		expect(count('class="ps-ym-tongue '), "tongues").to.equal(3);
-		expect(count('class="ps-ym-core"'), "core").to.equal(1);
-		expect(count('class="ps-ym-spark"'), "sparks").to.equal(4);
-		["ps-ym-t1", "ps-ym-t2", "ps-ym-t3"].forEach((t) => expect(count(`${t}"`), t).to.equal(1));
-		expect(markup).to.not.contain("ps-ym-fire-body");
-		expect(markup).to.not.contain("ps-ym-fire-tongues");
-
-		const box = (t: string) => {
-			const m = new RegExp(`class="ps-ym-tongue ${t}" style="([^"]+)"`).exec(flames);
-			const get = (k: string) =>
-				parseFloat((new RegExp(`${k}:([0-9.]+)%`).exec(m?.[1] ?? "") ?? ["", "NaN"])[1]);
-			return {bottom: get("bottom"), height: get("height")};
-		};
-		const [t1, t2, t3] = ["ps-ym-t1", "ps-ym-t2", "ps-ym-t3"].map(box);
-		expect(t2.height, "the middle tongue the tallest").to.be.above(
-			Math.max(t1.height, t3.height)
+		const at = (c: string) => flames.indexOf(c);
+		expect(at('class="ps-ym-fback"'), "the firebox's glow, first").to.be.above(0);
+		expect(at('class="ps-ym-fembers"')).to.be.above(at('class="ps-ym-fback"'));
+		// Outer, then the white-hot core, then mid and inner, which add their light to it.
+		expect(at('class="ps-ym-fl ps-ym-fl-outer"')).to.be.above(at('class="ps-ym-fembers"'));
+		expect(at('class="ps-ym-hotcore"')).to.be.above(at('class="ps-ym-fl ps-ym-fl-outer"'));
+		expect(at('class="ps-ym-fl ps-ym-fl-mid"')).to.be.above(at('class="ps-ym-hotcore"'));
+		expect(at('class="ps-ym-fl ps-ym-fl-inner"')).to.be.above(
+			at('class="ps-ym-fl ps-ym-fl-mid"')
 		);
-		// The coal bed's top curves round the stove, so the feet differ by a hair.
-		[t1, t3].forEach((t) =>
-			expect(t.bottom, "their feet on the coals").to.be.closeTo(t2.bottom, 2)
-		);
-		expect(flames).to.match(/<svg viewBox="0 0 20 40" preserveAspectRatio="none">/);
 
-		for (const m of flames.matchAll(/class="ps-ym-spark" style="([^"]+)"/g)) {
-			expect(m[1]).to.match(/--sd:[0-9.]+s;--sdl:-?[0-9.]+s/);
+		for (const layer of ["outer", "mid", "inner"]) {
+			const from = at(`class="ps-ym-fl ps-ym-fl-${layer}"`);
+			const body = flames.slice(from, flames.indexOf('class="ps-ym-fl ', from + 10));
+			const keys = [...body.matchAll(/<div class="ps-ym-fpose" style="--fk:(\d)">/g)].map(
+				(m) => Number(m[1])
+			);
+			expect(keys, `${layer}: six poses in order`).to.deep.equal([0, 1, 2, 3, 4, 5]);
+			expect(body.split("<feGaussianBlur").length - 1, `${layer}: each blurred`).to.equal(6);
+		}
+
+		for (const gone of ["ps-ym-tongue", "ps-ym-core", "ps-ym-spark", 'ps-yt-fire"']) {
+			expect(markup, gone).to.not.contain(gone);
 		}
 	});
 
