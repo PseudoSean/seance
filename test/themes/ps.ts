@@ -3465,6 +3465,14 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 		// Behind the far plain's edge (38 % up), rising into the sky; the box holds empty sky on top.
 		expect(valueOf(`${S} .ps-peaks`, "bottom")).to.equal("36%");
 		expect(valueOf(`${S} .ps-peaks`, "height")).to.equal("48%");
+		// A window wider than 2.65 : 1 would slice the peaks' tops off: the box keeps to the
+		// scene's middle, 2.65 times as wide as the scene is tall, and the ranges' foothills
+		// drawn past the view's edges fill the sides.
+		const WIDE = "@container (min-aspect-ratio: 265/100)";
+		expect(valueOf(`${S} .ps-peaks`, "width", WIDE)).to.equal("265cqh");
+		expect(valueOf(`${S} .ps-peaks`, "left", WIDE)).to.equal("calc(50% - 132.5cqh)");
+		expect(valueOf(`${S} .ps-peaks`, "right", WIDE)).to.equal("auto");
+		expect(valueOf(`${S} .ps-mountains`, "overflow")).to.equal("visible");
 	});
 
 	it("mixes no area colour in CSS: color-mix is left to the lines (the rims, the river's glint)", function () {

@@ -11,7 +11,7 @@ import {rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {bodyOpacity} from "./grounds";
 import {levelsAt, WEATHER, type Palette} from "./palette";
 import {clouds, FIREFLIES, fireflies, landSvg, nearGrass, smoke, yurtSvg} from "./plains";
-import {meteorsAt, meteorsMarkup} from "./meteors";
+import {meteorJitter, meteorsAt, meteorsMarkup} from "./meteors";
 import {mountainsSvg} from "./peaks";
 
 export const STAR_COUNT = 190;
@@ -26,6 +26,7 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 	const l = levelsAt(m, p);
 	const b = birdsAt(m, p);
 	const shooting = meteorsAt(m, p);
+	const jitter = meteorJitter(m);
 	return {
 		"--ps-sky-top": p.skyTop,
 		"--ps-sky-mid": p.skyMid,
@@ -115,6 +116,8 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-meteor-op": shooting.level.toFixed(3),
 		"--ps-meteor-count": String(shooting.sporadic),
 		"--ps-perseid-count": String(shooting.perseids),
+		"--ps-meteor-jx": `${jitter.x.toFixed(2)}%`,
+		"--ps-meteor-jy": `${jitter.y.toFixed(2)}%`,
 		"--ps-skeins-op": b.skeinsOpacity.toFixed(2),
 		"--ps-skein-count": String(b.skeins),
 		"--ps-bird-ink": b.ink,

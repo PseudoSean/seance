@@ -305,7 +305,7 @@ export function paletteAt(m: Moment): Palette {
 	const riverbed = mixOklab(land.hill1, "#dcc9a0", 0.42);
 	const bedstone = mixOklab(land.hill1, "#a99c80", 0.3);
 	const riverHi = mixOklab(s.hor, "#ffffff", 0.6);
-	const feltShade = mixOklab(s.felt, "#3a3040", 0.8);
+	const feltShade = mixOklab(s.felt, "#3a3040", 0.66);
 	const roofTop = mixOklab(s.felt, "#ffffff", 0.92);
 	const roofBottom = mixOklab(s.felt, "#4a3c3c", 0.78);
 	const roofStroke = mixOklab(s.felt, "#5a4a3e", 0.55);

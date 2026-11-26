@@ -1,7 +1,14 @@
 import {expect} from "chai";
 import {momentFor, type Moment, type Weather} from "../../../client/js/scenes/ps/engine";
 import {paletteAt} from "../../../client/js/scenes/ps/palette";
-import {meteorsAt, meteorsMarkup, PERSEIDS, SPORADIC} from "../../../client/js/scenes/ps/meteors";
+import {sceneVars} from "../../../client/js/scenes/ps/markup";
+import {
+	meteorJitter,
+	meteorsAt,
+	meteorsMarkup,
+	PERSEIDS,
+	SPORADIC,
+} from "../../../client/js/scenes/ps/meteors";
 
 /** A local minute on a day of the year, the moon down unless asked for. */
 function at(
@@ -83,6 +90,30 @@ describe("ps shooting stars (meteors.ts, 2026-11-26)", function () {
 		expect(stars(m).level).to.equal(0);
 	});
 
+	it("draws a new offset each minute, the same all through it, within a small reach of the sky", function () {
+		const xs: number[] = [];
+
+		for (let minute = 120; minute < 130; minute++) {
+			const j = meteorJitter(at(minute, 224));
+			expect(j.x).to.be.within(-12, 12);
+			expect(j.y).to.be.within(-8, 8);
+			expect(meteorJitter(at(minute + 0.5, 224))).to.deep.equal(j);
+			xs.push(j.x);
+		}
+
+		expect(new Set(xs.map((x) => x.toFixed(2))).size).to.be.at.least(8);
+		expect(meteorJitter(at(120, 224))).to.not.deep.equal(
+			meteorJitter({...at(120, 224), dayNumber: 20001})
+		);
+	});
+
+	it("publishes the minute's offset as percentages on the tick", function () {
+		const m = at(120, 224);
+		const v = sceneVars(m, paletteAt(m));
+		expect(v["--ps-meteor-jx"]).to.match(/^-?\d+\.\d{2}%$/);
+		expect(v["--ps-meteor-jy"]).to.match(/^-?\d+\.\d{2}%$/);
+	});
+
 	describe("meteorsMarkup", function () {
 		const markup = meteorsMarkup();
 
@@ -108,6 +139,26 @@ describe("ps shooting stars (meteors.ts, 2026-11-26)", function () {
 				expect(parseFloat(v["--md"])).to.be.within(200, 280);
 				expect(parseFloat(v["--mb"])).to.be.within(0.45, 1);
 			}
+		});
+
+		it("moves each streak's place with the minute's offset, each by its own share, so no track repeats night after night", function () {
+			const streaks = [...markup.matchAll(/style="([^"]*)"/g)].map((m) => m[1]);
+
+			for (const st of streaks) {
+				const left =
+					/left:calc\(([\d.]+)% \+ var\(--ps-meteor-jx, 0%\) \* (-?[\d.]+)\)/.exec(st);
+				const top = /top:calc\(([\d.]+)% \+ var\(--ps-meteor-jy, 0%\) \* (-?[\d.]+)\)/.exec(
+					st
+				);
+				expect(left, st).to.not.equal(null);
+				expect(top, st).to.not.equal(null);
+				expect(Math.abs(Number(left![2])), "its share").to.be.within(0.4, 1);
+			}
+
+			const shares = streaks.map(
+				(st) => /var\(--ps-meteor-jx, 0%\) \* (-?[\d.]+)/.exec(st)![1]
+			);
+			expect(new Set(shares).size, "shares differ").to.be.at.least(6);
 		});
 
 		it("radiates the shower from one point up and to the left: every Perseid heads down and right", function () {

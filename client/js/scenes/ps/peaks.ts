@@ -140,6 +140,34 @@ const RANGES: ReadonlyArray<{
 	},
 ];
 
+/**
+ * Low foothills on past both edges of the view, from -1600 to 0 and from 1600
+ * to 3200, around `base` by up to `amp`: a window wider than 2.65 : 1 keeps the
+ * box to the scene's middle (ps.css), and these fill its sides.
+ */
+function flank(from: number, to: number, base: number, amp: number): Pt[] {
+	const WAVE = [0.2, -0.6, 0.1, -1, 0.4, -0.3, 0.8, -0.8, 0, -0.5, 0.6, -0.9, 0.3];
+	const out: Pt[] = [];
+	const step = (to - from) / WAVE.length;
+
+	for (let k = 0; k < WAVE.length; k++) {
+		out.push([from + step * k, base + amp * WAVE[k]]);
+	}
+
+	return out;
+}
+
+/** A range's whole outline: its foothills past the left edge, the view's own, then those past the right. */
+function outline(r: (typeof RANGES)[number]): Pt[] {
+	const base = r.name === "far" ? 384 : r.name === "mid" ? 402 : 428;
+	const amp = r.name === "near" ? 12 : 18;
+	return [
+		...flank(-1600, 0, base, amp),
+		...r.pts,
+		...flank(1600 + 1600 / 13, 3200 + 1600 / 13, base, amp),
+	];
+}
+
 const n = (v: number) => String(Math.round(v * 100) / 100);
 const at = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 const poly = (pts: readonly Pt[]) => `M${pts.map(([x, y]) => `${n(x)},${n(y)}`).join(" L")} Z`;
@@ -203,10 +231,15 @@ export function mountainsSvg(): string {
 	let body = "";
 
 	for (const r of RANGES) {
+		const pts = outline(r);
 		body +=
-			`<path class="ps-m-${r.name}" d="${poly([[0, FOOT], ...r.pts, [1600, FOOT]])}"/>` +
-			`<path class="ps-m-${r.name}-sh" d="${shade(r.pts)}"/>` +
-			`<g class="ps-m-snow">${caps(r.pts, r.capAbove, r.capDepth)
+			`<path class="ps-m-${r.name}" d="${poly([
+				[pts[0][0], FOOT],
+				...pts,
+				[pts[pts.length - 1][0], FOOT],
+			])}"/>` +
+			`<path class="ps-m-${r.name}-sh" d="${shade(pts)}"/>` +
+			`<g class="ps-m-snow">${caps(pts, r.capAbove, r.capDepth)
 				.split(" M")
 				.map((d, k) => `<path d="${k === 0 ? d : `M${d}`}"/>`)
 				.join("")}</g>`;

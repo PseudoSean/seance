@@ -1487,6 +1487,21 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	display: block;
 	width: 100%;
 	height: 100%;
+	overflow: visible;
+}
+
+/* A window wider than 2.65 : 1 would slice the peaks' tops off (past that the
+ * view scales to the box's width): there the box keeps to the scene's middle,
+ * 2.65 times as wide as the scene is tall, and the ranges' foothills, drawn
+ * past the view's edges (peaks.ts), fill the sides. */
+@container (min-aspect-ratio: 265/100) {
+	#theme-scene .ps-peaks {
+		/* stylelint-disable-next-line unit-no-unknown -- cqh: #theme-scene is a size container; stylelint predates it */
+		left: calc(50% - 132.5cqh);
+		right: auto;
+		/* stylelint-disable-next-line unit-no-unknown -- cqh, as above */
+		width: 265cqh;
+	}
 }
 
 #theme-scene .ps-m-far { fill: var(--ps-mount-far); }

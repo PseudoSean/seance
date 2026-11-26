@@ -224,7 +224,8 @@ describe("ps palette: plan 3's derived land and yurt colours", function () {
 			expect(p.riverHi).to.equal(mixOklab(p.skyHorizon, "#ffffff", 0.6));
 			expect(p.riverSkyTop).to.equal(p.skyHorizon);
 			expect(p.riverSkyBottom).to.equal(p.skyMid);
-			expect(p.feltShade).to.equal(mixOklab(p.felt, "#3a3040", 0.8));
+			// The wall's edges shaded deeper (the avatar's rounder look, 2026-11-26).
+			expect(p.feltShade).to.equal(mixOklab(p.felt, "#3a3040", 0.66));
 			expect(p.roofTop).to.equal(mixOklab(p.felt, "#ffffff", 0.92));
 			expect(p.roofBottom).to.equal(mixOklab(p.felt, "#4a3c3c", 0.78));
 			expect(p.roofStroke).to.equal(mixOklab(p.felt, "#5a4a3e", 0.55));
@@ -378,6 +379,11 @@ describe("the avatar's yurt band (2026-11-26)", function () {
 			expect(C, "richer").to.be.above(C0 * 1.1);
 			expect((Math.abs(h - h0) * 180) / Math.PI, "the same hue, in degrees").to.be.below(4);
 		}
+	});
+
+	it("shades the wall's edges deep enough to read as a cylinder by day", function () {
+		const p = paletteAt(at(720, 172));
+		expect(contrast(p.felt, p.feltShade)).to.be.at.least(1.8);
 	});
 
 	it("marks it with gold diamonds", function () {

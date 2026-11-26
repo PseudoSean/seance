@@ -60,6 +60,7 @@ const AT = {
 	summerNoon: "2026-07-10T12:30", // clear
 	summerDusk: "2026-07-10T20:50",
 	summerNight: "2026-07-10T23:30",
+	summerDawn: "2026-07-10T04:20",
 	autumnNoon: "2026-10-10T12:30", // clear
 	perseidPeak: "2026-08-12T02:00", // clear, new moon
 	perseidStorm: "2027-08-05T02:00", // storm, in the shower
@@ -219,11 +220,15 @@ export default async function run(page) {
 		if (!phone) {
 			await at(AT.winterDusk);
 			await page.screenshot("winter-dusk");
-			await at(AT.summerDusk);
-			await page.screenshot("summer-dusk");
 			await at(AT.summerNight);
 			await page.screenshot("summer-night");
 		}
+
+		// The low sun at both ends of a summer day (on a phone the middle's peaks reach the edges).
+		await at(AT.summerDawn);
+		await page.screenshot(`summer-dawn${phone ? "-phone" : ""}`);
+		await at(AT.summerDusk);
+		await page.screenshot(`summer-dusk${phone ? "-phone" : ""}`);
 
 		const peak = await at(AT.perseidPeak);
 		// A phone's Auto is calm, which has no shooting stars until the iPhone measures them (the design's Task 8).
@@ -275,6 +280,45 @@ export default async function run(page) {
 			`the window's middle third shows a peak (its top ${middle.top} px down a ${middle.height} px scene)`,
 			middle.top < middle.height * 0.5
 		);
+
+		if (!phone) {
+			// A wide, short window (devtools docked below): the box keeps to the middle, so no peak is sliced flat.
+			await page.send("Emulation.setDeviceMetricsOverride", {
+				width: 1920,
+				height: 450,
+				deviceScaleFactor: 1,
+				mobile: false,
+			});
+			await at(AT.winterNoon);
+			const wide = JSON.parse(
+				await page.evaluate(`(() => {
+					const svg = document.querySelector("#theme-scene .ps-mountains").getBoundingClientRect();
+					const s = document.getElementById("theme-scene").getBoundingClientRect();
+					const path = document.querySelector("#theme-scene .ps-m-far");
+					const ctm = path.getScreenCTM();
+					const len = path.getTotalLength();
+					let top = Infinity, left = Infinity, right = -Infinity;
+					for (let i = 0; i <= 800; i++) {
+						const p = path.getPointAtLength((len * i) / 800);
+						const x = ctm.a * p.x + ctm.c * p.y + ctm.e, y = ctm.b * p.x + ctm.d * p.y + ctm.f;
+						top = Math.min(top, y);
+						if (y < s.bottom - 1) { left = Math.min(left, x); right = Math.max(right, x); }
+					}
+					return JSON.stringify({top: Math.round(top), boxTop: Math.round(svg.top), sceneTop: Math.round(s.top), left: Math.round(left), right: Math.round(right), width: Math.round(s.width)});
+				})()`)
+			);
+			page.check(
+				`a 1920 × 450 window: the tallest peak stands whole inside its box, and the ranges reach both edges (${JSON.stringify(
+					wide
+				)})`,
+				wide.top >= wide.boxTop &&
+					wide.top > wide.sceneTop &&
+					wide.left <= 0 &&
+					wide.right >= wide.width
+			);
+			await page.screenshot("wide-noon");
+			await page.send("Emulation.clearDeviceMetricsOverride", {});
+		}
 
 		page.check(
 			`no console errors (${JSON.stringify(page.consoleErrors)})`,

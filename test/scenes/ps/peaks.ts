@@ -56,6 +56,18 @@ describe("the mountains (peaks.ts, the avatar's ranges, 2026-11-26)", function (
 		}
 	});
 
+	it("runs each range on past both edges of the view as low foothills, for a window wider than 2.65 : 1", function () {
+		const pts = litPathVertices(svg);
+		expect(Math.min(...pts.map(([x]) => x))).to.be.at.most(-1600);
+		expect(Math.max(...pts.map(([x]) => x))).to.be.at.least(3200);
+
+		for (const [x, y] of pts) {
+			if (x < 0 || x > 1600) {
+				expect(y, `${x},${y}`).to.be.at.least(360);
+			}
+		}
+	});
+
 	it("caps peaks only inside the ranges' own silhouettes, and only the high ones", function () {
 		const caps = [...svg.matchAll(/<g class="ps-m-snow">(.*?)<\/g>/g)].map((m) => m[1]);
 		expect(caps).to.have.length(3);

@@ -58,6 +58,18 @@ export function meteorsAt(
 	};
 }
 
+/**
+ * The minute's offset of every streak's place, in % of the sky's width and
+ * height: a new draw each minute (seeded by the day and the minute, so every
+ * device agrees), which each streak takes its own share of. A streak recurs
+ * every few minutes, so each time it runs somewhere else and no track repeats;
+ * it is unseen for all but under a second of its loop, so the move never shows.
+ */
+export function meteorJitter(m: Moment): {x: number; y: number} {
+	const r = rng(m.dayNumber * 1440 + Math.floor(m.minute));
+	return {x: (r() * 2 - 1) * 12, y: (r() * 2 - 1) * 8};
+}
+
 const f = (v: number, d = 1) => v.toFixed(d);
 
 /**
@@ -85,16 +97,19 @@ export function meteorsMarkup(): string {
 		const period = 200 + r() * 80;
 		const delay = -r() * period;
 		const bright = r() < 0.25 ? 1 : 0.45 + r() * 0.25;
+		const share = (k: number) => (k < 0.5 ? -1 : 1) * (0.4 + r() * 0.6);
+		const sx = share(r());
+		const sy = share(r());
 		// Numbered within its kind (`--mi`, which ps.css holds against the published count, as a
 		// flock's --fi); the streak itself is the inner element, so its run never fights that opacity.
 		out +=
 			`<i class="${perseid ? "ps-perseid" : "ps-meteor"}" style="--mi:${
 				perseid ? i - SPORADIC : i
 			};` +
-			`left:${f(x)}%;top:${f(y)}%;--ma:${f(angle)}deg;--mx:${f(travel)}cqw;--ml:${f(
-				length,
-				2
-			)}rem;` +
+			`left:calc(${f(x)}% + var(--ps-meteor-jx, 0%) * ${f(sx, 2)});` +
+			`top:calc(${f(y)}% + var(--ps-meteor-jy, 0%) * ${f(sy, 2)});--ma:${f(
+				angle
+			)}deg;--mx:${f(travel)}cqw;--ml:${f(length, 2)}rem;` +
 			`--md:${f(period)}s;--mdl:${f(delay)}s;--mb:${f(bright, 2)}"><b></b></i>`;
 	}
 
