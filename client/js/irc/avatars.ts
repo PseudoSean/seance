@@ -53,6 +53,8 @@ type State = {
 	waiting: Set<string>;
 	/** Folded channels asked with a SYNC on this connection: their members are covered. */
 	synced: Set<string>;
+	/** When a METADATA command was last typed on this device (a raw `/metadata`), ms. */
+	typedAt: number;
 	pending: PendingSet | null;
 };
 
@@ -62,7 +64,13 @@ function stateOf(client: IrcClient): State {
 	let state = states.get(client);
 
 	if (!state) {
-		state = {asked: new Set(), waiting: new Set(), synced: new Set(), pending: null};
+		state = {
+			asked: new Set(),
+			waiting: new Set(),
+			synced: new Set(),
+			typedAt: 0,
+			pending: null,
+		};
 		states.set(client, state);
 	}
 
@@ -123,16 +131,34 @@ export function onAvatarValue(client: IrcClient, target: string, value: string):
 	}
 }
 
+/** How long after a typed `/metadata` a reply about our own avatar is its answer. */
+export const TYPED_REPLY_MS = 10_000;
+
 /**
  * A 761/766 for the avatar key that answers our own GET, or our SET: kept
  * quiet. A user's own `/metadata … get avatar` is shown as any reply is.
  */
 export function isQuietAvatarReply(client: IrcClient, target: string): boolean {
-	if (client.isSelf(target) && stateOf(client).pending) {
-		return true;
+	const state = stateOf(client);
+
+	// Our own avatar is state, whoever asked: a held session sends every
+	// reply to all its connections, so another device setting or reading
+	// ours brings its answer here too, unasked ("ps avatar * https://…" on
+	// every other device). Only a `/metadata` typed here just now is shown.
+	if (client.isSelf(target)) {
+		return (
+			state.pending !== null ||
+			state.waiting.has(client.casefold(target)) ||
+			Date.now() - state.typedAt > TYPED_REPLY_MS
+		);
 	}
 
-	return stateOf(client).waiting.has(client.casefold(target));
+	return state.waiting.has(client.casefold(target));
+}
+
+/** A METADATA command was typed on this device (sent raw, commands/index.ts). */
+export function noteTypedMetadata(client: IrcClient): void {
+	stateOf(client).typedAt = Date.now();
 }
 
 /**

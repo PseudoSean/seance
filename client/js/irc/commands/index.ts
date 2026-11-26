@@ -19,6 +19,7 @@ import type {Channel} from "../channel";
 import type {IrcClient} from "../client";
 import type {Command, InputOptions} from "../types";
 import {scriptManager} from "../scripting/manager";
+import {noteTypedMetadata} from "../avatars";
 import alias from "./alias";
 import away from "./away";
 import ban from "./ban";
@@ -243,6 +244,11 @@ function inputLine(
 	if (!client.isConnected) {
 		client.pushMessage(chan, {type: MessageType.ERROR, text: t("send.notConnected")});
 		return;
+	}
+
+	// Its reply about our own avatar is shown; another device's is not (irc/avatars.ts).
+	if (cmd === "metadata") {
+		noteTypedMetadata(client);
 	}
 
 	client.send(line.slice(1));
