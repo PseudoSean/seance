@@ -20,6 +20,16 @@
 /** The gated layers, back to front. */
 export type Gate =
 	| "stars"
+	| "meteor0"
+	| "meteor1"
+	| "perseid0"
+	| "perseid1"
+	| "perseid2"
+	| "perseid3"
+	| "perseid4"
+	| "perseid5"
+	| "perseid6"
+	| "perseid7"
 	| "sun"
 	| "fireflies"
 	| "smoke"
@@ -40,6 +50,16 @@ export interface GateSpec {
 
 export const GATES: Readonly<Record<Gate, GateSpec>> = {
 	stars: {selector: ".ps-stars"},
+	meteor0: {selector: ".ps-meteor", index: 0},
+	meteor1: {selector: ".ps-meteor", index: 1},
+	perseid0: {selector: ".ps-perseid", index: 0},
+	perseid1: {selector: ".ps-perseid", index: 1},
+	perseid2: {selector: ".ps-perseid", index: 2},
+	perseid3: {selector: ".ps-perseid", index: 3},
+	perseid4: {selector: ".ps-perseid", index: 4},
+	perseid5: {selector: ".ps-perseid", index: 5},
+	perseid6: {selector: ".ps-perseid", index: 6},
+	perseid7: {selector: ".ps-perseid", index: 7},
 	sun: {selector: ".ps-sun"},
 	fireflies: {selector: ".ps-fireflies"},
 	smoke: {selector: ".ps-smoke"},
@@ -63,8 +83,22 @@ export function liveLayers(vars: Readonly<Record<string, string>>): Record<Gate,
 	const shown = (name: string) => Number(vars[name]) > 0;
 	const skeins = shown("--ps-skeins-op");
 	const count = Number(vars["--ps-skein-count"]) || 0;
+	// A shooting star is live while the layer shows and its number is under its kind's count (meteors.ts).
+	const meteors = shown("--ps-meteor-op");
+	const sporadic = Number(vars["--ps-meteor-count"]) || 0;
+	const perseids = Number(vars["--ps-perseid-count"]) || 0;
 	return {
 		stars: shown("--ps-stars"),
+		meteor0: meteors && sporadic > 0,
+		meteor1: meteors && sporadic > 1,
+		perseid0: meteors && perseids > 0,
+		perseid1: meteors && perseids > 1,
+		perseid2: meteors && perseids > 2,
+		perseid3: meteors && perseids > 3,
+		perseid4: meteors && perseids > 4,
+		perseid5: meteors && perseids > 5,
+		perseid6: meteors && perseids > 6,
+		perseid7: meteors && perseids > 7,
 		sun: shown("--ps-sun-op"),
 		fireflies: shown("--ps-ff-op"),
 		smoke: shown("--ps-smoke-op"),

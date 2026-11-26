@@ -8,7 +8,9 @@ describe("ps NG groups (psng/groups.ts)", function () {
 		expect([...groupsFor("full")].sort()).to.deep.equal([...GROUPS].sort());
 		expect([...groupsFor("calm")]).to.deep.equal(["clouds", "hearth"]);
 		expect(groupsFor("still").size).to.equal(0);
-		expect(GROUPS).to.include.members(["hearth", "steam"]);
+		expect(GROUPS).to.include.members(["hearth", "steam", "meteors"]);
+		// The shooting stars wait for the iPhone's calm measurement (2026-11-26).
+		expect(groupsFor("calm").has("meteors")).to.equal(false);
 	});
 
 	it("`only` narrows full and calm and leaves still empty", function () {

@@ -1256,6 +1256,59 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	to { opacity: 1; }
 }
 
+/* Shooting stars (meteors.ts, 2026-11-26): each streak a thin line, its head
+ * bright on its leading end, standing at its place and angle; once in its long
+ * loop it runs along its angle for under a second, then is gone. Faint and
+ * brief: the one quick thing in the scene, never a flash. The minute tick
+ * gates how many are live (layers.ts) and sets the layer's level. */
+#theme-scene .ps-meteors {
+	inset: 0 0 40%;
+}
+
+/* Each streak's place, faded by the layer's level and held to its kind's count by its number. */
+#theme-scene .ps-meteor,
+#theme-scene .ps-perseid {
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+#theme-scene .ps-meteor {
+	opacity: calc(var(--ps-meteor-op, 0) * clamp(0, var(--ps-meteor-count, 0) - var(--mi), 1));
+}
+
+#theme-scene .ps-perseid {
+	opacity: calc(var(--ps-meteor-op, 0) * clamp(0, var(--ps-perseid-count, 0) - var(--mi), 1));
+}
+
+#theme-scene .ps-meteors b {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: var(--ml);
+	height: 0.0625rem;
+	border-radius: 0.0625rem;
+	background: linear-gradient(to right, transparent, rgb(236 242 255 / var(--mb)));
+	transform-origin: 0 50%;
+	opacity: 0;
+	animation: ps-meteor var(--md) linear var(--mdl) infinite;
+}
+
+@keyframes ps-meteor {
+	0%,
+	99.65% {
+		transform: rotate(var(--ma)) translateX(0);
+		opacity: 0;
+	}
+
+	99.72% { opacity: 1; }
+
+	100% {
+		transform: rotate(var(--ma)) translateX(var(--mx));
+		opacity: 0;
+	}
+}
+
 #theme-scene .ps-glow {
 	width: 80%;
 	aspect-ratio: 2.4;
@@ -3754,7 +3807,8 @@ html[data-reduce-motion] #theme-scene .ps-rain,
 html[data-reduce-motion] #theme-scene .ps-snow,
 html[data-reduce-motion] #theme-scene .ps-seeds,
 html[data-reduce-motion] #theme-scene .ps-flash,
-html[data-reduce-motion] #theme-scene .ps-smoke {
+html[data-reduce-motion] #theme-scene .ps-smoke,
+html[data-reduce-motion] #theme-scene .ps-meteors {
 	display: none;
 }
 

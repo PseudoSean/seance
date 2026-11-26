@@ -11,6 +11,7 @@ import {rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {bodyOpacity} from "./grounds";
 import {levelsAt, WEATHER, type Palette} from "./palette";
 import {clouds, FIREFLIES, fireflies, landSvg, nearGrass, smoke, yurtSvg} from "./plains";
+import {meteorsAt, meteorsMarkup} from "./meteors";
 import {mountainsSvg} from "./peaks";
 
 export const STAR_COUNT = 190;
@@ -24,6 +25,7 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 	const bodies = bodyOpacity(m, p);
 	const l = levelsAt(m, p);
 	const b = birdsAt(m, p);
+	const shooting = meteorsAt(m, p);
 	return {
 		"--ps-sky-top": p.skyTop,
 		"--ps-sky-mid": p.skyMid,
@@ -110,6 +112,9 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		// The birds (birds.ts): the skeins' layer and how many of its flocks
 		// fly, their moonlit inks (N2) and alpha; each day bird's switch and
 		// their ink.
+		"--ps-meteor-op": shooting.level.toFixed(3),
+		"--ps-meteor-count": String(shooting.sporadic),
+		"--ps-perseid-count": String(shooting.perseids),
 		"--ps-skeins-op": b.skeinsOpacity.toFixed(2),
 		"--ps-skein-count": String(b.skeins),
 		"--ps-bird-ink": b.ink,
@@ -239,7 +244,9 @@ export function stars(): string {
 export function sceneMarkup(phone: boolean): string {
 	return (
 		`<div class="ps-frost">` +
-		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div><div class="ps-glow"></div>` +
+		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div>` +
+		`<div class="ps-meteors">${meteorsMarkup()}</div>` +
+		`<div class="ps-glow"></div>` +
 		MOON +
 		SUN +
 		`<div class="ps-cloud-field"><div class="ps-overcast"></div>${clouds()}</div>` +

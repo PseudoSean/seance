@@ -384,6 +384,7 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		expect(topLevel(inside(sceneMarkup(false), "ps-frost"))).to.deep.equal([
 			"ps-milky",
 			"ps-stars",
+			"ps-meteors",
 			"ps-glow",
 			"ps-moon",
 			"ps-sun",

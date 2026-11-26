@@ -2378,9 +2378,10 @@ describe("the ps theme under reduced motion (spec §9): nothing moves, and the h
 		".ps-seeds",
 		".ps-flash",
 		".ps-smoke",
+		".ps-meteors",
 	];
 
-	it("hides what only exists in flight: the birds, the rain, snow and seeds, the lightning and the smoke", function () {
+	it("hides what only exists in flight: the birds, the rain, snow and seeds, the lightning, the smoke and the shooting stars", function () {
 		for (const layer of HIDDEN) {
 			expect(valueOf(`${S} ${layer}`, "display", REDUCED_MOTION), layer).to.equal("none");
 		}
@@ -2798,7 +2799,8 @@ describe("the ps theme's scene", function () {
 			weather: "clear",
 		});
 		const written = Object.keys(sceneVars(m, paletteAt(m)));
-		const shown = Object.fromEntries(written.map((name) => [name, "3"]));
+		// Over every count a gate holds against (the shower's eight streaks the most).
+		const shown = Object.fromEntries(written.map((name) => [name, "9"]));
 		const gates = Object.keys(GATES) as Gate[];
 		expect(
 			gates.filter((g) => !liveLayers(shown)[g]),

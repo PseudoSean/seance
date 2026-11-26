@@ -11,6 +11,7 @@ export type Group =
 	| "skeins"
 	| "daybirds"
 	| "sun"
+	| "meteors"
 	| "hearth"
 	| "steam";
 
@@ -24,6 +25,8 @@ export const GROUPS: readonly Group[] = [
 	"skeins",
 	"daybirds",
 	"sun",
+	// The shooting stars (meteors.ts, 2026-11-26): full only until the iPhone's calm measurement.
+	"meteors",
 	// The yurt's room (docs/projects/ps-yurt.md §8): the stove's fire and the lamp; the pot's steam.
 	"hearth",
 	"steam",

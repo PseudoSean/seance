@@ -32,6 +32,7 @@ describe("ps NG stylesheet (psng/styles.ts)", function () {
 		"skeins",
 		"daybirds",
 		"sun",
+		"meteors",
 	]) {
 		it(`${group}: still without psng-m-${group}, in phase with it`, function () {
 			const still = rules.filter(
@@ -48,6 +49,21 @@ describe("ps NG stylesheet (psng/styles.ts)", function () {
 			expect(lifted, "a lifted rule").to.have.length.greaterThan(0);
 		});
 	}
+
+	it("the shooting stars leave the render tree without their group and whenever the scene rests, so none is held lit", function () {
+		const hides = (sel: string) =>
+			rules.some(
+				([s, body]) =>
+					s
+						.split(",")
+						.map((x) => x.trim())
+						.includes(sel) && /display: none/.test(body)
+			);
+		expect(hides("#theme-scene.psng:not(.psng-m-meteors) .ps-meteors")).to.equal(true);
+		expect(hides("#theme-scene.psng.psng-frozen .ps-meteors")).to.equal(true);
+		const catchAll = rules.find(([sel]) => sel.startsWith("#theme-scene.psng *:not("));
+		expect(catchAll?.[0]).to.contain(".ps-meteors b");
+	});
 
 	it("every transition off; everything else still; the rest at its place", function () {
 		expect(rules).to.deep.include([
