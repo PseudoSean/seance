@@ -1504,6 +1504,16 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	}
 }
 
+/* A portrait window (a phone) crops the view's sides, which brings the
+ * middle's tall peaks to its edges, over the low sun, the moon and the dawn's
+ * glow: there the mountains stand lower, their box 32 % tall (the user,
+ * 2026-11-26; the low sun hides behind them 13 % of the day against 22 %). */
+@container (max-aspect-ratio: 1/1) {
+	#theme-scene .ps-peaks {
+		height: 32%;
+	}
+}
+
 #theme-scene .ps-m-far { fill: var(--ps-mount-far); }
 #theme-scene .ps-m-far-sh { fill: var(--ps-mount-far-sh); }
 #theme-scene .ps-m-mid { fill: var(--ps-mount-mid); }

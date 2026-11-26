@@ -3473,6 +3473,11 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 		expect(valueOf(`${S} .ps-peaks`, "left", WIDE)).to.equal("calc(50% - 132.5cqh)");
 		expect(valueOf(`${S} .ps-peaks`, "right", WIDE)).to.equal("auto");
 		expect(valueOf(`${S} .ps-mountains`, "overflow")).to.equal("visible");
+		// A portrait window crops the view's sides, which brought the middle's tall peaks to its
+		// edges over the low sun: there the box is 32 % tall (the user, 2026-11-26).
+		expect(valueOf(`${S} .ps-peaks`, "height", "@container (max-aspect-ratio: 1/1)")).to.equal(
+			"32%"
+		);
 	});
 
 	it("mixes no area colour in CSS: color-mix is left to the lines (the rims, the river's glint)", function () {
