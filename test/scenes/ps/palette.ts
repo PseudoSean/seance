@@ -215,9 +215,6 @@ describe("ps palette: plan 3's derived land and yurt colours", function () {
 		it(`ports the mockup's color-mix recipes verbatim at ${name}`, function () {
 			const p = paletteAt(m);
 			expect(p.mount2).to.equal(mixOklab(p.mount, p.far, 0.72));
-			expect(p.tree).to.equal(mixOklab(p.hill2, "#1f3a24", 0.55));
-			expect(p.trunk).to.equal(mixOklab(p.hill2, "#3a2a1c", 0.4));
-			expect(p.shrub).to.equal(mixOklab(p.far, "#28402c", 0.55));
 			expect(p.tuft2).to.equal(mixOklab(p.hill2, p.blade, 0.72));
 			expect(p.tuft1).to.equal(mixOklab(p.hill1, p.blade, 0.7));
 			expect(p.tuftLit).to.equal(mixOklab(p.hill1, "#fff6c8", 0.7));

@@ -57,10 +57,6 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-cloud": p.cloud,
 		"--ps-cloud-under": p.cloudUnder,
 		// The derived land and yurt colours (plan 3, palette.ts's mixOklab recipes).
-		"--ps-mount2": p.mount2,
-		"--ps-tree": p.tree,
-		"--ps-trunk": p.trunk,
-		"--ps-shrub": p.shrub,
 		"--ps-tuft2": p.tuft2,
 		"--ps-tuft1": p.tuft1,
 		"--ps-tuft-lit": p.tuftLit,

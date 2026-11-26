@@ -173,9 +173,6 @@ export interface Palette {
 	sunBloom: string;
 	/** Derived land and yurt colours (plan 3, docs/resources/themes/ps-plains/mockup.html lines 75–122), each ported verbatim from the mockup's `color-mix(in oklab, …)`. */
 	mount2: string;
-	tree: string;
-	trunk: string;
-	shrub: string;
 	tuft2: string;
 	tuft1: string;
 	tuftLit: string;
@@ -258,9 +255,6 @@ export function paletteAt(m: Moment): Palette {
 
 	// The land and yurt colours the mockup mixed in CSS (lines 75–122), ported verbatim.
 	const mount2 = mixOklab(land.mount, land.far, 0.72);
-	const tree = mixOklab(land.hill2, "#1f3a24", 0.55);
-	const trunk = mixOklab(land.hill2, "#3a2a1c", 0.4);
-	const shrub = mixOklab(land.far, "#28402c", 0.55);
 	const tuft2 = mixOklab(land.hill2, land.blade, 0.72);
 	const tuft1 = mixOklab(land.hill1, land.blade, 0.7);
 	const tuftLit = mixOklab(land.hill1, "#fff6c8", 0.7);
@@ -284,15 +278,19 @@ export function paletteAt(m: Moment): Palette {
 	const ranges = {
 		mountFar: mixOklab(s.mount, s.hor, 0.5),
 		mountMid: s.mount,
-		mountNear: mixOklab(s.mount, "#1c2742", 0.7),
+		mountNear: mixOklab(s.mount, "#1c2742", 0.78),
 	};
-	const pine = mixOklab("#1f3a2a", "#0b1424", 1 - s.dark);
-	const trees = {pine, pineShade: mixOklab(pine, "#000000", 0.75)};
+	// The pines: the old groves' recipe on the hour's own hill green (not the season's, so they stay
+	// evergreen), darker than the hills but light enough that every word holds over them.
+	const trees = {
+		pine: mixOklab(s.hill2, "#1f3a24", 0.66),
+		pineShade: mixOklab(s.hill2, "#1f3a24", 0.5),
+	};
 	const scenery: Record<string, string> = {
 		...ranges,
-		mountFarShade: mixOklab(ranges.mountFar, "#0e1528", 0.72),
-		mountMidShade: mixOklab(ranges.mountMid, "#0e1528", 0.72),
-		mountNearShade: mixOklab(ranges.mountNear, "#0e1528", 0.72),
+		mountFarShade: mixOklab(ranges.mountFar, "#0e1528", 0.8),
+		mountMidShade: mixOklab(ranges.mountMid, "#0e1528", 0.8),
+		mountNearShade: mixOklab(ranges.mountNear, "#0e1528", 0.8),
 		...trees,
 	};
 
@@ -329,9 +327,6 @@ export function paletteAt(m: Moment): Palette {
 		sunFlame: mix("#ffcf5a", "#ff6e2c", heat),
 		sunBloom: mix("#fff2b8", "#ff9a5a", heat),
 		mount2,
-		tree,
-		trunk,
-		shrub,
 		tuft2,
 		tuft1,
 		tuftLit,

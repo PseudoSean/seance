@@ -127,10 +127,6 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 			"--ps-door",
 			"--ps-cloud",
 			"--ps-cloud-under",
-			"--ps-mount2",
-			"--ps-tree",
-			"--ps-trunk",
-			"--ps-shrub",
 			"--ps-tuft2",
 			"--ps-tuft1",
 			"--ps-tuft-lit",
@@ -168,6 +164,11 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 
 		// The worn path is gone (the user, 2026-09-25), and so is its colour.
 		expect(v).to.not.have.property("--ps-path");
+		// The land's old swells, shrubs and groves are gone, and so are their colours (2026-11-26).
+		for (const gone of ["--ps-mount2", "--ps-tree", "--ps-trunk", "--ps-shrub"]) {
+			expect(v, gone).to.not.have.property(gone);
+		}
+
 		// The peaks' snow is a level, by the date (2026-11-26).
 		expect(v["--ps-peak-snow-op"]).to.match(/^\d\.\d{3}$/);
 	});

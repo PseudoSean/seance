@@ -77,14 +77,19 @@ export interface SceneGround {
 
 /** The plains' areas (the rulings table), by the names sceneGrounds gives them; the smoke's are added while it shows. */
 export const AREAS = [
-	"mount",
-	"mount2",
+	"mount far",
+	"mount far shade",
+	"mount mid",
+	"mount mid shade",
+	"mount near",
+	"mount near shade",
+	"pine",
+	"pine shade",
 	"far",
 	"hill2",
 	"hill1",
 	"grass",
 	"blade",
-	"tree",
 	"riverbed",
 	"river top",
 	"river bottom",
@@ -189,17 +194,26 @@ export function sceneGrounds(m: Moment, p: Palette): SceneGround[] {
 		}
 	}
 
-	for (const k of [
-		"mount",
-		"mount2",
-		"far",
-		"hill2",
-		"hill1",
-		"grass",
-		"blade",
-		"tree",
-		"riverbed",
+	// The mountains (peaks.ts) and the pines (the avatar's, 2026-11-26), then the land.
+	for (const [area, k] of [
+		["mount far", "mountFar"],
+		["mount far shade", "mountFarShade"],
+		["mount mid", "mountMid"],
+		["mount mid shade", "mountMidShade"],
+		["mount near", "mountNear"],
+		["mount near shade", "mountNearShade"],
+		["pine", "pine"],
+		["pine shade", "pineShade"],
 	] as const) {
+		add(area, p[k]);
+	}
+
+	// The peaks' snow at the date's level, over the range it caps (the near one, the darkest).
+	if (l.peakSnow > 0) {
+		add("peak snow", mix(p.mountNear, p.peakSnow, l.peakSnow));
+	}
+
+	for (const k of ["far", "hill2", "hill1", "grass", "blade", "riverbed"] as const) {
 		add(k, p[k]);
 	}
 
@@ -232,8 +246,15 @@ export function sceneGrounds(m: Moment, p: Palette): SceneGround[] {
 	if (p.smokeOpacity > 0) {
 		const smoke = smokeRgb(p.smoke);
 
-		for (const k of ["far", "mount", "mount2", "skyHorizon"] as const) {
-			add(`smoke over ${k}`, mix(p[k], smoke.hex, smoke.alpha * 0.9 * p.smokeOpacity));
+		for (const [name, k] of [
+			["far", "far"],
+			["mount far", "mountFar"],
+			["mount mid", "mountMid"],
+			["mount near", "mountNear"],
+			["pine", "pine"],
+			["skyHorizon", "skyHorizon"],
+		] as const) {
+			add(`smoke over ${name}`, mix(p[k], smoke.hex, smoke.alpha * 0.9 * p.smokeOpacity));
 		}
 	}
 
