@@ -13,6 +13,7 @@ import {
 	LAND,
 	levelsAt,
 	paletteAt,
+	peakSnowAt,
 	REF,
 	SEASON_LAND,
 	STOPS,
@@ -326,5 +327,45 @@ describe("ps palette: plan 3's levels", function () {
 			"residents",
 			"birdInk"
 		);
+	});
+});
+
+describe("the avatar's mountains and pines", function () {
+	it("puts snow on the peaks in winter and spring only", function () {
+		expect(peakSnowAt(196)).to.equal(0); // 15 Jul
+		expect(peakSnowAt(288)).to.equal(0); // 15 Oct
+		expect(peakSnowAt(354)).to.equal(0); // 20 Dec, still autumn
+		expect(peakSnowAt(15)).to.equal(1); // 15 Jan
+		expect(peakSnowAt(60)).to.equal(1); // 1 Mar
+		expect(peakSnowAt(120)).to.be.within(0.3, 0.7); // 30 Apr
+		expect(peakSnowAt(171)).to.be.below(0.05); // 20 Jun
+		expect(peakSnowAt(172)).to.equal(0); // summer
+	});
+
+	it("brings the caps in over the first two weeks of winter", function () {
+		expect(peakSnowAt(355)).to.equal(0);
+		expect(peakSnowAt(362)).to.be.within(0.4, 0.6);
+		expect(peakSnowAt(4)).to.equal(1);
+	});
+
+	it("keeps the ranges blue on a clear winter day, and the caps visible on them", function () {
+		const p = paletteAt(at(720, 15));
+		expect(luminance(p.mountNear)).to.be.below(luminance(p.peakSnow) - 0.25);
+	});
+
+	it("pales the ranges and frosts the pines on a snowy day", function () {
+		const clear = paletteAt(at(720, 15));
+		const snow = paletteAt(at(720, 15, "snow"));
+
+		for (const k of ["mountFar", "mountMid", "mountNear", "pine"] as const) {
+			expect(luminance(snow[k]), k).to.be.above(luminance(clear[k]) + 0.2);
+		}
+	});
+
+	it("gives no caps in summer or autumn even in snow", function () {
+		for (const doy of [213, 274]) {
+			const m = at(720, doy, "snow");
+			expect(levelsAt(m, paletteAt(m)).peakSnow, String(doy)).to.equal(0);
+		}
 	});
 });

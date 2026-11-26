@@ -197,6 +197,37 @@ export interface Palette {
 	pipe: string;
 	stone: string;
 	wood: string;
+	/** The mountains' three ranges, far to near, each with its shaded face (the avatar's, 2026-11-26). */
+	mountFar: string;
+	mountFarShade: string;
+	mountMid: string;
+	mountMidShade: string;
+	mountNear: string;
+	mountNearShade: string;
+	/** The snow on the peaks; its opacity is `Levels.peakSnow`. */
+	peakSnow: string;
+	pine: string;
+	pineShade: string;
+}
+
+/**
+ * How much snow the peaks hold on a day of the year, 0–1: none in summer
+ * and autumn (the user, 2026-11-26), coming in over winter's first two
+ * weeks, full through the rest of winter, melting through spring. By the
+ * calendar seasons (engine.ts `seasonOf`'s `main`), not the weather.
+ */
+export function peakSnowAt(doy: number): number {
+	if (doy >= 355 || doy < 79) {
+		const d = (doy < 79 ? doy + 365 : doy) - 355;
+		return Math.min(1, d / 14);
+	}
+
+	if (doy < 172) {
+		const x = (doy - 79) / 93;
+		return 1 - x * x * (3 - 2 * x);
+	}
+
+	return 0;
 }
 
 export function paletteAt(m: Moment): Palette {
@@ -248,6 +279,30 @@ export function paletteAt(m: Moment): Palette {
 	const pipe = mixOklab(s.felt, "#4d4640", 0.3);
 	const stone = mixOklab(land.grass, "#a8a39a", 0.45);
 	const wood = mixOklab(land.hill1, "#7a5638", 0.3);
+	// The ranges take the day's light from the stop's own mount, not the season-shifted land one,
+	// which goes near-white in winter and would hide the caps; under falling snow they all go pale.
+	const ranges = {
+		mountFar: mixOklab(s.mount, s.hor, 0.5),
+		mountMid: s.mount,
+		mountNear: mixOklab(s.mount, "#1c2742", 0.7),
+	};
+	const pine = mixOklab("#1f3a2a", "#0b1424", 1 - s.dark);
+	const trees = {pine, pineShade: mixOklab(pine, "#000000", 0.75)};
+	const scenery: Record<string, string> = {
+		...ranges,
+		mountFarShade: mixOklab(ranges.mountFar, "#0e1528", 0.72),
+		mountMidShade: mixOklab(ranges.mountMid, "#0e1528", 0.72),
+		mountNearShade: mixOklab(ranges.mountNear, "#0e1528", 0.72),
+		...trees,
+	};
+
+	if (m.weather === "snow") {
+		const white = mixOklab("#eef2f8", "#3c4a6a", 1 - s.dark * 0.55);
+
+		for (const k of Object.keys(scenery)) {
+			scenery[k] = mixOklab(scenery[k], white, 0.15);
+		}
+	}
 
 	return {
 		skyTop: s.top,
@@ -297,6 +352,15 @@ export function paletteAt(m: Moment): Palette {
 		pipe,
 		stone,
 		wood,
+		mountFar: scenery.mountFar,
+		mountFarShade: scenery.mountFarShade,
+		mountMid: scenery.mountMid,
+		mountMidShade: scenery.mountMidShade,
+		mountNear: scenery.mountNear,
+		mountNearShade: scenery.mountNearShade,
+		peakSnow: mixOklab("#f4f7fb", "#55648c", 1 - s.dark * 0.7),
+		pine: scenery.pine,
+		pineShade: scenery.pineShade,
 	};
 }
 
@@ -312,6 +376,8 @@ export interface Levels {
 	water: number;
 	flowers: number;
 	snowcap: number;
+	/** The peaks' snow (`peakSnowAt`), by the date alone. */
+	peakSnow: number;
 	fireflies: number;
 	wind: number;
 	/** The grass blades' sway, in degrees. */
@@ -340,6 +406,7 @@ export function levelsAt(m: Moment, p: Palette): Levels {
 		water: clamp01(1 - 1.35 * summer),
 		flowers: Math.min(1, spring + 0.55 * summer),
 		snowcap: Math.max(winter > 0.5 ? (winter - 0.4) / 0.6 : 0, m.weather === "snow" ? 0.9 : 0),
+		peakSnow: peakSnowAt(m.doy),
 		fireflies:
 			(summer + 0.45 * spring) *
 			clamp01((dark - 0.25) / 0.4) *

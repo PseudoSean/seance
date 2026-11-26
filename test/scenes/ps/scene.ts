@@ -151,6 +151,15 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 			"--ps-pipe",
 			"--ps-stone",
 			"--ps-wood",
+			"--ps-mount-far",
+			"--ps-mount-far-sh",
+			"--ps-mount-mid",
+			"--ps-mount-mid-sh",
+			"--ps-mount-near",
+			"--ps-mount-near-sh",
+			"--ps-peak-snow",
+			"--ps-pine",
+			"--ps-pine-sh",
 		];
 
 		for (const name of HEX_NAMES) {
@@ -159,6 +168,8 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 
 		// The worn path is gone (the user, 2026-09-25), and so is its colour.
 		expect(v).to.not.have.property("--ps-path");
+		// The peaks' snow is a level, by the date (2026-11-26).
+		expect(v["--ps-peak-snow-op"]).to.match(/^\d\.\d{3}$/);
 	});
 
 	it("writes the day's levels as numbers, sway in degrees, and the veil's colour as its own string", function () {
