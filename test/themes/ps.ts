@@ -2378,9 +2378,10 @@ describe("the ps theme under reduced motion (spec §9): nothing moves, and the h
 		".ps-seeds",
 		".ps-flash",
 		".ps-smoke",
+		".ps-meteors",
 	];
 
-	it("hides what only exists in flight: the birds, the rain, snow and seeds, the lightning and the smoke", function () {
+	it("hides what only exists in flight: the birds, the rain, snow and seeds, the lightning, the smoke and the shooting stars", function () {
 		for (const layer of HIDDEN) {
 			expect(valueOf(`${S} ${layer}`, "display", REDUCED_MOTION), layer).to.equal("none");
 		}
@@ -2798,7 +2799,8 @@ describe("the ps theme's scene", function () {
 			weather: "clear",
 		});
 		const written = Object.keys(sceneVars(m, paletteAt(m)));
-		const shown = Object.fromEntries(written.map((name) => [name, "3"]));
+		// Over every count a gate holds against (the shower's eight streaks the most).
+		const shown = Object.fromEntries(written.map((name) => [name, "9"]));
 		const gates = Object.keys(GATES) as Gate[];
 		expect(
 			gates.filter((g) => !liveLayers(shown)[g]),
@@ -3413,16 +3415,13 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 
 	it("fills every land area from the colour the palette publishes for it", function () {
 		const AREAS: Record<string, string> = {
-			"ps-l-mount2": "var(--ps-mount2)",
-			"ps-l-mount": "var(--ps-mount)",
 			"ps-l-far": "var(--ps-far)",
-			"ps-l-shrub": "var(--ps-shrub)",
 			"ps-l-riverbed": "var(--ps-riverbed)",
 			"ps-l-bedstone": "var(--ps-bedstone)",
 			"ps-l-hill2": "var(--ps-hill2)",
 			"ps-l-tuft2": "var(--ps-tuft2)",
-			"ps-l-tree": "var(--ps-tree)",
-			"ps-l-trunk": "var(--ps-trunk)",
+			"ps-l-pine-lit": "var(--ps-pine)",
+			"ps-l-pine-sh": "var(--ps-pine-sh)",
 			"ps-l-hill1": "var(--ps-hill1)",
 			"ps-l-tuft1": "var(--ps-tuft1)",
 			"ps-l-tuft-lit": "var(--ps-tuft-lit)",
@@ -3438,13 +3437,57 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 		expect(valueOf(`${S} .ps-l-river`, "fill")).to.equal(undefined);
 	});
 
+	it("puts each pine back in proportion about its own foot, so it stays rooted (the land is stretched)", function () {
+		expect(valueOf(`${S} .ps-l-pine`, "transform")).to.equal(
+			"scale(var(--ps-land-round-x, 1), var(--ps-land-round-y, 1))"
+		);
+		expect(valueOf(`${S} .ps-l-pine`, "transform-box")).to.equal("fill-box");
+		expect(valueOf(`${S} .ps-l-pine`, "transform-origin")).to.equal("50% 100%");
+	});
+
+	it("paints the mountains' ranges, faces and caps from the palette, the caps at the date's level", function () {
+		const FILLS: Record<string, string> = {
+			"ps-m-far": "var(--ps-mount-far)",
+			"ps-m-far-sh": "var(--ps-mount-far-sh)",
+			"ps-m-mid": "var(--ps-mount-mid)",
+			"ps-m-mid-sh": "var(--ps-mount-mid-sh)",
+			"ps-m-near": "var(--ps-mount-near)",
+			"ps-m-near-sh": "var(--ps-mount-near-sh)",
+			"ps-m-snow": "var(--ps-peak-snow)",
+		};
+
+		for (const [name, fill] of Object.entries(FILLS)) {
+			expect(valueOf(`${S} .${name}`, "fill"), name).to.equal(fill);
+		}
+
+		expect(valueOf(`${S} .ps-m-snow`, "opacity")).to.equal("var(--ps-peak-snow-op)");
+		expect(valueOf(`${S} .ps-land`, "height")).to.equal("56%");
+		// Behind the far plain's edge (38 % up), rising into the sky; the box holds empty sky on top.
+		expect(valueOf(`${S} .ps-peaks`, "bottom")).to.equal("36%");
+		expect(valueOf(`${S} .ps-peaks`, "height")).to.equal("48%");
+		// A window wider than 2.65 : 1 would slice the peaks' tops off: the box keeps to the
+		// scene's middle, 2.65 times as wide as the scene is tall, and the ranges' foothills
+		// drawn past the view's edges fill the sides.
+		const WIDE = "@container (min-aspect-ratio: 265/100)";
+		expect(valueOf(`${S} .ps-peaks`, "width", WIDE)).to.equal("265cqh");
+		expect(valueOf(`${S} .ps-peaks`, "left", WIDE)).to.equal("calc(50% - 132.5cqh)");
+		expect(valueOf(`${S} .ps-peaks`, "right", WIDE)).to.equal("auto");
+		expect(valueOf(`${S} .ps-mountains`, "overflow")).to.equal("visible");
+		// A portrait window crops the view's sides, which brought the middle's tall peaks to its
+		// edges over the low sun: there the box is 32 % tall (the user, 2026-11-26).
+		expect(valueOf(`${S} .ps-peaks`, "height", "@container (max-aspect-ratio: 1/1)")).to.equal(
+			"32%"
+		);
+	});
+
 	it("mixes no area colour in CSS: color-mix is left to the lines (the rims, the river's glint)", function () {
 		const LINES = [`${S} .ps-l-rim`, `${S} .ps-l-river-hi`];
 		const areas = rules.filter((r) =>
 			r.selectors.some(
 				(sel) =>
-					/^#theme-scene \.(ps-l-|ps-blades|ps-ground|ps-fireflies)/.test(sel) &&
-					!LINES.includes(sel)
+					/^#theme-scene \.(ps-l-|ps-m-|ps-peaks|ps-blades|ps-ground|ps-fireflies)/.test(
+						sel
+					) && !LINES.includes(sel)
 			)
 		);
 		expect(areas.length, "the land's rules").to.be.at.least(15);
@@ -3568,8 +3611,9 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 
 	it("puts the smoke at the pipe, on the same place: the yurt's top plus 22/170 of its height", function () {
 		expect(valueOf(SMOKE, "--ps-yurt-x")).to.equal(PLACE);
-		expect(valueOf(SMOKE, "left")).to.equal("var(--ps-yurt-x)");
-		expect(valueOf(SMOKE, "bottom")).to.equal("calc(17% + 21% * 148 / 170)");
+		// The pipe's top in the yurt's drawing: (166, 50), on the right slope (2026-11-26).
+		expect(valueOf(SMOKE, "left")).to.equal("calc(var(--ps-yurt-x) + 21cqh * 46 / 170)");
+		expect(valueOf(SMOKE, "bottom")).to.equal("calc(17% + 21% * 120 / 170)");
 		expect(valueOf(SMOKE, "opacity")).to.match(/^var\(--ps-smoke-op(, 0)?\)$/);
 	});
 
@@ -3603,7 +3647,12 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 			["ps-y-crown", "fill", "var(--ps-crown)"],
 			["ps-y-pipe", "fill", "var(--ps-pipe)"],
 			["ps-y-stone", "fill", "var(--ps-stone)"],
-			["ps-y-wood", "fill", "var(--ps-wood)"],
+			["ps-y-log", "fill", "var(--ps-log-end)"],
+			["ps-y-log-ring", "stroke", "var(--ps-log-ring)"],
+			["ps-y-lattice", "stroke", "var(--ps-lattice)"],
+			["ps-y-roof-shade", "fill", "var(--ps-roof-shade)"],
+			["ps-y-crown-spoke", "stroke", "var(--ps-crown)"],
+			["ps-y-tuft", "fill", "var(--ps-tuft1)"],
 		];
 
 		for (const [name, property, value] of PAINT) {
@@ -3663,17 +3712,24 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 		const puff = declsOf(`${S} .ps-smoke i`);
 		expect(puff.length).to.be.greaterThan(0);
 		expect(valueOf(`${S} .ps-smoke i`, "background")).to.include("var(--ps-smoke)");
-		// Its own name: the chrome's message entrance is already ps-rise.
-		expect(valueOf(`${S} .ps-smoke i`, "animation")).to.match(/^ps-smoke-rise /);
+		// Its own name: the chrome's message entrance is already ps-rise. It curls as it rises
+		// (2026-11-26); the room's steam keeps ps-smoke-rise.
+		expect(valueOf(`${S} .ps-smoke i`, "animation")).to.match(/^ps-smoke-curl /);
+		expect(css.match(/@keyframes ps-smoke-curl\b/g), "one ps-smoke-curl").to.have.length(1);
 		expect(css.match(/@keyframes ps-smoke-rise\b/g), "one ps-smoke-rise").to.have.length(1);
 
 		for (const [p, v] of puff) {
 			expect(v, `.ps-smoke i { ${p} }`).to.not.match(/\dpx/);
 		}
 
-		const frames = css.match(/@keyframes ps-smoke-rise\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+		const frames = css.match(/@keyframes ps-smoke-curl\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
 		expect(frames).to.include("translate(calc(-50% + 2.125rem), -6rem) scale(3.1)");
+		// It leans one way, then the other, as it climbs: transform and opacity only.
+		expect(frames).to.match(/translate\(calc\(-50% - [\d.]+rem\)/);
 		expect(frames).to.not.match(/\dpx/);
+		expect(
+			frames.match(/^\s*([a-z-]+):/gm)?.map((d) => d.trim().replace(":", "")) ?? []
+		).to.satisfy((props: string[]) => props.every((p) => p === "transform" || p === "opacity"));
 	});
 });
 

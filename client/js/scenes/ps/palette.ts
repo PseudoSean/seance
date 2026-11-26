@@ -4,7 +4,7 @@
  * with them, and the chrome reads the four values grounds.ts's `publishedFor`
  * gives. Pure: mocha loads it and holds the contrast floors against it (§11).
  */
-import {mix, mixOklab, shift} from "./colour";
+import {hexToOklch, luminance, mix, mixOklab, oklchToHex, shift} from "./colour";
 import type {Moment, Season, Weather} from "./engine";
 
 /** One stop of the canonical day. `t` is its canonical minute. */
@@ -173,9 +173,6 @@ export interface Palette {
 	sunBloom: string;
 	/** Derived land and yurt colours (plan 3, docs/resources/themes/ps-plains/mockup.html lines 75–122), each ported verbatim from the mockup's `color-mix(in oklab, …)`. */
 	mount2: string;
-	tree: string;
-	trunk: string;
-	shrub: string;
 	tuft2: string;
 	tuft1: string;
 	tuftLit: string;
@@ -196,7 +193,82 @@ export interface Palette {
 	crown: string;
 	pipe: string;
 	stone: string;
-	wood: string;
+	/** The wall's lattice, the roof's shaded side, and the woodpile's log ends and rings (2026-11-26). */
+	lattice: string;
+	roofShade: string;
+	logEnd: string;
+	logRing: string;
+	/** The mountains' three ranges, far to near, each with its shaded face (the avatar's, 2026-11-26). */
+	mountFar: string;
+	mountFarShade: string;
+	mountMid: string;
+	mountMidShade: string;
+	mountNear: string;
+	mountNearShade: string;
+	/** The snow on the peaks; its opacity is `Levels.peakSnow`. */
+	peakSnow: string;
+	pine: string;
+	pineShade: string;
+}
+
+/**
+ * How much snow the peaks hold on a day of the year, 0–1: none in summer
+ * and autumn (the user, 2026-11-26), coming in over winter's first two
+ * weeks, full through the rest of winter, melting through spring. By the
+ * calendar seasons (engine.ts `seasonOf`'s `main`), not the weather.
+ */
+export function peakSnowAt(doy: number): number {
+	if (doy >= 355 || doy < 79) {
+		const d = (doy < 79 ? doy + 365 : doy) - 355;
+		return Math.min(1, d / 14);
+	}
+
+	if (doy < 172) {
+		const x = (doy - 79) / 93;
+		return 1 - x * x * (3 - 2 * x);
+	}
+
+	return 0;
+}
+
+/**
+ * `hex` with its OKLCH chroma raised by up to `k`, its hue and its luminance
+ * (WCAG's, which every word is held to) kept, as far as sRGB holds it: the
+ * lightness is searched for the chroma, so the words over it read as before.
+ */
+function richer(hex: string, k: number): string {
+	const [L, C, h] = hexToOklch(hex);
+	const y = luminance(hex);
+
+	for (let c = C * k; c > C; c *= 0.98) {
+		let lo = Math.max(0, L - 0.15);
+		let hi = Math.min(1, L + 0.15);
+		let best: string | null = null;
+
+		for (let i = 0; i < 24; i++) {
+			const mid = (lo + hi) / 2;
+			const out = oklchToHex(mid, c, h);
+
+			if (!out) {
+				best = null;
+				break;
+			}
+
+			best = out;
+
+			if (luminance(out) < y) {
+				lo = mid;
+			} else {
+				hi = mid;
+			}
+		}
+
+		if (best && Math.abs(luminance(best) - y) < 0.002) {
+			return best;
+		}
+	}
+
+	return hex;
 }
 
 export function paletteAt(m: Moment): Palette {
@@ -227,27 +299,61 @@ export function paletteAt(m: Moment): Palette {
 
 	// The land and yurt colours the mockup mixed in CSS (lines 75–122), ported verbatim.
 	const mount2 = mixOklab(land.mount, land.far, 0.72);
-	const tree = mixOklab(land.hill2, "#1f3a24", 0.55);
-	const trunk = mixOklab(land.hill2, "#3a2a1c", 0.4);
-	const shrub = mixOklab(land.far, "#28402c", 0.55);
 	const tuft2 = mixOklab(land.hill2, land.blade, 0.72);
 	const tuft1 = mixOklab(land.hill1, land.blade, 0.7);
 	const tuftLit = mixOklab(land.hill1, "#fff6c8", 0.7);
 	const riverbed = mixOklab(land.hill1, "#dcc9a0", 0.42);
 	const bedstone = mixOklab(land.hill1, "#a99c80", 0.3);
 	const riverHi = mixOklab(s.hor, "#ffffff", 0.6);
-	const feltShade = mixOklab(s.felt, "#3a3040", 0.8);
+	const feltShade = mixOklab(s.felt, "#3a3040", 0.66);
 	const roofTop = mixOklab(s.felt, "#ffffff", 0.92);
 	const roofBottom = mixOklab(s.felt, "#4a3c3c", 0.78);
 	const roofStroke = mixOklab(s.felt, "#5a4a3e", 0.55);
-	const bandMark = mixOklab(s.band, "#f3e3c6", 0.45);
+	// The band a richer red at its own lightness (the avatar's, 2026-11-26): the snowy ink window
+	// holds over it as before; its diamonds gold.
+	const band = richer(s.band, 1.3);
+	const bandMark = mixOklab(band, "#f0c050", 0.3);
 	const rope = mixOklab(s.felt, "#5a4636", 0.55);
 	const rib = mixOklab(s.felt, "#6a5a4a", 0.72);
 	const doorOrn = mixOklab(s.door, "#f3c66a", 0.35);
 	const crown = mixOklab(s.felt, "#5a4a3e", 0.6);
 	const pipe = mixOklab(s.felt, "#4d4640", 0.3);
 	const stone = mixOklab(land.grass, "#a8a39a", 0.45);
-	const wood = mixOklab(land.hill1, "#7a5638", 0.3);
+	const lattice = mixOklab(s.felt, "#6a5440", 0.62);
+	const roofShade = mixOklab(s.felt, "#3a3040", 0.35);
+	const logEnd = mixOklab(land.hill1, "#b98a58", 0.35);
+	const logRing = mixOklab(land.hill1, "#6e4a2c", 0.35);
+	// The ranges take the day's light from the stop's own mount, not the season-shifted land one,
+	// which goes near-white in winter and would hide the caps; under falling snow they all go pale.
+	const ranges = {
+		mountFar: mixOklab(s.mount, s.hor, 0.5),
+		mountMid: s.mount,
+		mountNear: mixOklab(s.mount, "#1c2742", 0.78),
+	};
+	// The pines: the old groves' recipe on the hour's own hill green (not the season's, so they stay
+	// evergreen), darker than the hills but light enough that every word holds over them.
+	const trees = {
+		pine: mixOklab(s.hill2, "#1f3a24", 0.66),
+		pineShade: mixOklab(s.hill2, "#1f3a24", 0.5),
+	};
+	const scenery: Record<string, string> = {
+		...ranges,
+		mountFarShade: mixOklab(ranges.mountFar, "#0e1528", 0.8),
+		mountMidShade: mixOklab(ranges.mountMid, "#0e1528", 0.8),
+		mountNearShade: mixOklab(ranges.mountNear, "#0e1528", 0.8),
+		...trees,
+	};
+
+	// Under falling snow: frosted toward the snow's white by day and toward the hour's own far plain
+	// as it darkens, so a snowy night stays a night; the shaded faces and halves a little less, so
+	// the peaks keep their facets and the pines their shape.
+	if (m.weather === "snow") {
+		const white = mixOklab("#eef2f8", s.far, (1 - s.dark) ** 3);
+
+		for (const k of Object.keys(scenery)) {
+			scenery[k] = mixOklab(scenery[k], white, k.endsWith("Shade") ? 0.3 : 0.15);
+		}
+	}
 
 	return {
 		skyTop: s.top,
@@ -255,7 +361,7 @@ export function paletteAt(m: Moment): Palette {
 		skyHorizon: s.hor,
 		...land,
 		felt: s.felt,
-		band: s.band,
+		band,
 		door: s.door,
 		cloud: mix(s.cloud, s.dark > 0.5 ? "#262c3c" : "#9aa2b2", wx.grey),
 		cloudUnder: mix(s.under, s.dark > 0.5 ? "#1c2130" : "#7c8494", wx.grey),
@@ -274,9 +380,6 @@ export function paletteAt(m: Moment): Palette {
 		sunFlame: mix("#ffcf5a", "#ff6e2c", heat),
 		sunBloom: mix("#fff2b8", "#ff9a5a", heat),
 		mount2,
-		tree,
-		trunk,
-		shrub,
 		tuft2,
 		tuft1,
 		tuftLit,
@@ -296,7 +399,19 @@ export function paletteAt(m: Moment): Palette {
 		crown,
 		pipe,
 		stone,
-		wood,
+		lattice,
+		roofShade,
+		logEnd,
+		logRing,
+		mountFar: scenery.mountFar,
+		mountFarShade: scenery.mountFarShade,
+		mountMid: scenery.mountMid,
+		mountMidShade: scenery.mountMidShade,
+		mountNear: scenery.mountNear,
+		mountNearShade: scenery.mountNearShade,
+		peakSnow: mixOklab("#f4f7fb", "#55648c", 1 - s.dark * 0.7),
+		pine: scenery.pine,
+		pineShade: scenery.pineShade,
 	};
 }
 
@@ -312,6 +427,8 @@ export interface Levels {
 	water: number;
 	flowers: number;
 	snowcap: number;
+	/** The peaks' snow (`peakSnowAt`), by the date alone. */
+	peakSnow: number;
 	fireflies: number;
 	wind: number;
 	/** The grass blades' sway, in degrees. */
@@ -340,6 +457,7 @@ export function levelsAt(m: Moment, p: Palette): Levels {
 		water: clamp01(1 - 1.35 * summer),
 		flowers: Math.min(1, spring + 0.55 * summer),
 		snowcap: Math.max(winter > 0.5 ? (winter - 0.4) / 0.6 : 0, m.weather === "snow" ? 0.9 : 0),
+		peakSnow: peakSnowAt(m.doy),
 		fireflies:
 			(summer + 0.45 * spring) *
 			clamp01((dark - 0.25) / 0.4) *

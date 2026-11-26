@@ -84,6 +84,25 @@ describe("avatars on the wire (irc/avatars.ts)", function () {
 		expect(h.sent()).to.deep.equal([]);
 	});
 
+	it("keeps quiet the replies about our own avatar another device of the session asked for", function () {
+		const before = h.messages().length;
+		// Another device set ours: the session relays the server's answer to it.
+		h.transport.line(`:irc.test 761 alice alice avatar * :${URL_A}`);
+		expect(avatarOf(uuid(), "alice")?.value).to.equal(URL_A);
+		// Another device cleared it.
+		h.transport.line(":irc.test 766 alice alice avatar :key not set");
+		expect(avatarOf(uuid(), "alice")?.value).to.equal("");
+		expect(h.messages().length).to.equal(before);
+	});
+
+	it("shows the reply about our own avatar to a /metadata typed here", function () {
+		h.client.input(h.client.lobby.id, "/metadata * get avatar");
+		expect(h.sent()).to.deep.equal(["metadata * get avatar"]);
+		const before = h.messages().length;
+		h.transport.line(`:irc.test 761 alice alice avatar * :${URL_A}`);
+		expect(h.messages().length).to.be.greaterThan(before);
+	});
+
 	it("shows a user's own /metadata reply about someone else", function () {
 		const before = h.messages().length;
 		h.transport.line(`:irc.test 761 alice bob avatar * :${URL_B}`);

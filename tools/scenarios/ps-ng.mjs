@@ -280,6 +280,8 @@ const GROUP_OF = {
 	"ps-ffdrift": "fireflies",
 	"ps-ffblink": "fireflies",
 	"ps-smoke-rise": "smoke",
+	"ps-smoke-curl": "smoke",
+	"ps-meteor": "meteors",
 	"ps-sway": "grass",
 	"psng-rain-fall": "weather",
 	"ps-flake": "weather",

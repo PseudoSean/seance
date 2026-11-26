@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {
 	contrast,
 	hexRgb,
+	hexToOklch,
 	luminance,
 	mix,
 	mixOklab,
@@ -13,6 +14,7 @@ import {
 	LAND,
 	levelsAt,
 	paletteAt,
+	peakSnowAt,
 	REF,
 	SEASON_LAND,
 	STOPS,
@@ -214,9 +216,6 @@ describe("ps palette: plan 3's derived land and yurt colours", function () {
 		it(`ports the mockup's color-mix recipes verbatim at ${name}`, function () {
 			const p = paletteAt(m);
 			expect(p.mount2).to.equal(mixOklab(p.mount, p.far, 0.72));
-			expect(p.tree).to.equal(mixOklab(p.hill2, "#1f3a24", 0.55));
-			expect(p.trunk).to.equal(mixOklab(p.hill2, "#3a2a1c", 0.4));
-			expect(p.shrub).to.equal(mixOklab(p.far, "#28402c", 0.55));
 			expect(p.tuft2).to.equal(mixOklab(p.hill2, p.blade, 0.72));
 			expect(p.tuft1).to.equal(mixOklab(p.hill1, p.blade, 0.7));
 			expect(p.tuftLit).to.equal(mixOklab(p.hill1, "#fff6c8", 0.7));
@@ -225,18 +224,18 @@ describe("ps palette: plan 3's derived land and yurt colours", function () {
 			expect(p.riverHi).to.equal(mixOklab(p.skyHorizon, "#ffffff", 0.6));
 			expect(p.riverSkyTop).to.equal(p.skyHorizon);
 			expect(p.riverSkyBottom).to.equal(p.skyMid);
-			expect(p.feltShade).to.equal(mixOklab(p.felt, "#3a3040", 0.8));
+			// The wall's edges shaded deeper (the avatar's rounder look, 2026-11-26).
+			expect(p.feltShade).to.equal(mixOklab(p.felt, "#3a3040", 0.66));
 			expect(p.roofTop).to.equal(mixOklab(p.felt, "#ffffff", 0.92));
 			expect(p.roofBottom).to.equal(mixOklab(p.felt, "#4a3c3c", 0.78));
 			expect(p.roofStroke).to.equal(mixOklab(p.felt, "#5a4a3e", 0.55));
-			expect(p.bandMark).to.equal(mixOklab(p.band, "#f3e3c6", 0.45));
+			expect(p.bandMark).to.equal(mixOklab(p.band, "#f0c050", 0.3));
 			expect(p.rope).to.equal(mixOklab(p.felt, "#5a4636", 0.55));
 			expect(p.rib).to.equal(mixOklab(p.felt, "#6a5a4a", 0.72));
 			expect(p.doorOrn).to.equal(mixOklab(p.door, "#f3c66a", 0.35));
 			expect(p.crown).to.equal(mixOklab(p.felt, "#5a4a3e", 0.6));
 			expect(p.pipe).to.equal(mixOklab(p.felt, "#4d4640", 0.3));
 			expect(p.stone).to.equal(mixOklab(p.grass, "#a8a39a", 0.45));
-			expect(p.wood).to.equal(mixOklab(p.hill1, "#7a5638", 0.3));
 			expect(p).to.not.have.property("path");
 		});
 	}
@@ -326,5 +325,89 @@ describe("ps palette: plan 3's levels", function () {
 			"residents",
 			"birdInk"
 		);
+	});
+});
+
+describe("the avatar's mountains and pines", function () {
+	it("puts snow on the peaks in winter and spring only", function () {
+		expect(peakSnowAt(196)).to.equal(0); // 15 Jul
+		expect(peakSnowAt(288)).to.equal(0); // 15 Oct
+		expect(peakSnowAt(354)).to.equal(0); // 20 Dec, still autumn
+		expect(peakSnowAt(15)).to.equal(1); // 15 Jan
+		expect(peakSnowAt(60)).to.equal(1); // 1 Mar
+		expect(peakSnowAt(120)).to.be.within(0.3, 0.7); // 30 Apr
+		expect(peakSnowAt(171)).to.be.below(0.05); // 20 Jun
+		expect(peakSnowAt(172)).to.equal(0); // summer
+	});
+
+	it("brings the caps in over the first two weeks of winter", function () {
+		expect(peakSnowAt(355)).to.equal(0);
+		expect(peakSnowAt(362)).to.be.within(0.4, 0.6);
+		expect(peakSnowAt(4)).to.equal(1);
+	});
+
+	it("keeps the ranges blue on a clear winter day, and the caps visible on them", function () {
+		const p = paletteAt(at(720, 15));
+		expect(luminance(p.mountNear)).to.be.below(luminance(p.peakSnow) - 0.25);
+	});
+
+	it("pales the ranges and frosts the pines on a snowy day", function () {
+		const clear = paletteAt(at(720, 15));
+		const snow = paletteAt(at(720, 15, "snow"));
+
+		for (const k of ["mountFar", "mountMid", "mountNear", "pine"] as const) {
+			expect(luminance(snow[k]), k).to.be.above(luminance(clear[k]) + 0.2);
+		}
+	});
+
+	it("keeps a snowy night and dusk near the land's own light: the frost follows the day", function () {
+		const night = paletteAt(localAt(1320, 5, "snow"));
+		const dusk = paletteAt(localAt(1000, 5, "snow"));
+
+		for (const k of ["mountNear", "mountFar", "pine"] as const) {
+			expect(luminance(night[k]), `${k} at night`).to.be.at.most(
+				luminance(night.far) * 2 + 0.02
+			);
+			expect(luminance(dusk[k]), `${k} at dusk`).to.be.at.most(luminance(dusk.far) + 0.15);
+		}
+	});
+
+	it("keeps the peaks' faces and the pines' shaded halves under snow", function () {
+		const p = paletteAt(at(720, 15, "snow"));
+		expect(contrast(p.mountNear, p.mountNearShade)).to.be.at.least(1.2);
+		expect(contrast(p.pine, p.pineShade)).to.be.at.least(1.15);
+	});
+
+	it("gives no caps in summer or autumn even in snow", function () {
+		for (const doy of [213, 274]) {
+			const m = at(720, doy, "snow");
+			expect(levelsAt(m, paletteAt(m)).peakSnow, String(doy)).to.equal(0);
+		}
+	});
+});
+
+describe("the avatar's yurt band (2026-11-26)", function () {
+	it("paints the band a richer red at the stop's own luminance, so neither the dark ink nor the white words lose ground", function () {
+		for (const m of [at(720, 172), at(720, 15), localAt(0, 172)]) {
+			const p = paletteAt(m);
+			const stop = stopsAt(m.canonical).band;
+			const [, C0, h0] = hexToOklch(stop);
+			const [, C, h] = hexToOklch(p.band);
+			expect(luminance(p.band), "luminance kept").to.be.closeTo(luminance(stop), 0.003);
+			expect(C, "richer").to.be.above(C0 * 1.1);
+			expect((Math.abs(h - h0) * 180) / Math.PI, "the same hue, in degrees").to.be.below(4);
+		}
+	});
+
+	it("shades the wall's edges deep enough to read as a cylinder by day", function () {
+		const p = paletteAt(at(720, 172));
+		expect(contrast(p.felt, p.feltShade)).to.be.at.least(1.8);
+	});
+
+	it("marks it with gold diamonds", function () {
+		const p = paletteAt(at(720, 172));
+		const [, C, h] = hexToOklch(p.bandMark);
+		expect((h * 180) / Math.PI, "gold, in degrees").to.be.within(65, 100);
+		expect(C).to.be.above(0.08);
 	});
 });

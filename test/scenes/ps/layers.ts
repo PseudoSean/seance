@@ -31,6 +31,7 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 				"flock0",
 				"flock1",
 				"flock2",
+				"meteor0",
 				"skeins",
 				"smoke",
 				"stars",
@@ -74,7 +75,12 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 		});
 
 		it("flies no skein on a night with none (1 July: no passage)", function () {
-			expect(on(liveAt(182, 1380, "clear"))).to.deep.equal(["fireflies", "smoke", "stars"]);
+			expect(on(liveAt(182, 1380, "clear"))).to.deep.equal([
+				"fireflies",
+				"meteor0",
+				"smoke",
+				"stars",
+			]);
 		});
 
 		it("raises the larks in season and shows the heat band on a hot midday", function () {
@@ -152,6 +158,16 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 		it("names every animated layer that has a window, back to front", function () {
 			expect(Object.keys(GATES)).to.deep.equal([
 				"stars",
+				"meteor0",
+				"meteor1",
+				"perseid0",
+				"perseid1",
+				"perseid2",
+				"perseid3",
+				"perseid4",
+				"perseid5",
+				"perseid6",
+				"perseid7",
 				"sun",
 				"fireflies",
 				"smoke",
@@ -164,6 +180,32 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 				"seeds",
 				"heatband",
 			]);
+		});
+
+		it("finds each shooting star by its number among its kind, live while the layer shows and under the night's count", function () {
+			expect([GATES.meteor1, GATES.perseid7].map((g) => [g.selector, g.index])).to.deep.equal(
+				[
+					[".ps-meteor", 1],
+					[".ps-perseid", 7],
+				]
+			);
+			const live = liveLayers({
+				"--ps-meteor-op": "0.800",
+				"--ps-meteor-count": "1",
+				"--ps-perseid-count": "3",
+			});
+			expect([live.meteor0, live.meteor1]).to.deep.equal([true, false]);
+			expect([live.perseid0, live.perseid2, live.perseid3]).to.deep.equal([
+				true,
+				true,
+				false,
+			]);
+			const dark = liveLayers({
+				"--ps-meteor-op": "0.000",
+				"--ps-meteor-count": "2",
+				"--ps-perseid-count": "8",
+			});
+			expect(dark.meteor0 || dark.perseid0).to.equal(false);
 		});
 
 		it("finds each flock by its number among the skeins' flocks", function () {

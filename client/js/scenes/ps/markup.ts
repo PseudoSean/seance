@@ -11,6 +11,8 @@ import {rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {bodyOpacity} from "./grounds";
 import {levelsAt, WEATHER, type Palette} from "./palette";
 import {clouds, FIREFLIES, fireflies, landSvg, nearGrass, smoke, yurtSvg} from "./plains";
+import {meteorJitter, meteorsAt, meteorsMarkup} from "./meteors";
+import {mountainsSvg} from "./peaks";
 
 export const STAR_COUNT = 190;
 const RAD = Math.PI / 180;
@@ -23,6 +25,8 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 	const bodies = bodyOpacity(m, p);
 	const l = levelsAt(m, p);
 	const b = birdsAt(m, p);
+	const shooting = meteorsAt(m, p);
+	const jitter = meteorJitter(m);
 	return {
 		"--ps-sky-top": p.skyTop,
 		"--ps-sky-mid": p.skyMid,
@@ -56,10 +60,6 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-cloud": p.cloud,
 		"--ps-cloud-under": p.cloudUnder,
 		// The derived land and yurt colours (plan 3, palette.ts's mixOklab recipes).
-		"--ps-mount2": p.mount2,
-		"--ps-tree": p.tree,
-		"--ps-trunk": p.trunk,
-		"--ps-shrub": p.shrub,
 		"--ps-tuft2": p.tuft2,
 		"--ps-tuft1": p.tuft1,
 		"--ps-tuft-lit": p.tuftLit,
@@ -79,7 +79,20 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-crown": p.crown,
 		"--ps-pipe": p.pipe,
 		"--ps-stone": p.stone,
-		"--ps-wood": p.wood,
+		"--ps-lattice": p.lattice,
+		"--ps-roof-shade": p.roofShade,
+		"--ps-log-end": p.logEnd,
+		"--ps-log-ring": p.logRing,
+		"--ps-mount-far": p.mountFar,
+		"--ps-mount-far-sh": p.mountFarShade,
+		"--ps-mount-mid": p.mountMid,
+		"--ps-mount-mid-sh": p.mountMidShade,
+		"--ps-mount-near": p.mountNear,
+		"--ps-mount-near-sh": p.mountNearShade,
+		"--ps-peak-snow": p.peakSnow,
+		"--ps-peak-snow-op": l.peakSnow.toFixed(3),
+		"--ps-pine": p.pine,
+		"--ps-pine-sh": p.pineShade,
 		// The day's levels.
 		"--ps-water": l.water.toFixed(2),
 		"--ps-flowers": l.flowers.toFixed(2),
@@ -100,6 +113,11 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		// The birds (birds.ts): the skeins' layer and how many of its flocks
 		// fly, their moonlit inks (N2) and alpha; each day bird's switch and
 		// their ink.
+		"--ps-meteor-op": shooting.level.toFixed(3),
+		"--ps-meteor-count": String(shooting.sporadic),
+		"--ps-perseid-count": String(shooting.perseids),
+		"--ps-meteor-jx": `${jitter.x.toFixed(2)}%`,
+		"--ps-meteor-jy": `${jitter.y.toFixed(2)}%`,
 		"--ps-skeins-op": b.skeinsOpacity.toFixed(2),
 		"--ps-skein-count": String(b.skeins),
 		"--ps-bird-ink": b.ink,
@@ -229,11 +247,14 @@ export function stars(): string {
 export function sceneMarkup(phone: boolean): string {
 	return (
 		`<div class="ps-frost">` +
-		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div><div class="ps-glow"></div>` +
+		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div>` +
+		`<div class="ps-meteors">${meteorsMarkup()}</div>` +
+		`<div class="ps-glow"></div>` +
 		MOON +
 		SUN +
 		`<div class="ps-cloud-field"><div class="ps-overcast"></div>${clouds()}</div>` +
 		`<div class="ps-ground">` +
+		`<div class="ps-peaks">${mountainsSvg()}</div>` +
 		landSvg() +
 		`<div class="ps-fireflies">${fireflies(phone ? FIREFLIES / 2 : FIREFLIES)}</div>` +
 		`<div class="ps-yurt">${yurtSvg()}</div>` +

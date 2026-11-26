@@ -127,10 +127,6 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 			"--ps-door",
 			"--ps-cloud",
 			"--ps-cloud-under",
-			"--ps-mount2",
-			"--ps-tree",
-			"--ps-trunk",
-			"--ps-shrub",
 			"--ps-tuft2",
 			"--ps-tuft1",
 			"--ps-tuft-lit",
@@ -150,7 +146,19 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 			"--ps-crown",
 			"--ps-pipe",
 			"--ps-stone",
-			"--ps-wood",
+			"--ps-lattice",
+			"--ps-roof-shade",
+			"--ps-log-end",
+			"--ps-log-ring",
+			"--ps-mount-far",
+			"--ps-mount-far-sh",
+			"--ps-mount-mid",
+			"--ps-mount-mid-sh",
+			"--ps-mount-near",
+			"--ps-mount-near-sh",
+			"--ps-peak-snow",
+			"--ps-pine",
+			"--ps-pine-sh",
 		];
 
 		for (const name of HEX_NAMES) {
@@ -159,6 +167,13 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 
 		// The worn path is gone (the user, 2026-09-25), and so is its colour.
 		expect(v).to.not.have.property("--ps-path");
+		// The land's old swells, shrubs and groves are gone, and so are their colours (2026-11-26).
+		for (const gone of ["--ps-mount2", "--ps-tree", "--ps-trunk", "--ps-shrub"]) {
+			expect(v, gone).to.not.have.property(gone);
+		}
+
+		// The peaks' snow is a level, by the date (2026-11-26).
+		expect(v["--ps-peak-snow-op"]).to.match(/^\d\.\d{3}$/);
 	});
 
 	it("writes the day's levels as numbers, sway in degrees, and the veil's colour as its own string", function () {
@@ -369,6 +384,7 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		expect(topLevel(inside(sceneMarkup(false), "ps-frost"))).to.deep.equal([
 			"ps-milky",
 			"ps-stars",
+			"ps-meteors",
 			"ps-glow",
 			"ps-moon",
 			"ps-sun",
@@ -443,11 +459,12 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		}
 	});
 
-	it("holds the land, the fireflies, the yurt, its smoke and the animal layer in the ground group, in that order", function () {
+	it("holds the mountains, the land, the fireflies, the yurt, its smoke and the animal layer in the ground group, in that order", function () {
 		// The yurt after the fireflies, as the mockup's ground has it; the smoke
 		// inside the group too (the plan's ruling), so the heat haze bends it.
 		const ground = inside(sceneMarkup(false), "ps-ground");
 		expect(topLevel(ground)).to.deep.equal([
+			"ps-peaks",
 			"ps-land",
 			"ps-fireflies",
 			"ps-yurt",

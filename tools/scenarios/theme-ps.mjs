@@ -1791,8 +1791,12 @@ async function checkYurtMove(page, label, action, settleMs = 1000, alsoAt = []) 
 	// `alsoAt`: places it may pass through on the way (two toggles visit the other place).
 	const near = (x, ...at) => at.some((a) => Math.abs(x - a) <= 1);
 	const elsewhere = trace.filter((p) => !near(p.cx, before.cx, after.cx, ...alsoAt));
+	// The pipe stands off the yurt's middle (on the roof's right slope): the smoke's places are the yurt's plus that.
+	const pipe = smokeBefore - before.cx;
 	const smokeElsewhere = trace.filter(
-		(p) => p.smokeOp > 0.01 && !near(p.smokeX, smokeBefore, smokeAfter, ...alsoAt)
+		(p) =>
+			p.smokeOp > 0.01 &&
+			!near(p.smokeX, smokeBefore, smokeAfter, ...alsoAt.map((a) => a + pipe))
 	);
 	const minOp = Math.min(...trace.map((p) => p.op));
 	page.check(

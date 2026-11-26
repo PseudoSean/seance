@@ -53,7 +53,7 @@ export const NG_STILL_CSS = `/* ==== STILL_RULES (ps NG plan 1, Task 1, rung \`n
 /* Every animation off but the lifted groups' own (ps NG plan 2, Tasks 3 and 4); the rules below still
  * each of those while its psng-m-<group> class is absent. The sun's rays are exempt too (Task 6); g.ps-sway stays still for good (the wrapper sways).
  * The yurt's moving parts too (docs/projects/ps-yurt.md §8; psng/room-motion.ts stills them by their groups). */
-#theme-scene.psng *:not(.ps-cloud, .ps-stars i.tw, .ps-fireflies i, .ps-smoke i, .psng-sway, .psng-rain-tile, .ps-snow i, .ps-seeds i, .ps-flash, .ps-heatband, .ps-rays, .ps-flock, .ps-skein-sway, .psng-pose, .ps-buzzard, .psng-buzz-orbit, .psng-buzz-flap, .ps-lark-track, .psng-lark-fl, .psng-lark-ch, .psng-lark-cl, .ps-ym-cloud, .ps-ym-tw, .ps-ym-fpose, .ps-ym-hotcore, .ps-ym-fback, .ps-ym-fembers, .ps-ym-fireglow, .ps-ym-flame, .ps-ym-steam i) {
+#theme-scene.psng *:not(.ps-cloud, .ps-stars i.tw, .ps-fireflies i, .ps-smoke i, .psng-sway, .psng-rain-tile, .ps-snow i, .ps-seeds i, .ps-flash, .ps-heatband, .ps-rays, .ps-flock, .ps-skein-sway, .psng-pose, .ps-buzzard, .psng-buzz-orbit, .psng-buzz-flap, .ps-lark-track, .psng-lark-fl, .psng-lark-ch, .psng-lark-cl, .ps-ym-cloud, .ps-ym-tw, .ps-ym-fpose, .ps-ym-hotcore, .ps-ym-fback, .ps-ym-fembers, .ps-ym-fireglow, .ps-ym-flame, .ps-ym-steam i, .ps-meteors b) {
 	animation: none !important;
 }
 
@@ -63,7 +63,8 @@ export const NG_STILL_CSS = `/* ==== STILL_RULES (ps NG plan 1, Task 1, rung \`n
 	animation: none !important;
 }
 
-#theme-scene.psng.psng-frozen .ps-flash {
+#theme-scene.psng.psng-frozen .ps-flash,
+#theme-scene.psng.psng-frozen .ps-meteors {
 	display: none;
 }
 
@@ -75,7 +76,8 @@ export const NG_STILL_CSS = `/* ==== STILL_RULES (ps NG plan 1, Task 1, rung \`n
 #theme-scene.psng:not(.psng-m-weather) .ps-snow,
 #theme-scene.psng:not(.psng-m-weather) .ps-seeds,
 #theme-scene.psng:not(.psng-m-weather) .ps-flash,
-#theme-scene.psng:not(.psng-m-smoke) .ps-smoke {
+#theme-scene.psng:not(.psng-m-smoke) .ps-smoke,
+#theme-scene.psng:not(.psng-m-meteors) .ps-meteors {
 	display: none;
 }
 
@@ -114,6 +116,7 @@ export const NG_STILL_CSS = `/* ==== STILL_RULES (ps NG plan 1, Task 1, rung \`n
 #theme-scene.psng:not(.psng-m-weather) .ps-flash,
 #theme-scene.psng:not(.psng-m-weather) .ps-heatband,
 #theme-scene.psng:not(.psng-m-sun) .ps-rays,
+#theme-scene.psng:not(.psng-m-meteors) .ps-meteors b,
 #theme-scene.psng:not(.psng-m-skeins) .ps-flock,
 #theme-scene.psng:not(.psng-m-skeins) .ps-skein-sway,
 #theme-scene.psng:not(.psng-m-skeins) .ps-bird .psng-pose,
@@ -153,6 +156,10 @@ export const NG_STILL_CSS = `/* ==== STILL_RULES (ps NG plan 1, Task 1, rung \`n
 
 #theme-scene.psng.psng-m-smoke .ps-smoke i {
 	animation-delay: calc(var(--sdl) - var(--psng-t));
+}
+
+#theme-scene.psng.psng-m-meteors .ps-meteors b {
+	animation-delay: calc(var(--mdl) - var(--psng-t));
 }
 
 /* The near grass sways as one box: scene.ts wraps svg.ps-blades in div.psng-sway, which takes the

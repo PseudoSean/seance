@@ -74,7 +74,7 @@ The pieces stand by angle along the wall, measured from the back (0°), positive
 Everything else:
 
 - **Windows:** the back window is 3.1 m wide, from 0.45 m to 1.90 m, with curtains, a sill, a plant and a jug. The side windows are at −60° and 69°, from 1.0 m to 1.85 m.
-- **Stove:** round, 0.38 m in radius, with brass bands, an arched fire door and a round top plate holding a kettle and a pot. Its pipe rises through the crown.
+- **Stove:** round, 0.38 m in radius, with brass bands, an arched fire door and a round top plate holding a kettle and a pot. Its pipe rises through the crown. (Outside, since 2026-11-26, the plains' yurt draws its pipe on the roof's right slope, after the user's avatar; the room keeps its own.)
 - **Posts:** at x = ±0.63.
 - **Rug and table:** the rug is 2.5 m in radius. The dining table, 0.75 m high on a pedestal, stands with two chairs at (−1.35, −0.55), all on the rug. The wood basket is at (−0.75, 0.35).
 

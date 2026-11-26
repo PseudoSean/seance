@@ -41,14 +41,19 @@ const areas = (m: Moment) => sceneGrounds(m, paletteAt(m)).map((g) => g.area);
 describe("ps grounds: what the words are held over (plan 3, the rulings table)", function () {
 	it("names every painted area of the plains the ruling lists, and the sky", function () {
 		expect(AREAS).to.include.members([
-			"mount",
-			"mount2",
+			"mount far",
+			"mount far shade",
+			"mount mid",
+			"mount mid shade",
+			"mount near",
+			"mount near shade",
+			"pine",
+			"pine shade",
 			"far",
 			"hill2",
 			"hill1",
 			"grass",
 			"blade",
-			"tree",
 			"riverbed",
 			"river top",
 			"river bottom",
@@ -103,6 +108,35 @@ describe("ps grounds: what the words are held over (plan 3, the rulings table)",
 		}
 	});
 
+	it("holds the mountains and the pines, not the land's old swells and trees (the avatar's, 2026-11-26)", function () {
+		for (const gone of ["mount", "mount2", "tree"]) {
+			expect(AREAS, gone).to.not.include(gone);
+		}
+	});
+
+	it("counts the peaks' snow only while the date gives them some", function () {
+		expect(areas(at(750, 15))).to.include("peak snow");
+		expect(areas(at(0, 196))).to.not.include("peak snow");
+		expect(areas(at(750, 288, "snow"))).to.not.include("peak snow");
+	});
+
+	it("frosts the mountains and pines on a snowy noon, so the dark ink still holds over them", function () {
+		const m = at(750, 32, "snow");
+		const byName = Object.fromEntries(
+			sceneGrounds(m, paletteAt(m)).map((g) => [g.area, g.hex])
+		);
+		const clear = at(750, 32);
+		const clearBy = Object.fromEntries(
+			sceneGrounds(clear, paletteAt(clear)).map((g) => [g.area, g.hex])
+		);
+
+		for (const k of ["mount near", "pine", "pine shade"]) {
+			expect(luminance(byName[k]), k).to.be.above(luminance(clearBy[k]) + 0.2);
+		}
+
+		expect(publishedFor(paletteAt(m), m).text).to.equal("ink");
+	});
+
 	it("counts the smoke over the far land and the horizon only while the yurt smokes", function () {
 		expect(areas(at(750, 172)).filter((a) => a.startsWith("smoke"))).to.deep.equal([]);
 		expect(
@@ -111,8 +145,10 @@ describe("ps grounds: what the words are held over (plan 3, the rulings table)",
 				.sort()
 		).to.deep.equal([
 			"smoke over far",
-			"smoke over mount",
-			"smoke over mount2",
+			"smoke over mount far",
+			"smoke over mount mid",
+			"smoke over mount near",
+			"smoke over pine",
 			"smoke over skyHorizon",
 		]);
 	});

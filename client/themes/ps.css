@@ -1256,6 +1256,59 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	to { opacity: 1; }
 }
 
+/* Shooting stars (meteors.ts, 2026-11-26): each streak a thin line, its head
+ * bright on its leading end, standing at its place and angle; once in its long
+ * loop it runs along its angle for under a second, then is gone. Faint and
+ * brief: the one quick thing in the scene, never a flash. The minute tick
+ * gates how many are live (layers.ts) and sets the layer's level. */
+#theme-scene .ps-meteors {
+	inset: 0 0 40%;
+}
+
+/* Each streak's place, faded by the layer's level and held to its kind's count by its number. */
+#theme-scene .ps-meteor,
+#theme-scene .ps-perseid {
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+#theme-scene .ps-meteor {
+	opacity: calc(var(--ps-meteor-op, 0) * clamp(0, var(--ps-meteor-count, 0) - var(--mi), 1));
+}
+
+#theme-scene .ps-perseid {
+	opacity: calc(var(--ps-meteor-op, 0) * clamp(0, var(--ps-perseid-count, 0) - var(--mi), 1));
+}
+
+#theme-scene .ps-meteors b {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: var(--ml);
+	height: 0.0625rem;
+	border-radius: 0.0625rem;
+	background: linear-gradient(to right, transparent, rgb(236 242 255 / var(--mb)));
+	transform-origin: 0 50%;
+	opacity: 0;
+	animation: ps-meteor var(--md) linear var(--mdl) infinite;
+}
+
+@keyframes ps-meteor {
+	0%,
+	99.65% {
+		transform: rotate(var(--ma)) translateX(0);
+		opacity: 0;
+	}
+
+	99.72% { opacity: 1; }
+
+	100% {
+		transform: rotate(var(--ma)) translateX(var(--mx));
+		opacity: 0;
+	}
+}
+
 #theme-scene .ps-glow {
 	width: 80%;
 	aspect-ratio: 2.4;
@@ -1420,23 +1473,77 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	height: 56%;
 }
 
-#theme-scene .ps-l-mount2 { fill: var(--ps-mount2); }
-#theme-scene .ps-l-mount { fill: var(--ps-mount); }
+/* The mountains (peaks.ts): their own box behind the land, keeping their
+ * aspect; their foot behind the far plain's edge (38 % up), the box's top
+ * part empty sky that a wide window's slice crops first. */
+#theme-scene .ps-peaks {
+	left: 0;
+	right: 0;
+	bottom: 36%;
+	height: 48%;
+}
+
+#theme-scene .ps-mountains {
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+/* A window wider than 2.65 : 1 would slice the peaks' tops off (past that the
+ * view scales to the box's width): there the box keeps to the scene's middle,
+ * 2.65 times as wide as the scene is tall, and the ranges' foothills, drawn
+ * past the view's edges (peaks.ts), fill the sides. */
+@container (min-aspect-ratio: 265/100) {
+	#theme-scene .ps-peaks {
+		/* stylelint-disable-next-line unit-no-unknown -- cqh: #theme-scene is a size container; stylelint predates it */
+		left: calc(50% - 132.5cqh);
+		right: auto;
+		/* stylelint-disable-next-line unit-no-unknown -- cqh, as above */
+		width: 265cqh;
+	}
+}
+
+/* A portrait window (a phone) crops the view's sides, which brings the
+ * middle's tall peaks to its edges, over the low sun, the moon and the dawn's
+ * glow: there the mountains stand lower, their box 32 % tall (the user,
+ * 2026-11-26; the low sun hides behind them 13 % of the day against 22 %). */
+@container (max-aspect-ratio: 1/1) {
+	#theme-scene .ps-peaks {
+		height: 32%;
+	}
+}
+
+#theme-scene .ps-m-far { fill: var(--ps-mount-far); }
+#theme-scene .ps-m-far-sh { fill: var(--ps-mount-far-sh); }
+#theme-scene .ps-m-mid { fill: var(--ps-mount-mid); }
+#theme-scene .ps-m-mid-sh { fill: var(--ps-mount-mid-sh); }
+#theme-scene .ps-m-near { fill: var(--ps-mount-near); }
+#theme-scene .ps-m-near-sh { fill: var(--ps-mount-near-sh); }
+
+#theme-scene .ps-m-snow {
+	fill: var(--ps-peak-snow);
+	opacity: var(--ps-peak-snow-op);
+}
 #theme-scene .ps-l-far { fill: var(--ps-far); }
-#theme-scene .ps-l-shrub { fill: var(--ps-shrub); }
+#theme-scene .ps-l-pine-lit { fill: var(--ps-pine); }
+#theme-scene .ps-l-pine-sh { fill: var(--ps-pine-sh); }
 #theme-scene .ps-l-hill2 { fill: var(--ps-hill2); }
 #theme-scene .ps-l-tuft2 { fill: var(--ps-tuft2); }
-#theme-scene .ps-l-tree { fill: var(--ps-tree); }
-#theme-scene .ps-l-trunk { fill: var(--ps-trunk); }
 
 /* The land's box is stretched to the window (plains.ts landSvg): the round
  * things on it are put back in proportion about their own middles, their
  * area kept (watchers.ts watchLand), so a narrow window keeps them round. */
-#theme-scene .ps-l-shrub,
-#theme-scene .ps-l-bedstone ellipse,
-#theme-scene .ps-l-grove {
+#theme-scene .ps-l-bedstone ellipse {
 	transform-box: fill-box;
 	transform-origin: center;
+	transform: scale(var(--ps-land-round-x, 1), var(--ps-land-round-y, 1));
+}
+
+/* A pine about its own foot, so it stays rooted where it stands. */
+#theme-scene .ps-l-pine {
+	transform-box: fill-box;
+	transform-origin: 50% 100%;
 	transform: scale(var(--ps-land-round-x, 1), var(--ps-land-round-y, 1));
 }
 #theme-scene .ps-l-hill1 { fill: var(--ps-hill1); }
@@ -1568,7 +1675,12 @@ html:has(.userlist-open .chat-view[data-type="channel"]) #theme-scene .ps-smoke 
 #theme-scene .ps-y-crown { fill: var(--ps-crown); }
 #theme-scene .ps-y-pipe { fill: var(--ps-pipe); }
 #theme-scene .ps-y-stone { fill: var(--ps-stone); }
-#theme-scene .ps-y-wood { fill: var(--ps-wood); }
+#theme-scene .ps-y-log { fill: var(--ps-log-end); }
+#theme-scene .ps-y-log-ring { stroke: var(--ps-log-ring); }
+#theme-scene .ps-y-lattice { stroke: var(--ps-lattice); }
+#theme-scene .ps-y-roof-shade { fill: var(--ps-roof-shade); }
+#theme-scene .ps-y-crown-spoke { stroke: var(--ps-crown); }
+#theme-scene .ps-y-tuft { fill: var(--ps-tuft1); }
 
 /* At night the door, its seams, the wall and the crown glow from inside and a
  * soft pool of light lies on the ground before the door (the user's pick over
@@ -1585,13 +1697,14 @@ html:has(.userlist-open .chat-view[data-type="channel"]) #theme-scene .ps-smoke 
 	opacity: var(--ps-snowcap, 0);
 }
 
-/* The smoke rises from the pipe at night, on the yurt's own place: the yurt's
- * top plus 22/170 of its height (the pipe's top in its drawing), so it goes
- * wherever the yurt goes and fades with it. Inside the ground group, so the
- * heat haze bends it with the yurt. */
+/* The smoke rises from the pipe at night, on the yurt's own place: the pipe's
+ * top in its drawing, (166, 50) on the right slope of the roof (2026-11-26),
+ * so it goes wherever the yurt goes and fades with it. Inside the ground
+ * group, so the heat haze bends it with the yurt. */
 #theme-scene .ps-smoke {
-	left: var(--ps-yurt-x);
-	bottom: calc(17% + 21% * 148 / 170);
+	/* stylelint-disable-next-line unit-no-unknown -- cqh: #theme-scene is a size container; stylelint predates it */
+	left: calc(var(--ps-yurt-x) + 21cqh * 46 / 170);
+	bottom: calc(17% + 21% * 120 / 170);
 	width: 0;
 	height: 0;
 	opacity: var(--ps-smoke-op, 0);
@@ -1603,8 +1716,25 @@ html:has(.userlist-open .chat-view[data-type="channel"]) #theme-scene .ps-smoke 
 	bottom: 0;
 	border-radius: 50%;
 	background: radial-gradient(closest-side, var(--ps-smoke) 0%, transparent 100%);
-	animation: ps-smoke-rise var(--sd) linear var(--sdl) infinite;
+	animation: ps-smoke-curl var(--sd) linear var(--sdl) infinite;
 	opacity: 0;
+}
+
+/* The pipe's smoke leans one way, then curls the other as it climbs. */
+@keyframes ps-smoke-curl {
+	0% {
+		transform: translate(-50%, 0) scale(0.45);
+		opacity: 0;
+	}
+
+	12% { opacity: 0.9; }
+
+	45% { transform: translate(calc(-50% - 0.625rem), -2.5rem) scale(1.5); }
+
+	100% {
+		transform: translate(calc(-50% + 2.125rem), -6rem) scale(3.1);
+		opacity: 0;
+	}
 }
 
 @keyframes ps-smoke-rise {
@@ -2106,11 +2236,11 @@ html[data-shell="native"] #viewport {
  * solved to 4.6 against:
  *   #666666  doy 1 530 min clear  cloud #fffffe
  * The worst grounds by day, darkest first, through the halo:
- *   #c27f6a  doy 6 945 min snow  band under the veil #b76b58
- *   #c27f6b  doy 7 945 min snow  band under the veil #b76b58
- *   #c27f6c  doy 1 935 min snow  band under the veil #b76b59
- *   #c27f6d  doy 1 930 min snow  band under the veil #b76b59
- *   #c27f6e  doy 8 930 min snow  band under the veil #b76b5a
+ *   #cc7a65  doy 3 905 min snow  band under the veil #c4634d
+ *   #cc7a66  doy 1 900 min snow  band under the veil #c4644e
+ *   #cd7a64  doy 9 905 min snow  band under the veil #c5644c
+ *   #cc7b66  doy 1 895 min snow  band under the veil #c4644e
+ *   #cb7c67  doy 14 895 min snow  band under the veil #c3664f
  * The worst in the light treatment (at any hour: dark ink holds only on
  * snowy days), brightest first, through the shadow:
  *   #666666  doy 1 530 min clear  cloud #fffffe
@@ -2123,7 +2253,7 @@ html[data-shell="native"] #viewport {
  * the other coloured light colours to 4.6 against:
  *   #666666  doy 1 530 min clear  cloud #fffffe
  * Faint ink, rule 2: #4c5a72 → #38455c, OKLCH L −0.0764;
- *   3.01:1 on #c27f6a at doy 6 945 min snow.
+ *   3.01:1 on #cc7a65 at doy 3 905 min snow.
  * Code boxes paint --ps-code-bg, opaque (ps.css, after the block): the --tok-*
  * colours are solved against it, #f4f9ff by day and #121827 otherwise.
  * Six-digit hex throughout: the floors test reads every colour in that form. */
@@ -2147,8 +2277,8 @@ html[data-shell="native"] #viewport {
 	--channel-typing-color: #002e1e;
 	--event-quit: #550603;
 	--notice-color: #042d2d;
-	--nick-default: #002360;
-	--channel-activity-color: #002360;
+	--nick-default: #002460;
+	--channel-activity-color: #002460;
 	--tok-comment: #5f7292;
 	--tok-keyword: #c34073;
 	--tok-string: #2d7f5f;
@@ -2194,7 +2324,7 @@ html[data-shell="native"] #viewport {
 	--tok-attr: #9367f2;
 }
 
-#chat .chat .user.color-1 { color: #520529; }
+#chat .chat .user.color-1 { color: #530529; }
 #chat .chat .user.color-2 { color: #540521; }
 #chat .chat .user.color-3 { color: #550518; }
 #chat .chat .user.color-4 { color: #55060d; }
@@ -2212,13 +2342,13 @@ html[data-shell="native"] #viewport {
 #chat .chat .user.color-16 { color: #182d01; }
 #chat .chat .user.color-17 { color: #022f0a; }
 #chat .chat .user.color-18 { color: #052e1c; }
-#chat .chat .user.color-19 { color: #042d24; }
+#chat .chat .user.color-19 { color: #042e24; }
 #chat .chat .user.color-20 { color: #042d2b; }
 #chat .chat .user.color-21 { color: #032d2f; }
 #chat .chat .user.color-22 { color: #012c36; }
 #chat .chat .user.color-23 { color: #022b3b; }
 #chat .chat .user.color-24 { color: #012a46; }
-#chat .chat .user.color-25 { color: #002559; }
+#chat .chat .user.color-25 { color: #002659; }
 #chat .chat .user.color-26 { color: #19205f; }
 #chat .chat .user.color-27 { color: #291c5d; }
 #chat .chat .user.color-28 { color: #341858; }
@@ -3702,7 +3832,8 @@ html[data-reduce-motion] #theme-scene .ps-rain,
 html[data-reduce-motion] #theme-scene .ps-snow,
 html[data-reduce-motion] #theme-scene .ps-seeds,
 html[data-reduce-motion] #theme-scene .ps-flash,
-html[data-reduce-motion] #theme-scene .ps-smoke {
+html[data-reduce-motion] #theme-scene .ps-smoke,
+html[data-reduce-motion] #theme-scene .ps-meteors {
 	display: none;
 }
 

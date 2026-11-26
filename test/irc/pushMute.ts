@@ -891,8 +891,10 @@ describe("push mute on the wire (irc/pushMute.ts)", function () {
 	it("shows the replies for any other key, as a raw /metadata asked", function () {
 		const h = connect();
 		h.dispatch.resetHistory();
+		// (Our own avatar is not one: another device's answers about it are
+		// kept quiet, test/irc/avatars.ts.)
 		h.transport.lines(
-			":irc.test 761 alice alice avatar * :https://example.test/a.png",
+			":irc.test 761 alice alice display-name * :Alice",
 			":irc.test 766 alice alice display-name :key not set",
 			":irc.test 770 alice display-name"
 		);
