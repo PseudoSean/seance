@@ -3413,8 +3413,6 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 
 	it("fills every land area from the colour the palette publishes for it", function () {
 		const AREAS: Record<string, string> = {
-			"ps-l-mount2": "var(--ps-mount2)",
-			"ps-l-mount": "var(--ps-mount)",
 			"ps-l-far": "var(--ps-far)",
 			"ps-l-shrub": "var(--ps-shrub)",
 			"ps-l-riverbed": "var(--ps-riverbed)",
@@ -3438,13 +3436,36 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 		expect(valueOf(`${S} .ps-l-river`, "fill")).to.equal(undefined);
 	});
 
+	it("paints the mountains' ranges, faces and caps from the palette, the caps at the date's level", function () {
+		const FILLS: Record<string, string> = {
+			"ps-m-far": "var(--ps-mount-far)",
+			"ps-m-far-sh": "var(--ps-mount-far-sh)",
+			"ps-m-mid": "var(--ps-mount-mid)",
+			"ps-m-mid-sh": "var(--ps-mount-mid-sh)",
+			"ps-m-near": "var(--ps-mount-near)",
+			"ps-m-near-sh": "var(--ps-mount-near-sh)",
+			"ps-m-snow": "var(--ps-peak-snow)",
+		};
+
+		for (const [name, fill] of Object.entries(FILLS)) {
+			expect(valueOf(`${S} .${name}`, "fill"), name).to.equal(fill);
+		}
+
+		expect(valueOf(`${S} .ps-m-snow`, "opacity")).to.equal("var(--ps-peak-snow-op)");
+		expect(valueOf(`${S} .ps-land`, "height")).to.equal("56%");
+		// Behind the far plain's edge (38 % up), rising into the sky; the box holds empty sky on top.
+		expect(valueOf(`${S} .ps-peaks`, "bottom")).to.equal("36%");
+		expect(valueOf(`${S} .ps-peaks`, "height")).to.equal("48%");
+	});
+
 	it("mixes no area colour in CSS: color-mix is left to the lines (the rims, the river's glint)", function () {
 		const LINES = [`${S} .ps-l-rim`, `${S} .ps-l-river-hi`];
 		const areas = rules.filter((r) =>
 			r.selectors.some(
 				(sel) =>
-					/^#theme-scene \.(ps-l-|ps-blades|ps-ground|ps-fireflies)/.test(sel) &&
-					!LINES.includes(sel)
+					/^#theme-scene \.(ps-l-|ps-m-|ps-peaks|ps-blades|ps-ground|ps-fireflies)/.test(
+						sel
+					) && !LINES.includes(sel)
 			)
 		);
 		expect(areas.length, "the land's rules").to.be.at.least(15);

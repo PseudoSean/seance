@@ -454,11 +454,12 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		}
 	});
 
-	it("holds the land, the fireflies, the yurt, its smoke and the animal layer in the ground group, in that order", function () {
+	it("holds the mountains, the land, the fireflies, the yurt, its smoke and the animal layer in the ground group, in that order", function () {
 		// The yurt after the fireflies, as the mockup's ground has it; the smoke
 		// inside the group too (the plan's ruling), so the heat haze bends it.
 		const ground = inside(sceneMarkup(false), "ps-ground");
 		expect(topLevel(ground)).to.deep.equal([
+			"ps-peaks",
 			"ps-land",
 			"ps-fireflies",
 			"ps-yurt",

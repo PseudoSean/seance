@@ -55,10 +55,10 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			expect(land).to.not.include("ps-heat");
 		});
 
-		it("draws the eight land paths, once each", function () {
+		it("draws the six land paths, once each: the mountains are their own layer (peaks.ts)", function () {
+			expect(land).to.not.include("ps-l-mount");
+
 			for (const name of [
-				"ps-l-mount2",
-				"ps-l-mount",
 				"ps-l-far",
 				"ps-l-riverbed",
 				"ps-l-river",
@@ -74,8 +74,6 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 		it("in the mockup's order, back to front", function () {
 			const at = (name: string) => land.indexOf(`class="${name}"`);
 			const order = [
-				"ps-l-mount2",
-				"ps-l-mount",
 				"ps-l-far",
 				"ps-l-shrub",
 				"ps-l-riverbed",

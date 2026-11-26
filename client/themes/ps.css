@@ -1420,8 +1420,32 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	height: 56%;
 }
 
-#theme-scene .ps-l-mount2 { fill: var(--ps-mount2); }
-#theme-scene .ps-l-mount { fill: var(--ps-mount); }
+/* The mountains (peaks.ts): their own box behind the land, keeping their
+ * aspect; their foot behind the far plain's edge (38 % up), the box's top
+ * part empty sky that a wide window's slice crops first. */
+#theme-scene .ps-peaks {
+	left: 0;
+	right: 0;
+	bottom: 36%;
+	height: 48%;
+}
+
+#theme-scene .ps-mountains {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+#theme-scene .ps-m-far { fill: var(--ps-mount-far); }
+#theme-scene .ps-m-far-sh { fill: var(--ps-mount-far-sh); }
+#theme-scene .ps-m-mid { fill: var(--ps-mount-mid); }
+#theme-scene .ps-m-mid-sh { fill: var(--ps-mount-mid-sh); }
+#theme-scene .ps-m-near { fill: var(--ps-mount-near); }
+#theme-scene .ps-m-near-sh { fill: var(--ps-mount-near-sh); }
+#theme-scene .ps-m-snow {
+	fill: var(--ps-peak-snow);
+	opacity: var(--ps-peak-snow-op);
+}
 #theme-scene .ps-l-far { fill: var(--ps-far); }
 #theme-scene .ps-l-shrub { fill: var(--ps-shrub); }
 #theme-scene .ps-l-hill2 { fill: var(--ps-hill2); }

@@ -117,8 +117,6 @@ export function landSvg(): string {
 		`<stop offset="0" style="stop-color: var(--ps-river-sky-top)"/><stop offset="1" style="stop-color: var(--ps-river-sky-bottom)"/>` +
 		`</linearGradient>` +
 		`</defs>` +
-		`<path class="ps-l-mount2" d="M0,86 C60,70 110,54 170,62 C230,70 260,40 330,44 C400,48 430,76 500,70 C580,62 620,30 700,36 C780,42 820,70 900,64 C980,58 1030,34 1100,42 C1150,48 1180,60 1200,62${TO_FOOT}"/>` +
-		`<path class="ps-l-mount" d="M0,112 C80,96 140,84 220,92 C300,100 340,76 420,80 C500,84 560,104 640,98 C720,92 780,72 860,78 C940,84 1000,102 1080,96 C1140,92 1180,98 1200,100${TO_FOOT}"/>` +
 		`<path class="ps-l-far" d="M0,128 C200,120 400,132 600,126 C800,120 1000,132 1200,126${TO_FOOT}"/>` +
 		shrubs +
 		`<path class="ps-l-riverbed" d="${RIVER}"/>` +

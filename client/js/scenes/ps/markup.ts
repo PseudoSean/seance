@@ -11,6 +11,7 @@ import {rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {bodyOpacity} from "./grounds";
 import {levelsAt, WEATHER, type Palette} from "./palette";
 import {clouds, FIREFLIES, fireflies, landSvg, nearGrass, smoke, yurtSvg} from "./plains";
+import {mountainsSvg} from "./peaks";
 
 export const STAR_COUNT = 190;
 const RAD = Math.PI / 180;
@@ -244,6 +245,7 @@ export function sceneMarkup(phone: boolean): string {
 		SUN +
 		`<div class="ps-cloud-field"><div class="ps-overcast"></div>${clouds()}</div>` +
 		`<div class="ps-ground">` +
+		`<div class="ps-peaks">${mountainsSvg()}</div>` +
 		landSvg() +
 		`<div class="ps-fireflies">${fireflies(phone ? FIREFLIES / 2 : FIREFLIES)}</div>` +
 		`<div class="ps-yurt">${yurtSvg()}</div>` +
