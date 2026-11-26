@@ -62,14 +62,15 @@ const PAGE: Array<{
 		minute: 750,
 		doy: JUNE,
 		weather: "clear",
-		tints: {header: 0.46, composer: 0.4, side: 0.51, float: 0.6, card: 0.44},
+		// The pines and the mountains' shaded faces stand behind the side glass (2026-11-26).
+		tints: {header: 0.46, composer: 0.4, side: 0.58, float: 0.61, card: 0.47},
 	},
 	{
 		what: "clear late afternoon, 19:24",
 		minute: 1164,
 		doy: JUNE,
 		weather: "clear",
-		tints: {header: 0.65, composer: 0.64, side: 0.65, float: 0.65, card: 0.53},
+		tints: {header: 0.65, composer: 0.64, side: 0.7, float: 0.7, card: 0.58},
 	},
 	{
 		what: "the last minute of day glass, 20:23",
@@ -83,7 +84,7 @@ const PAGE: Array<{
 		minute: 750,
 		doy: MAY,
 		weather: "rain",
-		tints: {header: 0.54, composer: 0.48, side: 0.57, float: 0.62, card: 0.49},
+		tints: {header: 0.54, composer: 0.48, side: 0.61, float: 0.62, card: 0.5},
 	},
 ];
 
@@ -155,7 +156,14 @@ describe("ps glass: the luminous day glass (plan 3 task 7b, the user's pick)", f
 		]);
 		// A docked sidebar or user list: everything but the yurt, its pool and its smoke.
 		expect(areas("side").filter((a) => yurt.test(a))).to.deep.equal([]);
-		expect(areas("side")).to.include.members(["skyTop", "hill1", "tree", "river top", "cloud"]);
+		expect(areas("side")).to.include.members([
+			"skyTop",
+			"hill1",
+			"pine",
+			"mount near",
+			"river top",
+			"cloud",
+		]);
 		// A drawer, an overlaid list, a chip: everything.
 		expect(areas("float")).to.deep.equal(all.map((g) => g.area));
 	});
@@ -319,9 +327,9 @@ describe("ps glass: the luminous day glass (plan 3 task 7b, the user's pick)", f
 		expect(glassVars(day, "day")).to.deep.equal({
 			"--ps-g-tint-header": "0.46",
 			"--ps-g-tint-composer": "0.40",
-			"--ps-g-tint-side": "0.51",
-			"--ps-g-tint-float": "0.60",
-			"--ps-g-tint-card": "0.44",
+			"--ps-g-tint-side": "0.58",
+			"--ps-g-tint-float": "0.61",
+			"--ps-g-tint-card": "0.47",
 		});
 		expect(glassVars(at(30, JUNE), "night")).to.deep.equal({
 			"--ps-g-tint-header": null,
