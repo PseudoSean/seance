@@ -360,6 +360,24 @@ describe("the avatar's mountains and pines", function () {
 		}
 	});
 
+	it("keeps a snowy night and dusk near the land's own light: the frost follows the day", function () {
+		const night = paletteAt(localAt(1320, 5, "snow"));
+		const dusk = paletteAt(localAt(1000, 5, "snow"));
+
+		for (const k of ["mountNear", "mountFar", "pine"] as const) {
+			expect(luminance(night[k]), `${k} at night`).to.be.at.most(
+				luminance(night.far) * 2 + 0.02
+			);
+			expect(luminance(dusk[k]), `${k} at dusk`).to.be.at.most(luminance(dusk.far) + 0.15);
+		}
+	});
+
+	it("keeps the peaks' faces and the pines' shaded halves under snow", function () {
+		const p = paletteAt(at(720, 15, "snow"));
+		expect(contrast(p.mountNear, p.mountNearShade)).to.be.at.least(1.2);
+		expect(contrast(p.pine, p.pineShade)).to.be.at.least(1.15);
+	});
+
 	it("gives no caps in summer or autumn even in snow", function () {
 		for (const doy of [213, 274]) {
 			const m = at(720, doy, "snow");

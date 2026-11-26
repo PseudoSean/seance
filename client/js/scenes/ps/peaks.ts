@@ -1,6 +1,6 @@
 /**
- * The ps scene's mountains (the user's avatar, 2026-11-26; design
- * docs/superpowers/specs/2026-11-26-ps-scene-mountains-design.md): three
+ * The ps scene's mountains (the user's avatar, 2026-11-26;
+ * docs/projects/ps-theme.md §2 and §5.1): three
  * ranges behind the land, far to near, each a lit silhouette, its peaks'
  * shaded right faces and the snow on its high peaks. Their own layer, not
  * the land's: the land is stretched to the window, which would squash peaks

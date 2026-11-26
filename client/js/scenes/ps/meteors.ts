@@ -1,6 +1,6 @@
 /**
- * Shooting stars over the ps scene (the user, 2026-11-26; design
- * docs/superpowers/specs/2026-11-26-ps-scene-mountains-design.md): on clear
+ * Shooting stars over the ps scene (the user, 2026-11-26;
+ * docs/projects/ps-theme.md §2 and §5.9): on clear
  * nights only, with the stars, a sporadic one every few minutes, and from
  * 17 July to 24 August the Perseids, building to the peak nights of 12–13
  * August, when after midnight one crosses about every half minute, all of

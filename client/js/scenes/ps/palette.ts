@@ -344,11 +344,14 @@ export function paletteAt(m: Moment): Palette {
 		...trees,
 	};
 
+	// Under falling snow: frosted toward the snow's white by day and toward the hour's own far plain
+	// as it darkens, so a snowy night stays a night; the shaded faces and halves a little less, so
+	// the peaks keep their facets and the pines their shape.
 	if (m.weather === "snow") {
-		const white = mixOklab("#eef2f8", "#3c4a6a", 1 - s.dark * 0.55);
+		const white = mixOklab("#eef2f8", s.far, (1 - s.dark) ** 3);
 
 		for (const k of Object.keys(scenery)) {
-			scenery[k] = mixOklab(scenery[k], white, 0.15);
+			scenery[k] = mixOklab(scenery[k], white, k.endsWith("Shade") ? 0.3 : 0.15);
 		}
 	}
 

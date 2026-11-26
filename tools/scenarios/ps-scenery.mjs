@@ -1,5 +1,5 @@
 // The ps scene in the avatar's likeness and its shooting stars, in a real
-// browser (docs/superpowers/specs/2026-11-26-ps-scene-mountains-design.md):
+// browser (docs/projects/ps-theme.md §2, §5.1, §5.3, §5.9):
 //
 // - the clock pinned (a Date shim, in UTC) to days whose weather is known
 //   (engine.ts weatherFor), the scene remounted at each by a theme round trip;
