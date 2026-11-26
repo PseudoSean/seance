@@ -313,10 +313,84 @@ function bandMarks(): string {
 /** The wall's outline: the felt, and over it the inner glow at night. */
 const WALL = "M38,150 L38,98 Q120,90 202,98 L202,150 Q120,158 38,150 Z";
 
+/** Where a point on the wall's front stands: the cylinder seen from the front, so marks crowd toward the sides. */
+const wallX = (deg: number) =>
+	120 + 82 * Math.sin((Math.max(-90, Math.min(90, deg)) * Math.PI) / 180);
+
+/** The lattice (the avatar's, 2026-11-26): crossed diagonals round the cylinder, clipped to the wall. */
+function lattice(): string {
+	let out = "";
+
+	for (let deg = -120; deg <= 90; deg += 12) {
+		out += `<path d="M${n(wallX(deg))},92 L${n(wallX(deg + 30))},156"/>`;
+		out += `<path d="M${n(wallX(deg + 30))},92 L${n(wallX(deg))},156"/>`;
+	}
+
+	return out;
+}
+
+/** The roof's eave (its quadratic from (24, 101) through (120, 86) to (216, 101)) at x. */
+const eaveY = (x: number) => onCurve(101, 86, 101, (x - 24) / 192);
+
+/** A dozen ribs from the crown's ring to the eave, round the cone's front. */
+function ribs(): string {
+	let out = "";
+
+	for (let k = 0; k < 12; k++) {
+		const s = Math.sin(((-82 + (164 * k) / 11) * Math.PI) / 180);
+		const xb = 120 + 92 * s;
+		out += `<path d="M${n(120 + 13 * s)},${n(49.5)} L${n(xb)},${n(eaveY(xb) - 0.8)}"/>`;
+	}
+
+	return out;
+}
+
+/** The crown's wheel: eight spokes on its ring. */
+function spokes(): string {
+	let out = "";
+
+	for (let k = 0; k < 8; k++) {
+		const a = (k * Math.PI) / 4;
+		out += `<path d="M120,48 L${n(120 + 12 * Math.cos(a))},${n(48 + 3.6 * Math.sin(a))}"/>`;
+	}
+
+	return out;
+}
+
+/** The woodpile as log ends, stacked four, three, two, left of the wall; each with its ring. */
+const LOGS: ReadonlyArray<[number, number]> = [
+	[11, 143.5],
+	[18, 143.5],
+	[25, 143.5],
+	[32, 143.5],
+	[14.5, 137.6],
+	[21.5, 137.6],
+	[28.5, 137.6],
+	[18, 131.7],
+	[25, 131.7],
+];
+
+/** Stepping stones from the door, unlit, by day and at night (the user's pick: the pool at the door, no lit path). */
+const STONES: ReadonlyArray<[number, number, number, number]> = [
+	[120, 155.2, 4.6, 1.7],
+	[113.5, 159.2, 4.3, 1.6],
+	[121.5, 162.9, 4.8, 1.8],
+	[112.5, 166.4, 4.4, 1.6],
+	[103.5, 168, 3.8, 1.4],
+];
+
+/** A few tufts at the wall's foot. */
+const TUFTS = [44, 61, 178, 195]
+	.map((x) => `<path d="M${x},152.5 l-2.2,-5 l2.2,3 l1,-6.2 l1,6.2 l2,-4.4 l-1,6.4 Z"/>`)
+	.join("");
+
 /**
- * The yurt (docs/projects/ps-theme.md §5.3): felt walls and roof with a rope
- * band and ribs, the patterned band, the carved door, the crown ring and its
- * stove pipe, stones and a woodpile beside it, and the pool at the door. On
+ * The yurt (docs/projects/ps-theme.md §5.3): felt walls with their lattice
+ * and rope bands, the roof with its shaded side and a dozen ribs, the
+ * patterned band, the carved door, the spoked crown, the stove pipe on the
+ * roof's right slope (the avatar's, 2026-11-26), a woodpile of log ends,
+ * stepping stones from the door and tufts at its foot, and the pool at the
+ * door. On
  * the mockup's 240 × 170 box; ps.css sizes it on the ground band and scene.ts
  * decides where it stands. The `ps-y-lit` parts glow at night, and the door's
  * light falls as a soft pool on the ground before it (`ps-y-pool`), only at
@@ -336,12 +410,21 @@ export function yurtSvg(): string {
 		`<radialGradient id="ps-y-crown-glow"><stop offset="0" stop-color="#ffd08a" stop-opacity=".95"/><stop offset="1" stop-color="#ff9f4a" stop-opacity="0"/></radialGradient>` +
 		`<filter id="ps-y-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.4"/></filter>` +
 		`<filter id="ps-y-soft" x="-80%" y="-120%" width="260%" height="340%"><feGaussianBlur stdDeviation="5"/></filter>` +
+		`<clipPath id="ps-y-wall-clip"><path d="${WALL}"/></clipPath>` +
 		`</defs>` +
 		`<ellipse cx="120" cy="152" rx="96" ry="7" fill="#000" opacity=".16"/>` +
 		`<ellipse class="ps-y-pool" cx="120" cy="157" rx="58" ry="15" fill="url(#ps-y-pool)" filter="url(#ps-y-soft)"/>` +
-		`<g class="ps-y-wood"><rect x="20" y="136" width="22" height="5" rx="2.5"/><rect x="22" y="131" width="19" height="5" rx="2.5"/><rect x="25" y="126" width="13" height="5" rx="2.5"/></g>` +
-		`<g class="ps-y-stone"><ellipse cx="100" cy="160" rx="5" ry="2.2"/><ellipse cx="140" cy="164" rx="5.5" ry="2.4"/></g>` +
+		`<g class="ps-y-log">${LOGS.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.4"/>`).join(
+			""
+		)}</g>` +
+		`<g class="ps-y-log-ring" fill="none" stroke-width=".6">${LOGS.map(
+			([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6"/>`
+		).join("")}</g>` +
+		`<g class="ps-y-stone">${STONES.map(
+			([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>`
+		).join("")}</g>` +
 		`<path d="${WALL}" fill="url(#ps-y-wall)"/>` +
+		`<g class="ps-y-lattice" clip-path="url(#ps-y-wall-clip)" fill="none" stroke-width=".7" opacity=".4">${lattice()}</g>` +
 		`<path d="${WALL}" fill="url(#ps-y-inner)" class="ps-y-lit"/>` +
 		`<g class="ps-y-rope" fill="none" stroke-width="1.3" opacity=".6">` +
 		`<path d="M38,114 Q120,121 202,114"/><path d="M38,130 Q120,137 202,130"/><path d="M38,145 Q120,152 202,145"/>` +
@@ -349,20 +432,22 @@ export function yurtSvg(): string {
 		`<path class="ps-y-band" d="M38,98 Q120,90 202,98 L202,107 Q120,99 38,107 Z"/>` +
 		`<g class="ps-y-band-mark">${bandMarks()}</g>` +
 		`<path class="ps-y-roof" d="M24,101 Q120,86 216,101 L133,49 Q120,45 107,49 Z" fill="url(#ps-y-roof)"/>` +
+		`<path class="ps-y-roof-shade" d="M120,46 L133,49 L216,101 Q168,93.5 120,93.5 Z" opacity=".22"/>` +
 		`<path class="ps-y-snow" d="M27,99 Q120,85 213,99 L201,91 Q170,78 132,55 Q120,50 108,55 Q70,78 39,91 Z"/>` +
-		`<g class="ps-y-rib" stroke-width=".8" opacity=".55" fill="none">` +
-		`<path d="M110,50 L44,99"/><path d="M114,49 L70,95"/><path d="M118,48 L97,92"/><path d="M122,48 L143,92"/><path d="M126,49 L170,95"/><path d="M130,50 L196,99"/>` +
-		`</g>` +
+		`<g class="ps-y-rib" stroke-width=".8" opacity=".55" fill="none">${ribs()}</g>` +
 		`<ellipse class="ps-y-crown" cx="120" cy="48" rx="14" ry="4.2"/>` +
+		`<g class="ps-y-crown-spoke" fill="none" stroke-width=".6" opacity=".7">${spokes()}</g>` +
 		`<ellipse cx="120" cy="47" rx="16" ry="9" fill="url(#ps-y-crown-glow)" class="ps-y-lit" filter="url(#ps-y-blur)"/>` +
-		`<rect class="ps-y-pipe" x="116.5" y="24" width="7" height="24" rx="1.2"/>` +
-		`<rect class="ps-y-pipe" x="114.5" y="22" width="11" height="3" rx="1"/>` +
+		// The stove pipe on the roof's right slope (the avatar's, 2026-11-26), its foot in the roof.
+		`<rect class="ps-y-pipe" x="162.5" y="52" width="7" height="20" rx="1.2"/>` +
+		`<rect class="ps-y-pipe" x="160.5" y="50" width="11" height="3" rx="1"/>` +
 		`<path d="M103,151 L103,119 Q120,113 137,119 L137,151 Z" fill="#ffcf7a" class="ps-y-lit" filter="url(#ps-y-blur)"/>` +
 		`<path class="ps-y-door" d="M104,151 L104,120 Q120,114.5 136,120 L136,151 Z"/>` +
 		`<g class="ps-y-door-orn" fill="none" stroke-width="1.1" opacity=".85">` +
 		`<path d="M108,148 L108,123 Q120,118.5 132,123 L132,148 Z"/><path d="M120,122 L120,146"/><path d="M113,134 Q116,130 120,134 Q124,138 127,134"/>` +
 		`</g>` +
 		`<path d="M104,151 L104,120 Q120,114.5 136,120 L136,151" fill="none" stroke="#ffd98f" stroke-width="1.4" class="ps-y-lit"/>` +
+		`<g class="ps-y-tuft">${TUFTS}</g>` +
 		`</svg>`
 	);
 }
@@ -377,9 +462,9 @@ const PUFFS = [
 ];
 
 /**
- * The smoke from the yurt's crown at night: five puffs that rise, drift and
- * spread, each on its own clock (ps.css `ps-smoke-rise`), sized in rem. ps.css
- * stands the group on the pipe.
+ * The smoke from the yurt's stove pipe at night: five puffs that rise, curl
+ * and spread, each on its own clock (ps.css `ps-smoke-curl`), sized in rem.
+ * ps.css stands the group on the pipe.
  */
 export function smoke(): string {
 	return PUFFS.map(

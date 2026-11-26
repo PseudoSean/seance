@@ -1442,6 +1442,7 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 #theme-scene .ps-m-mid-sh { fill: var(--ps-mount-mid-sh); }
 #theme-scene .ps-m-near { fill: var(--ps-mount-near); }
 #theme-scene .ps-m-near-sh { fill: var(--ps-mount-near-sh); }
+
 #theme-scene .ps-m-snow {
 	fill: var(--ps-peak-snow);
 	opacity: var(--ps-peak-snow-op);
@@ -1596,7 +1597,12 @@ html:has(.userlist-open .chat-view[data-type="channel"]) #theme-scene .ps-smoke 
 #theme-scene .ps-y-crown { fill: var(--ps-crown); }
 #theme-scene .ps-y-pipe { fill: var(--ps-pipe); }
 #theme-scene .ps-y-stone { fill: var(--ps-stone); }
-#theme-scene .ps-y-wood { fill: var(--ps-wood); }
+#theme-scene .ps-y-log { fill: var(--ps-log-end); }
+#theme-scene .ps-y-log-ring { stroke: var(--ps-log-ring); }
+#theme-scene .ps-y-lattice { stroke: var(--ps-lattice); }
+#theme-scene .ps-y-roof-shade { fill: var(--ps-roof-shade); }
+#theme-scene .ps-y-crown-spoke { stroke: var(--ps-crown); }
+#theme-scene .ps-y-tuft { fill: var(--ps-tuft1); }
 
 /* At night the door, its seams, the wall and the crown glow from inside and a
  * soft pool of light lies on the ground before the door (the user's pick over
@@ -1613,13 +1619,14 @@ html:has(.userlist-open .chat-view[data-type="channel"]) #theme-scene .ps-smoke 
 	opacity: var(--ps-snowcap, 0);
 }
 
-/* The smoke rises from the pipe at night, on the yurt's own place: the yurt's
- * top plus 22/170 of its height (the pipe's top in its drawing), so it goes
- * wherever the yurt goes and fades with it. Inside the ground group, so the
- * heat haze bends it with the yurt. */
+/* The smoke rises from the pipe at night, on the yurt's own place: the pipe's
+ * top in its drawing, (166, 50) on the right slope of the roof (2026-11-26),
+ * so it goes wherever the yurt goes and fades with it. Inside the ground
+ * group, so the heat haze bends it with the yurt. */
 #theme-scene .ps-smoke {
-	left: var(--ps-yurt-x);
-	bottom: calc(17% + 21% * 148 / 170);
+	/* stylelint-disable-next-line unit-no-unknown -- cqh: #theme-scene is a size container; stylelint predates it */
+	left: calc(var(--ps-yurt-x) + 21cqh * 46 / 170);
+	bottom: calc(17% + 21% * 120 / 170);
 	width: 0;
 	height: 0;
 	opacity: var(--ps-smoke-op, 0);
@@ -1631,8 +1638,25 @@ html:has(.userlist-open .chat-view[data-type="channel"]) #theme-scene .ps-smoke 
 	bottom: 0;
 	border-radius: 50%;
 	background: radial-gradient(closest-side, var(--ps-smoke) 0%, transparent 100%);
-	animation: ps-smoke-rise var(--sd) linear var(--sdl) infinite;
+	animation: ps-smoke-curl var(--sd) linear var(--sdl) infinite;
 	opacity: 0;
+}
+
+/* The pipe's smoke leans one way, then curls the other as it climbs. */
+@keyframes ps-smoke-curl {
+	0% {
+		transform: translate(-50%, 0) scale(0.45);
+		opacity: 0;
+	}
+
+	12% { opacity: 0.9; }
+
+	45% { transform: translate(calc(-50% - 0.625rem), -2.5rem) scale(1.5); }
+
+	100% {
+		transform: translate(calc(-50% + 2.125rem), -6rem) scale(3.1);
+		opacity: 0;
+	}
 }
 
 @keyframes ps-smoke-rise {
@@ -2134,11 +2158,11 @@ html[data-shell="native"] #viewport {
  * solved to 4.6 against:
  *   #666666  doy 1 530 min clear  cloud #fffffe
  * The worst grounds by day, darkest first, through the halo:
- *   #c27f6a  doy 6 945 min snow  band under the veil #b76b58
- *   #c27f6b  doy 7 945 min snow  band under the veil #b76b58
- *   #c27f6c  doy 1 935 min snow  band under the veil #b76b59
- *   #c27f6d  doy 1 930 min snow  band under the veil #b76b59
- *   #c27f6e  doy 8 930 min snow  band under the veil #b76b5a
+ *   #cc7a65  doy 3 905 min snow  band under the veil #c4634d
+ *   #cc7a66  doy 1 900 min snow  band under the veil #c4644e
+ *   #cd7a64  doy 9 905 min snow  band under the veil #c5644c
+ *   #cc7b66  doy 1 895 min snow  band under the veil #c4644e
+ *   #cb7c67  doy 14 895 min snow  band under the veil #c3664f
  * The worst in the light treatment (at any hour: dark ink holds only on
  * snowy days), brightest first, through the shadow:
  *   #666666  doy 1 530 min clear  cloud #fffffe
@@ -2151,7 +2175,7 @@ html[data-shell="native"] #viewport {
  * the other coloured light colours to 4.6 against:
  *   #666666  doy 1 530 min clear  cloud #fffffe
  * Faint ink, rule 2: #4c5a72 → #38455c, OKLCH L −0.0764;
- *   3.01:1 on #c27f6a at doy 6 945 min snow.
+ *   3.01:1 on #cc7a65 at doy 3 905 min snow.
  * Code boxes paint --ps-code-bg, opaque (ps.css, after the block): the --tok-*
  * colours are solved against it, #f4f9ff by day and #121827 otherwise.
  * Six-digit hex throughout: the floors test reads every colour in that form. */
@@ -2175,8 +2199,8 @@ html[data-shell="native"] #viewport {
 	--channel-typing-color: #002e1e;
 	--event-quit: #550603;
 	--notice-color: #042d2d;
-	--nick-default: #002360;
-	--channel-activity-color: #002360;
+	--nick-default: #002460;
+	--channel-activity-color: #002460;
 	--tok-comment: #5f7292;
 	--tok-keyword: #c34073;
 	--tok-string: #2d7f5f;
@@ -2222,7 +2246,7 @@ html[data-shell="native"] #viewport {
 	--tok-attr: #9367f2;
 }
 
-#chat .chat .user.color-1 { color: #520529; }
+#chat .chat .user.color-1 { color: #530529; }
 #chat .chat .user.color-2 { color: #540521; }
 #chat .chat .user.color-3 { color: #550518; }
 #chat .chat .user.color-4 { color: #55060d; }
@@ -2240,13 +2264,13 @@ html[data-shell="native"] #viewport {
 #chat .chat .user.color-16 { color: #182d01; }
 #chat .chat .user.color-17 { color: #022f0a; }
 #chat .chat .user.color-18 { color: #052e1c; }
-#chat .chat .user.color-19 { color: #042d24; }
+#chat .chat .user.color-19 { color: #042e24; }
 #chat .chat .user.color-20 { color: #042d2b; }
 #chat .chat .user.color-21 { color: #032d2f; }
 #chat .chat .user.color-22 { color: #012c36; }
 #chat .chat .user.color-23 { color: #022b3b; }
 #chat .chat .user.color-24 { color: #012a46; }
-#chat .chat .user.color-25 { color: #002559; }
+#chat .chat .user.color-25 { color: #002659; }
 #chat .chat .user.color-26 { color: #19205f; }
 #chat .chat .user.color-27 { color: #291c5d; }
 #chat .chat .user.color-28 { color: #341858; }

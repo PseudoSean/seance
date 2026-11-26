@@ -3596,8 +3596,9 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 
 	it("puts the smoke at the pipe, on the same place: the yurt's top plus 22/170 of its height", function () {
 		expect(valueOf(SMOKE, "--ps-yurt-x")).to.equal(PLACE);
-		expect(valueOf(SMOKE, "left")).to.equal("var(--ps-yurt-x)");
-		expect(valueOf(SMOKE, "bottom")).to.equal("calc(17% + 21% * 148 / 170)");
+		// The pipe's top in the yurt's drawing: (166, 50), on the right slope (2026-11-26).
+		expect(valueOf(SMOKE, "left")).to.equal("calc(var(--ps-yurt-x) + 21cqh * 46 / 170)");
+		expect(valueOf(SMOKE, "bottom")).to.equal("calc(17% + 21% * 120 / 170)");
 		expect(valueOf(SMOKE, "opacity")).to.match(/^var\(--ps-smoke-op(, 0)?\)$/);
 	});
 
@@ -3631,7 +3632,12 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 			["ps-y-crown", "fill", "var(--ps-crown)"],
 			["ps-y-pipe", "fill", "var(--ps-pipe)"],
 			["ps-y-stone", "fill", "var(--ps-stone)"],
-			["ps-y-wood", "fill", "var(--ps-wood)"],
+			["ps-y-log", "fill", "var(--ps-log-end)"],
+			["ps-y-log-ring", "stroke", "var(--ps-log-ring)"],
+			["ps-y-lattice", "stroke", "var(--ps-lattice)"],
+			["ps-y-roof-shade", "fill", "var(--ps-roof-shade)"],
+			["ps-y-crown-spoke", "stroke", "var(--ps-crown)"],
+			["ps-y-tuft", "fill", "var(--ps-tuft1)"],
 		];
 
 		for (const [name, property, value] of PAINT) {
@@ -3691,17 +3697,24 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 		const puff = declsOf(`${S} .ps-smoke i`);
 		expect(puff.length).to.be.greaterThan(0);
 		expect(valueOf(`${S} .ps-smoke i`, "background")).to.include("var(--ps-smoke)");
-		// Its own name: the chrome's message entrance is already ps-rise.
-		expect(valueOf(`${S} .ps-smoke i`, "animation")).to.match(/^ps-smoke-rise /);
+		// Its own name: the chrome's message entrance is already ps-rise. It curls as it rises
+		// (2026-11-26); the room's steam keeps ps-smoke-rise.
+		expect(valueOf(`${S} .ps-smoke i`, "animation")).to.match(/^ps-smoke-curl /);
+		expect(css.match(/@keyframes ps-smoke-curl\b/g), "one ps-smoke-curl").to.have.length(1);
 		expect(css.match(/@keyframes ps-smoke-rise\b/g), "one ps-smoke-rise").to.have.length(1);
 
 		for (const [p, v] of puff) {
 			expect(v, `.ps-smoke i { ${p} }`).to.not.match(/\dpx/);
 		}
 
-		const frames = css.match(/@keyframes ps-smoke-rise\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+		const frames = css.match(/@keyframes ps-smoke-curl\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
 		expect(frames).to.include("translate(calc(-50% + 2.125rem), -6rem) scale(3.1)");
+		// It leans one way, then the other, as it climbs: transform and opacity only.
+		expect(frames).to.match(/translate\(calc\(-50% - [\d.]+rem\)/);
 		expect(frames).to.not.match(/\dpx/);
+		expect(
+			frames.match(/^\s*([a-z-]+):/gm)?.map((d) => d.trim().replace(":", "")) ?? []
+		).to.satisfy((props: string[]) => props.every((p) => p === "transform" || p === "opacity"));
 	});
 });
 

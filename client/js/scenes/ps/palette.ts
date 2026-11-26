@@ -4,7 +4,7 @@
  * with them, and the chrome reads the four values grounds.ts's `publishedFor`
  * gives. Pure: mocha loads it and holds the contrast floors against it (§11).
  */
-import {mix, mixOklab, shift} from "./colour";
+import {hexToOklch, luminance, mix, mixOklab, oklchToHex, shift} from "./colour";
 import type {Moment, Season, Weather} from "./engine";
 
 /** One stop of the canonical day. `t` is its canonical minute. */
@@ -193,7 +193,11 @@ export interface Palette {
 	crown: string;
 	pipe: string;
 	stone: string;
-	wood: string;
+	/** The wall's lattice, the roof's shaded side, and the woodpile's log ends and rings (2026-11-26). */
+	lattice: string;
+	roofShade: string;
+	logEnd: string;
+	logRing: string;
 	/** The mountains' three ranges, far to near, each with its shaded face (the avatar's, 2026-11-26). */
 	mountFar: string;
 	mountFarShade: string;
@@ -225,6 +229,46 @@ export function peakSnowAt(doy: number): number {
 	}
 
 	return 0;
+}
+
+/**
+ * `hex` with its OKLCH chroma raised by up to `k`, its hue and its luminance
+ * (WCAG's, which every word is held to) kept, as far as sRGB holds it: the
+ * lightness is searched for the chroma, so the words over it read as before.
+ */
+function richer(hex: string, k: number): string {
+	const [L, C, h] = hexToOklch(hex);
+	const y = luminance(hex);
+
+	for (let c = C * k; c > C; c *= 0.98) {
+		let lo = Math.max(0, L - 0.15);
+		let hi = Math.min(1, L + 0.15);
+		let best: string | null = null;
+
+		for (let i = 0; i < 24; i++) {
+			const mid = (lo + hi) / 2;
+			const out = oklchToHex(mid, c, h);
+
+			if (!out) {
+				best = null;
+				break;
+			}
+
+			best = out;
+
+			if (luminance(out) < y) {
+				lo = mid;
+			} else {
+				hi = mid;
+			}
+		}
+
+		if (best && Math.abs(luminance(best) - y) < 0.002) {
+			return best;
+		}
+	}
+
+	return hex;
 }
 
 export function paletteAt(m: Moment): Palette {
@@ -265,14 +309,20 @@ export function paletteAt(m: Moment): Palette {
 	const roofTop = mixOklab(s.felt, "#ffffff", 0.92);
 	const roofBottom = mixOklab(s.felt, "#4a3c3c", 0.78);
 	const roofStroke = mixOklab(s.felt, "#5a4a3e", 0.55);
-	const bandMark = mixOklab(s.band, "#f3e3c6", 0.45);
+	// The band a richer red at its own lightness (the avatar's, 2026-11-26): the snowy ink window
+	// holds over it as before; its diamonds gold.
+	const band = richer(s.band, 1.3);
+	const bandMark = mixOklab(band, "#f0c050", 0.3);
 	const rope = mixOklab(s.felt, "#5a4636", 0.55);
 	const rib = mixOklab(s.felt, "#6a5a4a", 0.72);
 	const doorOrn = mixOklab(s.door, "#f3c66a", 0.35);
 	const crown = mixOklab(s.felt, "#5a4a3e", 0.6);
 	const pipe = mixOklab(s.felt, "#4d4640", 0.3);
 	const stone = mixOklab(land.grass, "#a8a39a", 0.45);
-	const wood = mixOklab(land.hill1, "#7a5638", 0.3);
+	const lattice = mixOklab(s.felt, "#6a5440", 0.62);
+	const roofShade = mixOklab(s.felt, "#3a3040", 0.35);
+	const logEnd = mixOklab(land.hill1, "#b98a58", 0.35);
+	const logRing = mixOklab(land.hill1, "#6e4a2c", 0.35);
 	// The ranges take the day's light from the stop's own mount, not the season-shifted land one,
 	// which goes near-white in winter and would hide the caps; under falling snow they all go pale.
 	const ranges = {
@@ -308,7 +358,7 @@ export function paletteAt(m: Moment): Palette {
 		skyHorizon: s.hor,
 		...land,
 		felt: s.felt,
-		band: s.band,
+		band,
 		door: s.door,
 		cloud: mix(s.cloud, s.dark > 0.5 ? "#262c3c" : "#9aa2b2", wx.grey),
 		cloudUnder: mix(s.under, s.dark > 0.5 ? "#1c2130" : "#7c8494", wx.grey),
@@ -346,7 +396,10 @@ export function paletteAt(m: Moment): Palette {
 		crown,
 		pipe,
 		stone,
-		wood,
+		lattice,
+		roofShade,
+		logEnd,
+		logRing,
 		mountFar: scenery.mountFar,
 		mountFarShade: scenery.mountFarShade,
 		mountMid: scenery.mountMid,

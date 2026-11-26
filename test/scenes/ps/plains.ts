@@ -267,6 +267,7 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				"ps-y-crown-glow",
 				"ps-y-blur",
 				"ps-y-soft",
+				"ps-y-wall-clip",
 			]);
 
 			for (const id of ids) {
@@ -288,8 +289,13 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				"ps-y-roof-t",
 				"ps-y-roof-b",
 				"ps-y-pool",
-				"ps-y-wood",
+				"ps-y-log",
+				"ps-y-log-ring",
 				"ps-y-stone",
+				"ps-y-tuft",
+				"ps-y-lattice",
+				"ps-y-roof-shade",
+				"ps-y-crown-spoke",
 				"ps-y-lit",
 				"ps-y-rope",
 				"ps-y-band",
@@ -372,8 +378,62 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			// Over the yurt's shadow, under the stones it lights and the woodpile.
 			const at = (s: string) => yurt.indexOf(s);
 			expect(at(pool)).to.be.greaterThan(at('fill="#000" opacity=".16"'));
-			expect(at(pool)).to.be.lessThan(at('class="ps-y-wood"'));
+			expect(at(pool)).to.be.lessThan(at('class="ps-y-log"'));
 			expect(at(pool)).to.be.lessThan(at('class="ps-y-stone"'));
+		});
+
+		it("stands its stove pipe on the roof's right slope, not in the crown (the avatar's, 2026-11-26)", function () {
+			const rects = [
+				...yurt.matchAll(
+					/<rect class="ps-y-pipe" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g
+				),
+			].map((m) => m.slice(1).map(Number));
+			expect(rects).to.have.length(2);
+			const [x, y, w, h] = rects.reduce((a, b) => (b[3] > a[3] ? b : a));
+			expect(x + w / 2, "the pipe's middle").to.be.within(160, 172);
+			expect(y, "the pipe's top").to.be.within(48, 56);
+			// Its foot under the slope's line from (133, 49) to (216, 101), so it rises out of the roof.
+			const slope = 49 + ((x + w / 2 - 133) * 52) / 83;
+			expect(y + h, "the pipe's foot").to.be.above(slope);
+
+			for (const [rx, , rw] of rects) {
+				expect(Math.abs(rx + rw / 2 - 120), "nothing left at the crown").to.be.above(30);
+			}
+		});
+
+		it("latticed walls clipped to the wall, a dozen ribs, a spoked crown and a shaded roof", function () {
+			expect(yurt).to.include('<clipPath id="ps-y-wall-clip">');
+			expect(yurt).to.match(/<g class="ps-y-lattice" clip-path="url\(#ps-y-wall-clip\)"/);
+			const lattice = yurt.match(/<g class="ps-y-lattice"[^>]*>([\s\S]*?)<\/g>/)?.[1] ?? "";
+			expect((lattice.match(/<path /g) ?? []).length).to.be.at.least(16);
+			const ribs = yurt.match(/<g class="ps-y-rib"[^>]*>([\s\S]*?)<\/g>/)?.[1] ?? "";
+			expect((ribs.match(/<path /g) ?? []).length).to.be.at.least(10);
+			const spokes =
+				yurt.match(/<g class="ps-y-crown-spoke"[^>]*>([\s\S]*?)<\/g>/)?.[1] ?? "";
+			expect((spokes.match(/<path /g) ?? []).length).to.be.at.least(6);
+			expect(classCount(yurt, "ps-y-roof-shade")).to.equal(1);
+		});
+
+		it("stacks the woodpile as log ends, lays five unlit stepping stones from the door, and tufts at its foot", function () {
+			const logs = yurt.match(/<g class="ps-y-log">([\s\S]*?)<\/g>/)?.[1] ?? "";
+			expect((logs.match(/<circle /g) ?? []).length).to.be.at.least(6);
+			expect(classCount(yurt, "ps-y-log-ring")).to.equal(1);
+			const stones = yurt.match(/<g class="ps-y-stone">([\s\S]*?)<\/g>/)?.[1] ?? "";
+			const cys = [...stones.matchAll(/<ellipse cx="([\d.]+)" cy="([\d.]+)"/g)].map((m) => [
+				Number(m[1]),
+				Number(m[2]),
+			]);
+			expect(cys).to.have.length(5);
+
+			for (const [cx, cy] of cys) {
+				expect(cy, `stone at ${cx}`).to.be.within(153, 168);
+				expect(cx, `stone at ${cx}`).to.be.within(90, 150);
+			}
+
+			// Unlit, by day and at night: a plain class fill, no glow, no gradient (no lit path, 2026-11-26).
+			expect(stones).to.not.include("fill=");
+			expect(stones).to.not.include("ps-y-lit");
+			expect(classCount(yurt, "ps-y-tuft")).to.equal(1);
 		});
 
 		it("holds no text and no style strings", function () {

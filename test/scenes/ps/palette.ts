@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {
 	contrast,
 	hexRgb,
+	hexToOklch,
 	luminance,
 	mix,
 	mixOklab,
@@ -227,14 +228,13 @@ describe("ps palette: plan 3's derived land and yurt colours", function () {
 			expect(p.roofTop).to.equal(mixOklab(p.felt, "#ffffff", 0.92));
 			expect(p.roofBottom).to.equal(mixOklab(p.felt, "#4a3c3c", 0.78));
 			expect(p.roofStroke).to.equal(mixOklab(p.felt, "#5a4a3e", 0.55));
-			expect(p.bandMark).to.equal(mixOklab(p.band, "#f3e3c6", 0.45));
+			expect(p.bandMark).to.equal(mixOklab(p.band, "#f0c050", 0.3));
 			expect(p.rope).to.equal(mixOklab(p.felt, "#5a4636", 0.55));
 			expect(p.rib).to.equal(mixOklab(p.felt, "#6a5a4a", 0.72));
 			expect(p.doorOrn).to.equal(mixOklab(p.door, "#f3c66a", 0.35));
 			expect(p.crown).to.equal(mixOklab(p.felt, "#5a4a3e", 0.6));
 			expect(p.pipe).to.equal(mixOklab(p.felt, "#4d4640", 0.3));
 			expect(p.stone).to.equal(mixOklab(p.grass, "#a8a39a", 0.45));
-			expect(p.wood).to.equal(mixOklab(p.hill1, "#7a5638", 0.3));
 			expect(p).to.not.have.property("path");
 		});
 	}
@@ -364,5 +364,26 @@ describe("the avatar's mountains and pines", function () {
 			const m = at(720, doy, "snow");
 			expect(levelsAt(m, paletteAt(m)).peakSnow, String(doy)).to.equal(0);
 		}
+	});
+});
+
+describe("the avatar's yurt band (2026-11-26)", function () {
+	it("paints the band a richer red at the stop's own luminance, so neither the dark ink nor the white words lose ground", function () {
+		for (const m of [at(720, 172), at(720, 15), localAt(0, 172)]) {
+			const p = paletteAt(m);
+			const stop = stopsAt(m.canonical).band;
+			const [, C0, h0] = hexToOklch(stop);
+			const [, C, h] = hexToOklch(p.band);
+			expect(luminance(p.band), "luminance kept").to.be.closeTo(luminance(stop), 0.003);
+			expect(C, "richer").to.be.above(C0 * 1.1);
+			expect((Math.abs(h - h0) * 180) / Math.PI, "the same hue, in degrees").to.be.below(4);
+		}
+	});
+
+	it("marks it with gold diamonds", function () {
+		const p = paletteAt(at(720, 172));
+		const [, C, h] = hexToOklch(p.bandMark);
+		expect((h * 180) / Math.PI, "gold, in degrees").to.be.within(65, 100);
+		expect(C).to.be.above(0.08);
 	});
 });
