@@ -3414,13 +3414,12 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 	it("fills every land area from the colour the palette publishes for it", function () {
 		const AREAS: Record<string, string> = {
 			"ps-l-far": "var(--ps-far)",
-			"ps-l-shrub": "var(--ps-shrub)",
 			"ps-l-riverbed": "var(--ps-riverbed)",
 			"ps-l-bedstone": "var(--ps-bedstone)",
 			"ps-l-hill2": "var(--ps-hill2)",
 			"ps-l-tuft2": "var(--ps-tuft2)",
-			"ps-l-tree": "var(--ps-tree)",
-			"ps-l-trunk": "var(--ps-trunk)",
+			"ps-l-pine-lit": "var(--ps-pine)",
+			"ps-l-pine-sh": "var(--ps-pine-sh)",
 			"ps-l-hill1": "var(--ps-hill1)",
 			"ps-l-tuft1": "var(--ps-tuft1)",
 			"ps-l-tuft-lit": "var(--ps-tuft-lit)",
@@ -3434,6 +3433,14 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 		expect(valueOf(`${S} .ps-blades path`, "fill")).to.equal("var(--ps-blade)");
 		// The river's sky is its own fill attribute (plains.ts); a class fill would cover it.
 		expect(valueOf(`${S} .ps-l-river`, "fill")).to.equal(undefined);
+	});
+
+	it("puts each pine back in proportion about its own foot, so it stays rooted (the land is stretched)", function () {
+		expect(valueOf(`${S} .ps-l-pine`, "transform")).to.equal(
+			"scale(var(--ps-land-round-x, 1), var(--ps-land-round-y, 1))"
+		);
+		expect(valueOf(`${S} .ps-l-pine`, "transform-box")).to.equal("fill-box");
+		expect(valueOf(`${S} .ps-l-pine`, "transform-origin")).to.equal("50% 100%");
 	});
 
 	it("paints the mountains' ranges, faces and caps from the palette, the caps at the date's level", function () {

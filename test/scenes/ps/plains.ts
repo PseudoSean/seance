@@ -21,6 +21,20 @@ import {WEATHERS} from "../../../client/js/scenes/ps/engine";
 /** How many times `class="<name>"` appears: the whole attribute, so `ps-l-mount` is not `ps-l-mount2`. */
 const classCount = (markup: string, name: string) => markup.split(`class="${name}"`).length - 1;
 
+/** Each pine's middle, foot (its lowest point) and height, from its two paths' numbers. */
+function pines(land: string): Array<{x: number; foot: number; height: number}> {
+	return (land.match(/<g class="ps-l-pine">[\s\S]*?<\/g>/g) ?? []).map((g) => {
+		const nums = (g.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+		const xs = nums.filter((_, i) => i % 2 === 0);
+		const ys = nums.filter((_, i) => i % 2 === 1);
+		return {
+			x: (Math.min(...xs) + Math.max(...xs)) / 2,
+			foot: Math.max(...ys),
+			height: Math.max(...ys) - Math.min(...ys),
+		};
+	});
+}
+
 describe("ps plains: the land, the near grass, the yurt, its smoke and the fireflies (plains.ts)", function () {
 	describe("landSvg", function () {
 		const land = landSvg();
@@ -75,7 +89,7 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			const at = (name: string) => land.indexOf(`class="${name}"`);
 			const order = [
 				"ps-l-far",
-				"ps-l-shrub",
+				"ps-l-pine",
 				"ps-l-riverbed",
 				"ps-l-bedstone",
 				"ps-l-river",
@@ -83,7 +97,6 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				"ps-l-hill2",
 				"ps-l-rim",
 				"ps-l-tuft2",
-				"ps-l-tree",
 				"ps-l-hill1",
 				"ps-l-grass",
 			].map(at);
@@ -105,25 +118,66 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			expect(land).to.include("var(--ps-river-sky-bottom)");
 		});
 
-		it("scatters 40 shrubs, 160 far tufts and 240 near tufts, a quarter or so of them lit", function () {
-			expect(classCount(land, "ps-l-shrub")).to.equal(40);
+		it("scatters 160 far tufts and 240 near tufts, a quarter or so of them lit", function () {
 			expect(classCount(land, "ps-l-tuft2")).to.equal(160);
 			const lit = classCount(land, "ps-l-tuft-lit");
 			expect(classCount(land, "ps-l-tuft1") + lit).to.equal(240);
 			expect(lit).to.be.within(30, 90);
 		});
 
-		it("stands four trees with two trunks, and seven stones in the riverbed", function () {
-			expect(classCount(land, "ps-l-tree")).to.equal(4);
-			expect(classCount(land, "ps-l-trunk")).to.equal(2);
+		it("stands pines in place of the shrubs and groves (the avatar's, 2026-11-26), and seven stones in the riverbed", function () {
+			for (const gone of ["ps-l-shrub", "ps-l-grove", "ps-l-tree", "ps-l-trunk"]) {
+				expect(land, gone).to.not.include(gone);
+			}
+
+			const all = pines(land);
+			const far = all.filter((p) => p.foot < 160);
+			const left = all.filter((p) => p.foot >= 160 && p.x < 600);
+			const right = all.filter((p) => p.foot >= 160 && p.x >= 600);
+			expect(far.length, "far").to.be.within(12, 20);
+			expect(left.length, "left stand").to.be.within(9, 16);
+			expect(right.length, "right stand").to.be.within(9, 16);
+			// Out from each edge far enough to show past a desktop's side panels.
+			expect(
+				left.every((p) => p.x <= 320),
+				"the left stand at the left edge"
+			).to.equal(true);
+			expect(
+				right.every((p) => p.x >= 880),
+				"the right stand at the right edge"
+			).to.equal(true);
+			expect(
+				left.some((p) => p.x > 200),
+				"the left stand reaching past the sidebar"
+			).to.equal(true);
+			expect(
+				right.some((p) => p.x < 1000),
+				"the right stand reaching past the user list"
+			).to.equal(true);
+			// Two or three sizes: the tallest of a stand well over its shortest.
+			for (const stand of [far, left, right]) {
+				const hs = stand.map((p) => p.height);
+				expect(Math.max(...hs)).to.be.above(Math.min(...hs) * 1.5);
+			}
+
+			// Each pine a lit and a shaded half.
+			for (const g of land.match(/<g class="ps-l-pine">[\s\S]*?<\/g>/g) ?? []) {
+				expect(g).to.include('class="ps-l-pine-lit"');
+				expect(g).to.include('class="ps-l-pine-sh"');
+			}
+
 			const bed = land.match(/<g class="ps-l-bedstone">([\s\S]*?)<\/g>/)?.[1] ?? "";
 			expect(bed.match(/<ellipse /g)).to.have.length(7);
 		});
 
-		it("puts every shrub on the far plain and every tuft on its own hill", function () {
-			for (const m of land.matchAll(/class="ps-l-shrub" cx="([\d.]+)" cy="([\d.]+)"/g)) {
-				expect(Number(m[1])).to.be.within(0, 1200);
-				expect(Number(m[2])).to.be.within(130, 140);
+		it("roots every far pine on the far plain, clear of the river's head, and every edge pine on the back hill behind the front one", function () {
+			for (const p of pines(land)) {
+				if (p.foot < 160) {
+					expect(p.foot, `far pine at ${p.x}`).to.be.within(128, 150);
+					expect(p.x < 300 || p.x > 460, `far pine at ${p.x}`).to.equal(true);
+				} else {
+					expect(p.foot, `edge pine at ${p.x}`).to.be.within(196, 246);
+				}
 			}
 
 			const foot = (name: string) =>

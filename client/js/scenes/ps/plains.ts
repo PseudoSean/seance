@@ -68,28 +68,94 @@ function tuft(x: number, y: number, h: number, cls: string): string {
 }
 
 /**
- * The land: mountains, the far plain with its shrubs, the river (or its dry
- * bed), two hills with their rims, tufts and trees, and the grass band, back
- * to front on the mockup's 1200 × 400 box, stretched to whatever box ps.css
- * gives it, with the river's sky gradient in its defs. The hills stretch
- * with the window; the round things on them (the shrubs, the bed's stones,
- * the two groves) are widened back about their own middles by the stretch's
- * squash (`--ps-land-unsquash`, watchers.ts watchLand), so a narrow window does
- * not draw them as tall ellipses. (The heat haze that
+ * The land: the far plain with its pines, the river (or its dry bed), two
+ * hills with their rims, tufts and the stands of pines at both edges, and the
+ * grass band, back to front on the mockup's 1200 × 400 box, stretched to
+ * whatever box ps.css gives it, with the river's sky gradient in its defs (the
+ * mountains are their own layer behind it, peaks.ts). The hills stretch with
+ * the window; the shapes on them (the bed's stones about their middles, each
+ * pine about its foot) are put back in proportion by the stretch's squash
+ * (`--ps-land-unsquash`, watchers.ts watchLand), so a narrow window does not
+ * draw them tall and thin. (The heat haze that
  * bends the ground on hot days is the weather layer's: `weatherLayers`.)
  */
-export function landSvg(): string {
-	// One stream, as the mockup's: the shrubs, then the far tufts, then the near.
-	const r = rng(777);
-	let shrubs = "";
+/**
+ * One pine (the avatar's, 2026-11-26): three stacked tiers on a short trunk,
+ * the left half lit and the right half shaded, standing on `(x, foot)` and
+ * `h` tall in the land's units. Absolute coordinates, no transform attribute:
+ * ps.css scales the group about its own foot to undo the land's stretch.
+ */
+function pine(x: number, foot: number, h: number): string {
+	const w = h * 0.5;
+	const trunk = h * 0.12;
+	const p = (dx: number, dy: number) => `${(x + dx).toFixed(1)},${(foot - dy).toFixed(1)}`;
+	let lit = "";
+	let shade = `M${p(-h * 0.035, 0)} L${p(h * 0.035, 0)} L${p(h * 0.035, trunk)} L${p(
+		-h * 0.035,
+		trunk
+	)} Z`;
 
-	for (let i = 0; i < 40; i++) {
-		const x = r() * 1200;
-		const y = 130 + r() * 10;
-		const w = 3 + r() * 6;
-		shrubs += `<ellipse class="ps-l-shrub" cx="${x.toFixed(0)}" cy="${y.toFixed(
-			1
-		)}" rx="${w.toFixed(1)}" ry="${(w * 0.45).toFixed(1)}"/>`;
+	for (let k = 0; k < 3; k++) {
+		const base = trunk + k * h * 0.24;
+		const apex = k === 2 ? h : base + h * 0.42;
+		const half = (w / 2) * (1 - k * 0.24);
+		lit += `M${p(0, apex)} L${p(-half, base)} L${p(0, base + h * 0.04)} Z`;
+		shade += ` M${p(0, apex)} L${p(0, base + h * 0.04)} L${p(half, base)} Z`;
+	}
+
+	return `<g class="ps-l-pine"><path class="ps-l-pine-lit" d="${lit}"/><path class="ps-l-pine-sh" d="${shade}"/></g>`;
+}
+
+/** Small pines scattered on the far plain, clear of the river's head, back to front. */
+function farPines(): string {
+	const r = rng(4242);
+	const out: Array<[number, number, number]> = [];
+
+	while (out.length < 16) {
+		const x = 10 + r() * 1180;
+		const foot = 130 + r() * 18;
+		const h = 12 + r() * 14;
+
+		if (x < 300 || x > 460) {
+			out.push([x, foot, h]);
+		}
+	}
+
+	return out
+		.sort((a, b) => a[1] - b[1])
+		.map(([x, foot, h]) => pine(x, foot, h))
+		.join("");
+}
+
+/** The stands at both edges, rooted on the back hill, denser toward the edge, back to front. */
+function edgePines(): string {
+	const r = rng(5151);
+	const out: Array<[number, number, number]> = [];
+
+	for (const side of [0, 1]) {
+		for (let i = 0; i < 12; i++) {
+			const d = 300 * r() ** 1.7;
+			const x = side === 0 ? 4 + d : 1196 - d;
+			const foot = 200 + r() * 42;
+			const h = (foot > 225 ? 70 : 52) + r() * 34;
+			out.push([x, foot, h]);
+		}
+	}
+
+	return out
+		.sort((a, b) => a[1] - b[1])
+		.map(([x, foot, h]) => pine(x, foot, h))
+		.join("");
+}
+
+export function landSvg(): string {
+	// One stream, as the mockup's: the far tufts, then the near. The shrubs it
+	// began with are gone (the pines took their place), but their numbers are
+	// still drawn, so every tuft stands where it did.
+	const r = rng(777);
+
+	for (let i = 0; i < 40 * 3; i++) {
+		r();
 	}
 
 	let far = "";
@@ -118,7 +184,7 @@ export function landSvg(): string {
 		`</linearGradient>` +
 		`</defs>` +
 		`<path class="ps-l-far" d="M0,128 C200,120 400,132 600,126 C800,120 1000,132 1200,126${TO_FOOT}"/>` +
-		shrubs +
+		farPines() +
 		`<path class="ps-l-riverbed" d="${RIVER}"/>` +
 		`<g class="ps-l-bedstone"><ellipse cx="352" cy="150" rx="4" ry="1.6"/><ellipse cx="330" cy="167" rx="5" ry="2"/>` +
 		`<ellipse cx="402" cy="186" rx="4.5" ry="1.8"/><ellipse cx="468" cy="199" rx="6" ry="2.2"/><ellipse cx="520" cy="222" rx="5" ry="2"/>` +
@@ -128,9 +194,7 @@ export function landSvg(): string {
 		`<path class="ps-l-hill2" d="${HILL2_EDGE}${TO_FOOT}"/>` +
 		`<path class="ps-l-rim" d="${HILL2_EDGE}"/>` +
 		far +
-		`<g class="ps-l-grove"><ellipse class="ps-l-tree" cx="448" cy="160" rx="16" ry="12"/><ellipse class="ps-l-tree" cx="466" cy="163" rx="12" ry="10"/>` +
-		`<ellipse class="ps-l-tree" cx="432" cy="166" rx="10" ry="8"/><rect class="ps-l-trunk" x="447" y="168" width="3" height="8"/></g>` +
-		`<g class="ps-l-grove"><ellipse class="ps-l-tree" cx="1008" cy="168" rx="9" ry="7"/><rect class="ps-l-trunk" x="1007" y="173" width="2" height="6"/></g>` +
+		edgePines() +
 		`<path class="ps-l-hill1" d="${HILL1_EDGE}${TO_FOOT}"/>` +
 		`<path class="ps-l-rim" d="${HILL1_EDGE}"/>` +
 		near +

@@ -1447,20 +1447,24 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	opacity: var(--ps-peak-snow-op);
 }
 #theme-scene .ps-l-far { fill: var(--ps-far); }
-#theme-scene .ps-l-shrub { fill: var(--ps-shrub); }
+#theme-scene .ps-l-pine-lit { fill: var(--ps-pine); }
+#theme-scene .ps-l-pine-sh { fill: var(--ps-pine-sh); }
 #theme-scene .ps-l-hill2 { fill: var(--ps-hill2); }
 #theme-scene .ps-l-tuft2 { fill: var(--ps-tuft2); }
-#theme-scene .ps-l-tree { fill: var(--ps-tree); }
-#theme-scene .ps-l-trunk { fill: var(--ps-trunk); }
 
 /* The land's box is stretched to the window (plains.ts landSvg): the round
  * things on it are put back in proportion about their own middles, their
  * area kept (watchers.ts watchLand), so a narrow window keeps them round. */
-#theme-scene .ps-l-shrub,
-#theme-scene .ps-l-bedstone ellipse,
-#theme-scene .ps-l-grove {
+#theme-scene .ps-l-bedstone ellipse {
 	transform-box: fill-box;
 	transform-origin: center;
+	transform: scale(var(--ps-land-round-x, 1), var(--ps-land-round-y, 1));
+}
+
+/* A pine about its own foot, so it stays rooted where it stands. */
+#theme-scene .ps-l-pine {
+	transform-box: fill-box;
+	transform-origin: 50% 100%;
 	transform: scale(var(--ps-land-round-x, 1), var(--ps-land-round-y, 1));
 }
 #theme-scene .ps-l-hill1 { fill: var(--ps-hill1); }
