@@ -6,7 +6,7 @@
  * (indoor.ts `roomCss` shades them by the minute) and the windows by the
  * plains' own custom properties. What the mockup did with masks, blend-mode
  * rectangles and a brightened copy of the stove is left out: the classes'
- * night mix does it. The light (the beam, the glows, the low sun, the stars,
+ * night mix does it. The light (the glows, the low sun, the stars,
  * the moon) is drawn once and driven by opacity from the minute's levels; the
  * fire, the lamp's flame and the night screen are the only literal colours
  * (`ps-yt-lit`). The windows' weather is a slot (`.ps-yt-weather`) the scene
@@ -27,7 +27,6 @@ import {
 	depthOf,
 	fill,
 	freeFrame,
-	hull,
 	line3,
 	n,
 	onWall,
@@ -113,6 +112,10 @@ const onStove = (a: number, y: number, b: number): P3 => [
 	y,
 	STOVE.z + a * Math.cos(STOVE_FACE) + b * Math.sin(STOVE_FACE),
 ];
+/** The bed's head posts and its headboard's arch: a four-poster's posts stand over its boards. */
+export const BED = {headPost: 1.52, headPeak: 1.42} as const;
+/** The stove's pipe: a little behind its middle, rising to the roof above it. */
+export const PIPE = {x: onStove(0, 0, -0.1)[0], z: onStove(0, 0, -0.1)[2]} as const;
 
 /** The clips of the three windows' panes, which the windows' weather (task 5) is clipped to. */
 export const WINDOW_CLIPS = ["ps-yt-win-back", "ps-yt-win-left", "ps-yt-win-right"] as const;
@@ -129,7 +132,6 @@ export const ROOM_PIECES: readonly string[] = [
 	"washstand",
 	"hooks",
 	"stove",
-	"post",
 	"table",
 	"chair",
 	"bench",
@@ -441,28 +443,31 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 	bed(fr) {
 		const Wl = surface((s, t) => onWall(fr, s, t));
 		const kw = Wl.px(0, 1.4);
+		// The wall rug hangs toward the bed's head, so the stove's pipe (2026-11-27) does not cut
+		// through its medallion.
+		const RA = -0.45;
 		let s =
-			Wl.rect(-0.7, 0.98, 0.7, 1.8, cls("rug"), 8) +
+			Wl.rect(RA - 0.7, 0.98, RA + 0.7, 1.8, cls("rug"), 8) +
 			Wl.rect(
-				-0.63,
+				RA - 0.63,
 				1.05,
-				0.63,
+				RA + 0.63,
 				1.73,
 				`fill="none" ${cls(undefined, "rugB")} stroke-width="${n(0.028 * kw)}"`,
 				8
 			) +
-			Wl.diamond(0, 1.39, 0.18, 0.26, cls("rugP")) +
-			Wl.diamond(0, 1.39, 0.1, 0.15, cls("rugB")) +
+			Wl.diamond(RA, 1.39, 0.18, 0.26, cls("rugP")) +
+			Wl.diamond(RA, 1.39, 0.1, 0.15, cls("rugB")) +
 			[
 				[-0.48, 1.18],
 				[0.48, 1.18],
 				[-0.48, 1.6],
 				[0.48, 1.6],
 			]
-				.map(([a, c]) => Wl.diamond(a, c, 0.06, 0.09, cls("rugB")))
+				.map(([a, c]) => Wl.diamond(RA + a, c, 0.06, 0.09, cls("rugB")))
 				.join("");
 
-		for (let a = -0.65; a <= 0.66; a += 0.1) {
+		for (let a = RA - 0.65; a <= RA + 0.66; a += 0.1) {
 			s += Wl.line(
 				[
 					[a, 0.98],
@@ -531,24 +536,6 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 			l.push([s0, tSide]);
 			return l;
 		};
-		const medallion = (S: Painter, b: number, c: number, r: number) =>
-			S.circle(
-				b,
-				c,
-				r,
-				`${cls("green", "cream")} stroke-width="${strokeAt(S, b, c, 0.014)}"`
-			) +
-			S.circle(b, c, r * 0.42, cls("gold")) +
-			[-1, 1]
-				.map((m) =>
-					S.circle(
-						b + m * r * 2.2,
-						c,
-						r * 0.48,
-						`${cls("blue", "cream")} stroke-width="${strokeAt(S, b, c, 0.01)}"`
-					)
-				)
-				.join("");
 		/** A shaped board across the bed: its far face as a rim, then the near face painted. */
 		const board = (
 			A0: number,
@@ -586,19 +573,20 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 			board(
 				HEAD - T,
 				HEAD,
-				archOutline(0, D, 0, 1.12, 1.42),
+				archOutline(0, D, 0, 1.12, BED.headPeak),
 				archOutline(0.12, D - 0.12, 0.64, 1.04, 1.28),
-				(S) => medallion(S, D / 2, 0.9, 0.085)
+				// Above the pillows' tops (0.96), where it shows whole (it sat behind them, its discs peeking out).
+				(S) => paintedMedallion(S, D / 2, 1.12, 0.085)
 			) +
-			post(HEAD - 0.09, HEAD + 0.02, 0, 1.34) +
-			post(HEAD - 0.09, HEAD + 0.02, D - 0.1, 1.34);
+			post(HEAD - 0.09, HEAD + 0.02, 0, BED.headPost) +
+			post(HEAD - 0.09, HEAD + 0.02, D - 0.1, BED.headPost);
 		const footboard =
 			board(
 				FOOT,
 				FOOT + T,
 				archOutline(0, D, 0, 0.66, 0.8),
 				archOutline(0.12, D - 0.12, 0.2, 0.58, 0.7),
-				(S) => medallion(S, D / 2, 0.42, 0.065)
+				(S) => paintedMedallion(S, D / 2, 0.42, 0.065)
 			) +
 			post(FOOT - 0.02, FOOT + 0.09, 0, 0.9) +
 			post(FOOT - 0.02, FOOT + 0.09, D - 0.1, 0.9);
@@ -628,7 +616,7 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 						0.22,
 						0.012
 					)}"`
-				) + [-0.6, 0.1, 0.8].map((a) => S.circle(a, 0.22, 0.022, cls("cream"))).join(""),
+				),
 		});
 		s += box(fr, [HEAD + 0.02, FOOT - 0.02], [0.04, D - 0.02], [0.4, 0.58], "mattress");
 		const lean = (aBot: number, aTop: number, cBot: number, cTop: number) =>
@@ -1610,7 +1598,7 @@ export function roomMarkup(): string {
 	};
 	const Dr = surface(doorMap);
 	// The pipe stands a little behind the stove's middle and rises to the roof above it.
-	const [pipeX, , pipeZ] = onStove(0, 0, -0.1);
+	const {x: pipeX, z: pipeZ} = PIPE;
 	const pipeTop = roofHeightAt(Math.hypot(pipeX, pipeZ));
 	// The stove, drawn twice: once in its place among what stands, once over the glows (body, below).
 	const stoveBody =
@@ -1733,46 +1721,6 @@ export function roomMarkup(): string {
 		Dr.circle(0.09, 0.343, 0.014, `fill="#c04a20" opacity=".7" ${LIT}`);
 	const door = project(doorMap(0, 0.42));
 
-	// The posts that hold the crown.
-	const post = (x: number) => {
-		const bands = (S: Painter, s0: number, s1: number) =>
-			[0.55, 1.45, 2.35]
-				.map(
-					(h) =>
-						S.rect(s0, h, s1, h + 0.13, cls("blue")) +
-						S.line(
-							[
-								[s0, h + 0.13],
-								[s1, h + 0.13],
-							],
-							`${cls(undefined, "cream")} stroke-width="${strokeAt(
-								S,
-								(s0 + s1) / 2,
-								h,
-								0.012
-							)}"`
-						)
-				)
-				.join("");
-		// The base, below the eye, before the pole that stands on it; the cap, above the eye, before the pole
-		// too, so the pole covers its underside (the user, 2026-11-19).
-		return piece(
-			"post",
-			abox([x - 0.09, x + 0.09], [0, 0.15], [-0.09, 0.09], "furnD") +
-				abox(
-					[x - 0.09, x + 0.09],
-					[CROWN_H - 0.2, CROWN_H - 0.08],
-					[-0.09, 0.09],
-					"furnD"
-				) +
-				abox([x - 0.06, x + 0.06], [0.15, CROWN_H - 0.2], [-0.06, 0.06], "pole", {
-					front: (S) => bands(S, x - 0.06, x + 0.06),
-					left: (S) => bands(S, -0.06, 0.06),
-					right: (S) => bands(S, -0.06, 0.06),
-				})
-		);
-	};
-
 	// The dining table on its pedestal and four feet, all of it on the rug: its top with a thick edge.
 	const table = () => {
 		const [tx, tz] = TABLE;
@@ -1838,10 +1786,6 @@ export function roomMarkup(): string {
 		footprints.push({fr, d: p.d});
 		return {z: depthOf(fr.pt(0, p.d, 0.6)), svg: piece(kind, p.svg)};
 	});
-	things.push(
-		{z: depthOf([-0.63, 1, 0]), svg: post(-0.63)},
-		{z: depthOf([0.63, 1, 0]), svg: post(0.63)}
-	);
 	things.push({z: depthOf(onStove(0, 0.4, STOVE.r)), svg: stove});
 	things.push({z: depthOf([TABLE[0], 0.4, TABLE[1]]), svg: table()});
 
@@ -1923,13 +1867,6 @@ export function roomMarkup(): string {
 			`fill="none" ${cls(undefined, "rugB")} stroke-width="${strokeAt(Fl, 0, 0.1, 0.015)}"`,
 			72
 		);
-	const patch: [number, number] = [-0.95, 0.85];
-	const beam = hull(
-		[
-			...circle3(0, CROWN_H, 0, CROWN_R - 0.06, 24),
-			...circle3(patch[0], 0.005, patch[1], 0.8, 24),
-		].map(project)
-	);
 	const lamp = lights.lamp && depthOf(lights.lamp) > NEAR ? project(lights.lamp) : null;
 	const screenAt = lights.screen && depthOf(lights.screen) > NEAR ? project(lights.screen) : null;
 	const backBox = bbox(backInner);
@@ -1985,7 +1922,6 @@ export function roomMarkup(): string {
 		`<radialGradient id="ps-yt-g-screen"><stop offset="0" stop-color="#9fbaff" stop-opacity=".55"/><stop offset="1" stop-color="#7f9fff" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-shadow"><stop offset="0" stop-color="#000"/><stop offset=".6" stop-color="#000" stop-opacity=".7"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-g-golden"><stop offset="0" stop-color="#ffb070" stop-opacity=".9"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></radialGradient>` +
-		`<linearGradient id="ps-yt-beam-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbe8" stop-opacity=".34"/><stop offset="1" stop-color="#fff3cc" stop-opacity=".07"/></linearGradient>` +
 		`<clipPath id="ps-yt-roof-clip"><polygon points="${roofPoly}"/></clipPath>` +
 		`<clipPath id="ps-yt-wall-clip"><polygon points="${wallPoly}"/></clipPath>` +
 		// The views out and their weather overdraw their openings by 2 units (the frames cover it).
@@ -2055,13 +1991,6 @@ export function roomMarkup(): string {
 		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate, STOVE.plate, cls("hearth")) +
 		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate - 0.08, STOVE.plate - 0.08, cls("hearthL")) +
 		shadows +
-		`<g class="ps-yt-pool-sun">${Fl.ellipse(
-			patch[0],
-			patch[1],
-			0.8,
-			0.8,
-			`fill="#fff6dc" opacity=".45" ${LIT}`
-		)}</g>` +
 		`<g class="ps-yt-golden">${Fl.ellipse(
 			0.15,
 			2.4,
@@ -2101,11 +2030,11 @@ export function roomMarkup(): string {
 			  )}" r="${n((FOCAL * 0.45) / screenAt[2])}" fill="url(#ps-yt-g-screen)"/>`
 			: "");
 
-	// Over the glows: the stove drawn again, so its iron stays dark against its own glow; the sun's
-	// beam through the crown, over everything it falls across; and what stays bright in the dark.
+	// Over the glows: the stove drawn again, so its iron stays dark against its own glow; and what
+	// stays bright in the dark. (The sun's beam through the crown, drawn over everything it crossed,
+	// washed the furniture out; it went, with its pool on the floor, 2026-11-27.)
 	const over =
 		`<g class="ps-yt-stove-over">${stoveBody}${potSteam}</g>` +
-		`<polygon class="ps-yt-beam" points="${pts(beam)}" fill="url(#ps-yt-beam-fill)"/>` +
 		`<g class="ps-yt-embers">${embers}</g>` +
 		`<g class="ps-yt-still-hearth ps-yt-burn">${fire}</g>` +
 		(lights.flame ? `<g class="ps-yt-glow-lamp ps-yt-still-hearth">${lights.flame}</g>` : "") +
