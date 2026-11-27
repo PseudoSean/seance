@@ -68,7 +68,18 @@ const ROOM: ReadonlyArray<readonly [Piece, number]> = [
 ];
 const SIDE_WINDOWS = [-60, 69] as const;
 const RUG_R = 2.5;
-const TABLE = [-1.35, -0.55] as const;
+/** The dining table (the user, 2026-11-27): at the middle of the big rug, a little behind the posts. */
+export const TABLE = [0, 0.8] as const;
+/**
+ * Its two chairs, on the table's far side either way, facing it, so the eye sees their seats and backs
+ * between the posts (beside them, the posts hid the chairs).
+ */
+export const CHAIRS = [
+	{x: -0.45, z: 1.35, nx: 0.45, nz: -0.55},
+	{x: 0.45, z: 1.35, nx: -0.45, nz: -0.55},
+] as const;
+/** A low bench where the table stood, on the rug, facing the room's middle. */
+export const BENCH = {x: -1.45, z: -0.35, length: 1.1, nx: 1, nz: 0.35} as const;
 /** The wood basket, beside the stove toward the middle, on the rug. */
 const BASKET = [1.2, 0.05] as const;
 /** The back window: 3.1 m wide, from 0.45 m to 1.9 m, flat in the curved wall. */
@@ -117,6 +128,7 @@ export const ROOM_PIECES: readonly string[] = [
 	"post",
 	"table",
 	"chair",
+	"bench",
 	"rug",
 	"crown",
 	"window-back",
@@ -284,27 +296,85 @@ interface Lights {
 }
 
 /** A chair in a frame turned toward what it serves (b toward it): legs, seat, and a back away from it. */
-function chair(fr: Frame): string {
-	let s = "";
+type Span = readonly [number, number];
 
-	for (const [a, b] of [
-		[-0.19, -0.19],
-		[0.14, -0.19],
-		[-0.19, 0.14],
-		[0.14, 0.14],
-	]) {
-		s += box(fr, [a, a + 0.05], [b, b + 0.05], [0, 0.45], "wood");
-	}
-
-	s += box(fr, [-0.21, 0.21], [-0.21, 0.21], [0.45, 0.5], "woodL");
-	s +=
-		box(fr, [-0.2, -0.15], [-0.21, -0.16], [0.5, 0.98], "wood") +
-		box(fr, [0.15, 0.2], [-0.21, -0.16], [0.5, 0.98], "wood");
-	s += box(fr, [-0.2, 0.2], [-0.21, -0.16], [0.74, 0.95], "woodL", {
-		front: (S) => S.circle(0, 0.845, 0.05, cls("furn")),
-	});
-	return piece("chair", s);
+/** A part of a piece built of boxes in its own frame: along it (a), toward where it faces (b), up (c). */
+interface Part {
+	part: string;
+	a: Span;
+	b: Span;
+	c: Span;
+	colour: RoomColour;
 }
+
+/**
+ * The parts drawn from the ground up, by the height each starts at (the legs, then the seat, then what
+ * stands on it), and far to near among those that start alike, so the nearer covers the farther and
+ * nothing that stands on a part is hidden under it.
+ */
+function partsInFrame(fr: Frame, parts: readonly Part[]): string {
+	const mid = (q: Span) => (q[0] + q[1]) / 2;
+	const depth = (p: Part) => depthOf(fr.pt(mid(p.a), mid(p.b), mid(p.c)));
+	return [...parts]
+		.sort((p, q) => p.c[0] - q.c[0] || depth(q) - depth(p))
+		.map((p) => box(fr, p.a, p.b, p.c, p.colour))
+		.join("");
+}
+
+/**
+ * A chair, whole (the user, 2026-11-27: "the backs of chairs missing"): four legs, a seat with its
+ * thickness, a back of two posts, a top rail and two slats, its back away from where it faces.
+ */
+export const CHAIR_PARTS: readonly Part[] = [
+	...(
+		[
+			[-0.19, -0.19],
+			[0.15, -0.19],
+			[-0.19, 0.15],
+			[0.15, 0.15],
+		] as const
+	).map(
+		([a, b]): Part => ({
+			part: "leg",
+			a: [a, a + 0.04],
+			b: [b, b + 0.04],
+			c: [0, 0.45],
+			colour: "wood",
+		})
+	),
+	{part: "seat", a: [-0.21, 0.21], b: [-0.21, 0.21], c: [0.45, 0.495], colour: "woodL"},
+	{part: "post", a: [-0.2, -0.16], b: [-0.21, -0.17], c: [0.495, 0.97], colour: "wood"},
+	{part: "post", a: [0.16, 0.2], b: [-0.21, -0.17], c: [0.495, 0.97], colour: "wood"},
+	{part: "rail", a: [-0.16, 0.16], b: [-0.205, -0.175], c: [0.86, 0.95], colour: "woodL"},
+	{part: "slat", a: [-0.09, -0.05], b: [-0.2, -0.18], c: [0.495, 0.86], colour: "wood"},
+	{part: "slat", a: [0.05, 0.09], b: [-0.2, -0.18], c: [0.495, 0.86], colour: "wood"},
+];
+
+function chair(fr: Frame): string {
+	return piece("chair", partsInFrame(fr, CHAIR_PARTS));
+}
+
+/** A low wooden bench with a cushion. */
+const BENCH_PARTS: readonly Part[] = [
+	...(
+		[
+			[-0.5, -0.14],
+			[0.46, -0.14],
+			[-0.5, 0.1],
+			[0.46, 0.1],
+		] as const
+	).map(
+		([a, b]): Part => ({
+			part: "leg",
+			a: [a, a + 0.05],
+			b: [b, b + 0.05],
+			c: [0, 0.38],
+			colour: "wood",
+		})
+	),
+	{part: "seat", a: [-0.55, 0.55], b: [-0.17, 0.17], c: [0.38, 0.43], colour: "woodL"},
+	{part: "cushion", a: [-0.48, 0.48], b: [-0.14, 0.14], c: [0.43, 0.49], colour: "curtain"},
+];
 
 /* ---------- the furniture along the round wall: each gives how far it stands out, and its markup ---------- */
 const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: string}> = {
@@ -1625,18 +1695,34 @@ export function roomMarkup(): string {
 		);
 	};
 
-	// The dining table on its pedestal, all of it on the rug.
+	// The dining table on its pedestal and four feet, all of it on the rug: its top with a thick edge.
 	const table = () => {
 		const [tx, tz] = TABLE;
-		let s =
-			cylinderSide(tx, tz, 0.28, 0, 0.05, cls("furnD")) +
-			poly3(circle3(tx, 0.05, tz, 0.28, 32), fill("furnD", "top"));
-		s += cylinderSide(tx, tz, 0.07, 0.05, 0.71, 'fill="url(#ps-yt-wood)"');
-		s += cylinderSide(tx, tz, 0.11, 0.3, 0.36, cls("blue"));
+		const foot = (dx: number, dz: number) =>
+			abox(
+				dx === 0
+					? [tx - 0.04, tx + 0.04]
+					: dx > 0
+					? [tx + 0.05, tx + 0.32]
+					: [tx - 0.32, tx - 0.05],
+				[0, 0.06],
+				dz === 0
+					? [tz - 0.04, tz + 0.04]
+					: dz > 0
+					? [tz + 0.05, tz + 0.32]
+					: [tz - 0.32, tz - 0.05],
+				"furnD"
+			);
+		let s = foot(0, 1) + foot(-1, 0) + foot(1, 0);
 		s +=
-			cylinderSide(tx, tz, 0.52, 0.71, 0.75, cls("furnD")) +
-			poly3(circle3(tx, 0.75, tz, 0.52), cls("furn"));
-		const T = surface((a, b) => [tx + a, 0.751, tz + b]);
+			cylinderSide(tx, tz, 0.065, 0.06, 0.71, 'fill="url(#ps-yt-wood)"') +
+			cylinderSide(tx, tz, 0.1, 0.22, 0.36, 'fill="url(#ps-yt-wood)"') +
+			cylinderSide(tx, tz, 0.12, 0.66, 0.7, cls("furnD"));
+		s += foot(0, -1);
+		s +=
+			cylinderSide(tx, tz, 0.52, 0.7, 0.755, cls("furnD")) +
+			poly3(circle3(tx, 0.755, tz, 0.52), cls("furn"));
+		const T = surface((a, b) => [tx + a, 0.756, tz + b]);
 		s +=
 			T.ellipse(
 				0,
@@ -1658,9 +1744,9 @@ export function roomMarkup(): string {
 				)}" stroke-dasharray="${strokeAt(T, 0, 0, 0.05)} ${strokeAt(T, 0, 0, 0.05)}"`
 			);
 		s +=
-			sprite([tx + 0.08, 0.75, tz + 0.2], SPR.teapot, 0.006) +
-			sprite([tx - 0.1, 0.75, tz - 0.05], SPR.dumplings, 0.006) +
-			sprite([tx + 0.24, 0.75, tz - 0.14], SPR.tbowl, 0.006);
+			sprite([tx + 0.08, 0.755, tz + 0.2], SPR.teapot, 0.006) +
+			sprite([tx - 0.1, 0.755, tz - 0.05], SPR.dumplings, 0.006) +
+			sprite([tx + 0.24, 0.755, tz - 0.14], SPR.tbowl, 0.006);
 		return piece("table", s);
 	};
 
@@ -1678,14 +1764,17 @@ export function roomMarkup(): string {
 	things.push({z: depthOf(onStove(0, 0.4, STOVE.r)), svg: stove});
 	things.push({z: depthOf([TABLE[0], 0.4, TABLE[1]]), svg: table()});
 
-	for (const [dx, dz] of [
-		[-0.66, 0.0],
-		[0.06, 0.66],
-	]) {
-		const cx = TABLE[0] + dx;
-		const cz = TABLE[1] + dz;
-		things.push({z: depthOf([cx, 0.5, cz]), svg: chair(freeFrame(cx, cz, -dx, -dz))});
+	for (const c of CHAIRS) {
+		things.push({z: depthOf([c.x, 0.5, c.z]), svg: chair(freeFrame(c.x, c.z, c.nx, c.nz))});
 	}
+
+	things.push({
+		z: depthOf([BENCH.x, 0.4, BENCH.z]),
+		svg: piece(
+			"bench",
+			partsInFrame(freeFrame(BENCH.x, BENCH.z, BENCH.nx, BENCH.nz), BENCH_PARTS)
+		),
+	});
 
 	things.push({
 		z: depthOf([BASKET[0], 0.3, BASKET[1]]),

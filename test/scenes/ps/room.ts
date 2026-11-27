@@ -9,9 +9,13 @@ import {
 	ROOM_GEOMETRY,
 } from "../../../client/js/scenes/ps/yurt";
 import {
+	BENCH,
+	CHAIR_PARTS,
+	CHAIRS,
 	CURTAIN_ROD,
 	ROOM_PIECES,
 	STOVE,
+	TABLE,
 	roomMarkup,
 	WINDOW_CLIPS,
 	windowMotion,
@@ -608,6 +612,48 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			expect(Math.abs(Number(steam[1]) - at[0]), "the steam over the stove").to.be.below(
 				reach
 			);
+		});
+	});
+
+	describe("the dining set at the centre, solid; a bench where it stood (the user, 2026-11-27)", function () {
+		const onRug = (x: number, z: number, reach: number) => Math.hypot(x, z - 0.1) + reach <= 2.5;
+
+		it("stands the table at the middle of the rug, a little behind the posts, wholly on the rug", function () {
+			expect(Math.abs(TABLE[0])).to.be.at.most(0.15);
+			expect(TABLE[1]).to.be.within(0.5, 1.0);
+			expect(onRug(TABLE[0], TABLE[1], 0.52)).to.equal(true);
+		});
+
+		it("puts both chairs on the rug, clear of the posts and of the stove's plate", function () {
+			expect(CHAIRS).to.have.length(2);
+
+			for (const c of CHAIRS) {
+				expect(onRug(c.x, c.z, 0.3), `${c.x},${c.z} on the rug`).to.equal(true);
+				expect(Math.min(Math.hypot(c.x - 0.63, c.z), Math.hypot(c.x + 0.63, c.z))).to.be.at.least(0.35);
+				expect(Math.hypot(c.x - STOVE.x, c.z - STOVE.z)).to.be.at.least(STOVE.plate + 0.3);
+			}
+		});
+
+		it("builds each chair whole: four legs, a seat with thickness, two back posts and at least two slats", function () {
+			const of = (k: string) => CHAIR_PARTS.filter((p) => p.part === k);
+			expect(of("leg")).to.have.length(4);
+			of("leg").forEach((l) => expect(l.c[0]).to.equal(0));
+			expect(of("seat")).to.have.length(1);
+			expect(of("seat")[0].c[1] - of("seat")[0].c[0]).to.be.at.least(0.04);
+			expect(of("post")).to.have.length(2);
+			of("post").forEach((p) => expect(p.c[1]).to.be.at.least(0.9));
+			expect(of("slat").length).to.be.at.least(2);
+			expect(of("rail").length).to.be.at.least(1);
+		});
+
+		it("gives the table no blue band, and the room a bench wholly on the rug where the table stood", function () {
+			const at = markup.indexOf('<g class="ps-yt-p-table">');
+			const end = markup.indexOf('<g class="ps-yt-p-', at + 10);
+			// No band round the pedestal (a cylinder in the blue class); the blue teapot is a sprite, not a polygon.
+			expect(markup.slice(at, end)).to.not.match(/<polygon points="[^"]*" class="ps-yt-c-blue"/);
+			expect(ROOM_PIECES).to.include("ps-yt-p-bench");
+			expect(markup).to.include('<g class="ps-yt-p-bench">');
+			expect(onRug(BENCH.x, BENCH.z, BENCH.length / 2 + 0.05)).to.equal(true);
 		});
 	});
 });
