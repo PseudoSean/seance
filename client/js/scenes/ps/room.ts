@@ -16,6 +16,7 @@ import {rainTiles} from "../psng/rain";
 import {WEATHERS, type Weather} from "./engine";
 import {FLAME_CORE, FLAME_LAYERS, FLAME_POSES, FLAME_SPACE, flameShape, flameSvg} from "./flames";
 import {FIREBOX_BURNING, type RoomColour} from "./indoor";
+import {rangesIn} from "./peaks";
 import {
 	abox,
 	arc,
@@ -1024,6 +1025,27 @@ function windowMoon(cx: number, cy: number, r: number): string {
 	);
 }
 
+/** A small pine in a window's view, in the plains' pine colours: a lit and a shaded half, on a trunk. */
+function viewPine(x: number, foot: number, h: number): string {
+	const w = h * 0.5;
+	const p = (dx: number, dy: number) => `${n(x + dx)},${n(foot - dy)}`;
+	let lit = "";
+	let shade = `M${p(-h * 0.035, 0)} L${p(h * 0.035, 0)} L${p(h * 0.035, h * 0.12)} L${p(
+		-h * 0.035,
+		h * 0.12
+	)} Z`;
+
+	for (let k = 0; k < 3; k++) {
+		const base = h * 0.12 + k * h * 0.24;
+		const apex = k === 2 ? h : base + h * 0.42;
+		const half = (w / 2) * (1 - k * 0.24);
+		lit += `M${p(0, apex)} L${p(-half, base)} L${p(0, base + h * 0.04)} Z`;
+		shade += ` M${p(0, apex)} L${p(0, base + h * 0.04)} L${p(half, base)} Z`;
+	}
+
+	return `<path class="ps-l-pine-lit" d="${lit}"/><path class="ps-l-pine-sh" d="${shade}"/>`;
+}
+
 /** The view out of one window: the sky and the land in the plains' own colours, the stars, and (the back window) the moon and the low sun. */
 function windowView(q: Quad, clip: string, side: boolean, seed: number): string {
 	const {x: ix, y: iy, w: iw, h: ih} = bbox(q);
@@ -1041,22 +1063,49 @@ function windowView(q: Quad, clip: string, side: boolean, seed: number): string 
 
 	s += `<g class="ps-yt-star">${stars}</g>`;
 
+	// The land outside, as the plains draw it (2026-11-27): low hills on the horizon to the sides and the
+	// outside's own three ranges out the back, the far plain with its pines, the near hill.
+	const plain = iy + ih * 0.64;
+	const hill = `<path style="fill: var(--ps-hill2)" d="M${n(ix)},${n(iy + ih * 0.86)} Q${n(
+		ix + iw * 0.5
+	)},${n(iy + ih * 0.76)} ${n(ix + iw)},${n(iy + ih * 0.84)} V${n(iy + ih)} H${n(ix)} Z"/>`;
+	const far = `<rect x="${n(ix)}" y="${n(plain)}" width="${n(iw)}" height="${n(
+		ih - (plain - iy)
+	)}" style="fill: var(--ps-far)"/>`;
+	const stand = (xs: readonly number[], sizes: readonly number[]) =>
+		xs
+			.map((fx, k) =>
+				viewPine(
+					ix + iw * fx,
+					plain + ih * (0.05 + 0.04 * (k % 2)),
+					ih * sizes[k % sizes.length]
+				)
+			)
+			.join("");
+
 	if (side) {
-		// To the side the plains run flat to low hills.
+		const left = clip === WINDOW_CLIPS[1];
 		s +=
-			`<path style="fill: color-mix(in oklab, var(--ps-mount), var(--ps-sky-hor) 50%)" d="M${n(
-				ix
-			)},${n(iy + ih * 0.6)} Q${n(ix + iw * 0.3)},${n(iy + ih * 0.5)} ${n(ix + iw * 0.6)},${n(
-				iy + ih * 0.58
-			)} T${n(ix + iw)},${n(iy + ih * 0.55)} V${n(iy + ih)} H${n(ix)} Z"/>` +
-			`<rect x="${n(ix)}" y="${n(iy + ih * 0.66)}" width="${n(iw)}" height="${n(
-				ih * 0.34
-			)}" style="fill: var(--ps-far)"/>` +
-			`<path style="fill: var(--ps-hill2)" d="M${n(ix)},${n(iy + ih * 0.84)} Q${n(
-				ix + iw * 0.5
-			)},${n(iy + ih * 0.74)} ${n(ix + iw)},${n(iy + ih * 0.82)} V${n(iy + ih)} H${n(
-				ix
-			)} Z"/>`;
+			`<path class="ps-m-far" d="M${n(ix)},${n(iy + ih * 0.6)} Q${n(ix + iw * 0.3)},${n(
+				iy + ih * 0.5
+			)} ${n(ix + iw * 0.6)},${n(iy + ih * 0.58)} T${n(ix + iw)},${n(iy + ih * 0.55)} V${n(
+				iy + ih
+			)} H${n(ix)} Z"/>` +
+			far +
+			(left
+				? // The river, carrying the sky, out to the left as on the plains.
+				  `<path class="ps-yt-view-river" fill="url(#ps-yt-sky)" d="M${n(
+						ix + iw * 0.55
+				  )},${n(plain)} C${n(ix + iw * 0.4)},${n(plain + ih * 0.06)} ${n(
+						ix + iw * 0.75
+				  )},${n(plain + ih * 0.12)} ${n(ix + iw * 0.45)},${n(iy + ih)} L${n(
+						ix + iw * 0.7
+				  )},${n(iy + ih)} C${n(ix + iw * 0.95)},${n(plain + ih * 0.12)} ${n(
+						ix + iw * 0.55
+				  )},${n(plain + ih * 0.06)} ${n(ix + iw * 0.62)},${n(plain)} Z"/>` +
+				  stand([0.08, 0.2, 0.3, 0.86], [0.22, 0.3, 0.18])
+				: stand([0.12, 0.62, 0.74, 0.88], [0.2, 0.3, 0.24])) +
+			hill;
 	} else {
 		s += windowMoon(ix + iw * 0.24, iy + ih * 0.2, 8);
 		s += `<g class="ps-yt-window-sun"><circle cx="${n(ix + iw * 0.78)}" cy="${n(
@@ -1064,16 +1113,11 @@ function windowView(q: Quad, clip: string, side: boolean, seed: number): string 
 		)}" r="36" fill="url(#ps-yt-sun-glow)"/><circle cx="${n(ix + iw * 0.78)}" cy="${n(
 			iy + ih * 0.5
 		)}" r="9" fill="#fff3cf" ${LIT}/></g>`;
-		const sx = Math.round((iw / 400) * 1000) / 1000;
-		const sy = Math.round((ih / 161) * 1000) / 1000;
 		s +=
-			`<g transform="translate(${n(ix - 470 * sx)},${n(iy)}) scale(${sx},${sy})">` +
-			`<path style="fill: color-mix(in oklab, var(--ps-mount), var(--ps-sky-hor) 45%)" d="M0,86 C60,70 110,54 170,62 C230,70 260,40 330,44 C400,48 430,76 500,70 C580,62 620,30 700,36 C780,42 820,70 900,64 C980,58 1030,34 1100,42 C1150,48 1180,60 1200,62 L1200,400 L0,400 Z"/>` +
-			`<path style="fill: color-mix(in oklab, var(--ps-mount), #fff 55%)" opacity=".7" d="M580,62 C600,46 620,30 700,36 C730,38 752,46 770,54 C740,52 720,50 700,52 C670,48 640,58 600,64 Z"/>` +
-			`<path style="fill: var(--ps-mount)" d="M0,112 C80,96 140,84 220,92 C300,100 340,76 420,80 C500,84 560,104 640,98 C720,92 780,72 860,78 C940,84 1000,102 1080,96 C1140,92 1180,98 1200,100 L1200,400 L0,400 Z"/>` +
-			`<path style="fill: var(--ps-far)" d="M0,128 C200,120 400,132 600,126 C800,120 1000,132 1200,126 L1200,400 L0,400 Z"/>` +
-			`<path style="fill: var(--ps-hill2)" transform="translate(0,-58)" d="M0,190 C120,170 260,160 400,172 C520,182 600,200 740,188 C880,176 1000,160 1200,176 L1200,400 L0,400 Z"/>` +
-			`</g>`;
+			rangesIn(ix, plain + ih * 0.02, iw, {from: 200, to: 1400}) +
+			far +
+			stand([0.1, 0.26, 0.47, 0.66, 0.9], [0.06, 0.09, 0.07]) +
+			hill;
 	}
 
 	s += `<polygon points="${n(ix + iw * 0.1)},${n(iy)} ${n(ix + iw * 0.32)},${n(iy)} ${n(

@@ -8,11 +8,11 @@
  * done here in numbers, gives the room's grounds for the legibility model and
  * the query's glass tints. Pure and Vue-free: mocha loads it directly.
  */
-import {hexRgb, mixOklab, rgbHex} from "./colour";
+import {hexRgb, mix, mixOklab, rgbHex} from "./colour";
 import {FLAME_CORE, FLAME_LAYERS} from "./flames";
 import type {Moment} from "./engine";
 import type {SceneGround} from "./grounds";
-import {GLASS_NIGHT_AT, WEATHER, type Palette} from "./palette";
+import {GLASS_NIGHT_AT, levelsAt, WEATHER, type Palette} from "./palette";
 
 /**
  * Every colour the room is painted with, by name: the approved mockup's
@@ -371,13 +371,27 @@ export function indoorGrounds(m: Moment, p: Palette): SceneGround[] {
 		["skyTop", p.skyTop],
 		["skyMid", p.skyMid],
 		["skyHorizon", p.skyHorizon],
-		["mount2", p.mount2],
-		["mount", p.mount],
+		// The outside's own mountains and pines through the windows (2026-11-27).
+		["mountFar", p.mountFar],
+		["mountFarShade", p.mountFarShade],
+		["mountMid", p.mountMid],
+		["mountMidShade", p.mountMidShade],
+		["mountNear", p.mountNear],
+		["mountNearShade", p.mountNearShade],
+		["pine", p.pine],
+		["pineShade", p.pineShade],
 		["far", p.far],
 		["hill2", p.hill2],
 		["cloud", p.cloud],
 	] as const) {
 		add(`room pane ${name}`, hex, "middle");
+	}
+
+	// The peaks' snow through the back window, while the date gives them some (as outside).
+	const caps = levelsAt(m, p).peakSnow;
+
+	if (caps > 0) {
+		add("room pane peak snow", mix(p.mountNear, p.peakSnow, caps), "middle");
 	}
 
 	add("room crown sky", mixOklab(p.skyTop, p.skyMid, 0.65), "top");

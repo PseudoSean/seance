@@ -154,7 +154,8 @@ describe("ps yurt: the room's colour and light by the minute (indoor.ts, docs/pr
 		ROOM_GROUNDS.forEach((k) => expect(g.map((x) => x.area)).to.include(`room ${k}`));
 		expect(g.map((x) => x.hex))
 			.to.include(p.skyTop)
-			.and.include(p.mount);
+			// The windows show the outside's own ranges (2026-11-27).
+			.and.include(p.mountNear);
 		ROOM_LIT.forEach((hex) => expect(g.map((x) => x.hex)).to.not.include(hex));
 		expect(g.filter((x) => x.zone === "top").map((x) => x.area)).to.include("room roofA");
 	});

@@ -227,7 +227,8 @@ function caps(pts: readonly Pt[], above: number, depth: number): string {
 		.join(" ");
 }
 
-export function mountainsSvg(): string {
+/** The three ranges' markup on the view's own 1600 × 480 units: each lit outline, its faces and its caps. */
+function rangesBody(): string {
 	let body = "";
 
 	for (const r of RANGES) {
@@ -245,6 +246,29 @@ export function mountainsSvg(): string {
 				.join("")}</g>`;
 	}
 
+	return body;
+}
+
+/**
+ * The same ranges for a window of the yurt's room (2026-11-27), so its view shows the outside's own
+ * mountains, their light, their caps and their snow: the view's x from `crop.from` to `crop.to` scaled
+ * into `w` from `x`, their foot at `foot`, unsquashed. The room clips it to the pane.
+ */
+export function rangesIn(
+	x: number,
+	foot: number,
+	w: number,
+	crop: {from: number; to: number}
+): string {
+	const k = w / (crop.to - crop.from);
+	const kk = String(Math.round(k * 10000) / 10000);
+	return `<g transform="translate(${n(x - crop.from * k)},${n(
+		foot - FOOT * k
+	)}) scale(${kk})">${rangesBody()}</g>`;
+}
+
+export function mountainsSvg(): string {
+	const body = rangesBody();
 	return (
 		`<svg class="ps-mountains" viewBox="0 0 1600 480" preserveAspectRatio="xMidYMax slice" aria-hidden="true">` +
 		body +

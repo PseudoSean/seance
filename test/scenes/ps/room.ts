@@ -1,6 +1,7 @@
 import {expect} from "chai";
-import {WEATHERS} from "../../../client/js/scenes/ps/engine";
-import {roomCss} from "../../../client/js/scenes/ps/indoor";
+import {indoorGrounds, roomCss} from "../../../client/js/scenes/ps/indoor";
+import {momentFor, WEATHERS} from "../../../client/js/scenes/ps/engine";
+import {paletteAt} from "../../../client/js/scenes/ps/palette";
 import {
 	circle3,
 	DESIGN_FRAME,
@@ -748,6 +749,79 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			expect(markup).to.match(
 				/<polygon points="[^"]+" class="[^"]*\bps-yt-wallfoot\b[^"]*" opacity="\.1\d?"/
 			);
+		});
+	});
+
+	describe("the windows show the outside (the user, 2026-11-27)", function () {
+		/** The view clipped to a window's pane: from its clip-path group to its end. */
+		const view = (clip: string) => {
+			const at = markup.indexOf(`<g clip-path="url(#${clip})"><rect`);
+			let depth = 0;
+			let i = at;
+
+			for (; i < markup.length; i++) {
+				if (markup.startsWith("<g", i)) {
+					depth++;
+				}
+
+				if (markup.startsWith("</g>", i) && --depth === 0) {
+					break;
+				}
+			}
+
+			return markup.slice(at, i + 4);
+		};
+
+		it("draws the outside's own three ranges in the back window, their faces and their caps", function () {
+			const back = view(WINDOW_CLIPS[0]);
+
+			for (const c of [
+				"ps-m-far",
+				"ps-m-far-sh",
+				"ps-m-mid",
+				"ps-m-mid-sh",
+				"ps-m-near",
+				"ps-m-near-sh",
+			]) {
+				expect(back, c).to.include(`class="${c}"`);
+			}
+
+			expect(back.split('class="ps-m-snow"').length - 1).to.equal(3);
+			// The old soft swells and the pale highlight that showed in every season are gone.
+			expect(back).to.not.include("var(--ps-mount)");
+			expect(back).to.not.include("#fff 55%");
+			expect(back, "pines on the far plain").to.include('class="ps-l-pine-lit"');
+		});
+
+		it("shows the river and the left stand of pines to the left, the right stand to the right", function () {
+			const left = view(WINDOW_CLIPS[1]);
+			const right = view(WINDOW_CLIPS[2]);
+			expect(left).to.include('class="ps-yt-view-river"');
+			expect(left.split('class="ps-l-pine-lit"').length - 1).to.be.at.least(3);
+			expect(right.split('class="ps-l-pine-lit"').length - 1).to.be.at.least(3);
+			expect(right).to.not.include('class="ps-yt-view-river"');
+		});
+
+		it("holds the words over the panes' new colours, the caps only while they show, frosted on a snowy day as outside", function () {
+			const at = (minute: number, doy: number, weather: "clear" | "snow" = "clear") =>
+				momentFor({minute, doy, dayNumber: doy, epochDays: 20000, weather});
+			const areas = (m: ReturnType<typeof at>) =>
+				indoorGrounds(m, paletteAt(m)).map((g) => g.area);
+			const winter = at(750, 15);
+			const summer = at(750, 196);
+
+			for (const k of ["mountNear", "mountFar", "pine"]) {
+				expect(areas(summer), k).to.include(`room pane ${k}`);
+			}
+
+			expect(areas(summer)).to.not.include("room pane mount2");
+			expect(areas(winter)).to.include("room pane peak snow");
+			expect(areas(summer)).to.not.include("room pane peak snow");
+			const snowy = at(750, 15, "snow");
+			const pane = indoorGrounds(snowy, paletteAt(snowy)).find(
+				(g) => g.area === "room pane mountNear"
+			)!;
+			expect(pane.hex).to.equal(paletteAt(snowy).mountNear);
 		});
 	});
 });
