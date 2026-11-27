@@ -241,7 +241,7 @@ export function roomCss(): string {
 	return (
 		colours +
 		"\n.ps-yt-stop { stop-color: var(--c); }" +
-		"\n.ps-yt-f-side, .ps-yt-f-left, .ps-yt-f-right { fill: color-mix(in oklab, var(--c), #000 16%); }" +
+		"\n.ps-yt-f-side, .ps-yt-f-left, .ps-yt-f-right, .ps-yt-f-back { fill: color-mix(in oklab, var(--c), #000 16%); }" +
 		"\n.ps-yt-f-top { fill: color-mix(in oklab, var(--c), #fff 14%); }" +
 		"\n.ps-yt-f-bottom { fill: color-mix(in oklab, var(--c), #000 28%); }" +
 		"\n.ps-yt-beam, .ps-yt-pool-sun { opacity: var(--ps-in-beam); }" +

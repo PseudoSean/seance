@@ -4,6 +4,7 @@ import {
 	clipPolygon,
 	depthOf,
 	fill,
+	freeFrame,
 	project,
 	ROOM_GEOMETRY,
 	sprite,
@@ -63,5 +64,14 @@ describe("ps yurt: the room's geometry (yurt.ts, docs/projects/ps-yurt.md §5)",
 
 	it("leaves out a sprite behind the eye", function () {
 		expect(sprite([0, 1, -3.2], "<i/>")).to.equal("");
+	});
+
+	it("draws a box's back when it turns toward the eye, shaded as a side: a chair seen from behind keeps its back (2026-11-27)", function () {
+		const away = box(freeFrame(0, 2, 0, 1), [-0.2, 0.2], [-0.03, 0.03], [0.5, 1], "wood");
+		expect(away).to.include('class="ps-yt-c-wood ps-yt-f-back"');
+		expect(away).to.not.include('class="ps-yt-c-wood"');
+		const facing = box(freeFrame(0, 2, 0, -1), [-0.2, 0.2], [-0.03, 0.03], [0.5, 1], "wood");
+		expect(facing).to.include('class="ps-yt-c-wood"');
+		expect(facing).to.not.include("ps-yt-f-back");
 	});
 });
