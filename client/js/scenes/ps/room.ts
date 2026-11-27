@@ -1787,9 +1787,12 @@ export function roomMarkup(): string {
 
 	// The pieces along the wall, then everything standing, far to near.
 	const lights: Lights = {};
+	/** Each piece along the wall: its frame and how far it stands out, for its shadow on the floor. */
+	const footprints: Array<{fr: Frame; d: number}> = [];
 	const things: Array<{z: number; svg: string}> = ROOM.map(([kind, th]) => {
 		const fr = wallFrame(th);
 		const p = PIECES[kind](fr, lights);
+		footprints.push({fr, d: p.d});
 		return {z: depthOf(fr.pt(0, p.d, 0.6)), svg: piece(kind, p.svg)};
 	});
 	things.push(
@@ -1823,6 +1826,29 @@ export function roomMarkup(): string {
 
 	// The floor's things: the rug, the hearth, the light that falls there.
 	const Fl = surface((a, b) => [a, 0.005, b]);
+	// Soft contact shadows under what stands on the floor (2026-11-27): each a soft-edged ellipse on its
+	// footprint, the whole set light (a fifth black at most), drawn under the standing pieces.
+	const SH = 'fill="url(#ps-yt-shadow)"';
+	const Fs = surface((a, b) => [a, 0.006, b]);
+	const shadows =
+		`<g class="ps-yt-shadows" opacity=".18">` +
+		Fs.ellipse(STOVE.x, STOVE.z, STOVE.r + 0.12, STOVE.r + 0.12, SH) +
+		Fs.ellipse(TABLE[0], TABLE[1], 0.5, 0.5, SH) +
+		CHAIRS.map((c) => Fs.ellipse(c.x, c.z, 0.28, 0.28, SH)).join("") +
+		surface((a, b) => freeFrame(BENCH.x, BENCH.z, BENCH.nx, BENCH.nz).pt(a, b, 0.006)).ellipse(
+			0,
+			0,
+			0.62,
+			0.24,
+			SH
+		) +
+		Fs.ellipse(BASKET[0], BASKET[1], 0.2, 0.2, SH) +
+		footprints
+			.map(({fr, d}) =>
+				surface((a, b) => fr.pt(a, b, 0.006)).ellipse(0, d / 2, 0.62, d / 2 + 0.08, SH)
+			)
+			.join("") +
+		`</g>`;
 	const rug =
 		Fl.ellipse(0, 0.1, RUG_R, RUG_R, cls("rug"), 72) +
 		Fl.ellipse(
@@ -1914,6 +1940,7 @@ export function roomMarkup(): string {
 		`<radialGradient id="ps-yt-g-fire"><stop offset="0" stop-color="#ffa040" stop-opacity=".85"/><stop offset=".45" stop-color="#ff7a2a" stop-opacity=".32"/><stop offset="1" stop-color="#ff6a20" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-g-lamp"><stop offset="0" stop-color="#ffd08a" stop-opacity=".8"/><stop offset="1" stop-color="#ffb060" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-g-screen"><stop offset="0" stop-color="#9fbaff" stop-opacity=".55"/><stop offset="1" stop-color="#7f9fff" stop-opacity="0"/></radialGradient>` +
+		`<radialGradient id="ps-yt-shadow"><stop offset="0" stop-color="#000"/><stop offset=".6" stop-color="#000" stop-opacity=".7"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-g-golden"><stop offset="0" stop-color="#ffb070" stop-opacity=".9"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></radialGradient>` +
 		`<linearGradient id="ps-yt-beam-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbe8" stop-opacity=".34"/><stop offset="1" stop-color="#fff3cc" stop-opacity=".07"/></linearGradient>` +
 		`<clipPath id="ps-yt-roof-clip"><polygon points="${roofPoly}"/></clipPath>` +
@@ -1966,6 +1993,8 @@ export function roomMarkup(): string {
 		`<g clip-path="url(#ps-yt-wall-clip)" opacity=".9">${lattice}</g>` +
 		ribbon(WALL_H - 0.09, WALL_H, R - 0.04, cls("band")) +
 		ribbon(0, 0.1, R - 0.04, cls("skirt")) +
+		// The wall's foot a little darker above its skirt, where the floor and the wall meet (2026-11-27).
+		ribbon(0.1, 0.32, R - 0.045, `${cls("woodD", undefined, "ps-yt-wallfoot")} opacity=".12"`) +
 		`</g>` +
 		// The crown's bent ribs and its rim, over its sky.
 		`<g class="ps-yt-ribs"><g clip-path="url(#ps-yt-crown)">${ribs}</g>` +
@@ -1982,6 +2011,7 @@ export function roomMarkup(): string {
 		piece("rug", rug) +
 		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate, STOVE.plate, cls("hearth")) +
 		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate - 0.08, STOVE.plate - 0.08, cls("hearthL")) +
+		shadows +
 		`<g class="ps-yt-pool-sun">${Fl.ellipse(
 			patch[0],
 			patch[1],

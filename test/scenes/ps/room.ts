@@ -727,4 +727,27 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			}
 		});
 	});
+
+	describe("soft shadows under what stands, and the wall's foot (2026-11-27)", function () {
+		it("lays a soft shadow under each piece on the floor, after the rug and before what stands", function () {
+			const at = markup.indexOf('<g class="ps-yt-shadows"');
+			expect(at).to.be.above(markup.indexOf('<g class="ps-yt-p-rug">'));
+			const first = Math.min(
+				...["stove", "table", "chair", "bench", "closet", "bed", "kitchen"].map((p) =>
+					markup.indexOf(`<g class="ps-yt-p-${p}">`)
+				)
+			);
+			expect(at).to.be.below(first);
+			const g = /<g class="ps-yt-shadows" opacity="([\d.]+)">(.*?)<\/g>/.exec(markup)!;
+			expect(Number(g[1]), "no more than a fifth black").to.be.at.most(0.2);
+			// The stove, the table, two chairs, the bench, the basket, and the seven pieces along the wall.
+			expect(g[2].split("<polygon").length - 1).to.be.at.least(13);
+		});
+
+		it("shades the wall's foot", function () {
+			expect(markup).to.match(
+				/<polygon points="[^"]+" class="[^"]*\bps-yt-wallfoot\b[^"]*" opacity="\.1\d?"/
+			);
+		});
+	});
 });
