@@ -616,7 +616,8 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 	});
 
 	describe("the dining set at the centre, solid; a bench where it stood (the user, 2026-11-27)", function () {
-		const onRug = (x: number, z: number, reach: number) => Math.hypot(x, z - 0.1) + reach <= 2.5;
+		const onRug = (x: number, z: number, reach: number) =>
+			Math.hypot(x, z - 0.1) + reach <= 2.5;
 
 		it("stands the table at the middle of the rug, a little behind the posts, wholly on the rug", function () {
 			expect(Math.abs(TABLE[0])).to.be.at.most(0.15);
@@ -629,7 +630,9 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 
 			for (const c of CHAIRS) {
 				expect(onRug(c.x, c.z, 0.3), `${c.x},${c.z} on the rug`).to.equal(true);
-				expect(Math.min(Math.hypot(c.x - 0.63, c.z), Math.hypot(c.x + 0.63, c.z))).to.be.at.least(0.35);
+				expect(
+					Math.min(Math.hypot(c.x - 0.63, c.z), Math.hypot(c.x + 0.63, c.z))
+				).to.be.at.least(0.35);
 				expect(Math.hypot(c.x - STOVE.x, c.z - STOVE.z)).to.be.at.least(STOVE.plate + 0.3);
 			}
 		});
@@ -650,10 +653,37 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			const at = markup.indexOf('<g class="ps-yt-p-table">');
 			const end = markup.indexOf('<g class="ps-yt-p-', at + 10);
 			// No band round the pedestal (a cylinder in the blue class); the blue teapot is a sprite, not a polygon.
-			expect(markup.slice(at, end)).to.not.match(/<polygon points="[^"]*" class="ps-yt-c-blue"/);
+			expect(markup.slice(at, end)).to.not.match(
+				/<polygon points="[^"]*" class="ps-yt-c-blue"/
+			);
 			expect(ROOM_PIECES).to.include("ps-yt-p-bench");
 			expect(markup).to.include('<g class="ps-yt-p-bench">');
 			expect(onRug(BENCH.x, BENCH.z, BENCH.length / 2 + 0.05)).to.equal(true);
+		});
+	});
+
+	describe("the kitchen, solid (the user, 2026-11-27: nonsensical things)", function () {
+		const kitchen = (() => {
+			const at = markup.indexOf('<g class="ps-yt-p-kitchen">');
+			return markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+		})();
+
+		it("gives the cupboard doors pulls, not big blue ovals", function () {
+			// The doors' ovals were polygons in the blue class; the blue jar on the shelf is a sprite.
+			expect(kitchen).to.not.match(/<polygon points="[^"]*" class="ps-yt-c-blue/);
+			expect(kitchen.split("ps-yt-c-handle").length - 1).to.be.at.least(2);
+		});
+
+		it("sets the basin into the counter and stands the plates as china discs, not hoops", function () {
+			expect(kitchen).to.not.include("ps-yt-c-plate");
+			expect(
+				kitchen.split('class="ps-yt-c-china ps-yt-s-chinaB"').length - 1,
+				"plates"
+			).to.be.at.least(3);
+			expect(
+				kitchen.split('class="ps-yt-c-chinaB"').length - 1,
+				"the basin's bowl and the plates' wells"
+			).to.be.at.least(4);
 		});
 	});
 });

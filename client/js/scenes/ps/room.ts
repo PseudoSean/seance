@@ -167,7 +167,6 @@ const SPR = {
 		"cream"
 	)} stroke-width="2.4"/>`,
 	plant: `<path d="${PLANT.pot}" ${cls("clay")}/><path d="${PLANT.leaves}" ${cls("leaf")}/>`,
-	plate: `<ellipse cx="0" cy="-11" rx="5" ry="11" ${cls("plate", "blue")} stroke-width="1.5"/>`,
 	jarA: `<rect x="-7" y="-22" width="14" height="22" rx="3" ${cls(
 		"jarAmber"
 	)}/><rect x="-8" y="-25" width="16" height="4" rx="1" ${cls("woodD")}/>`,
@@ -835,37 +834,49 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 
 		s += box(fr, [-0.575, 0.575], [0, 0.34], [1.87, 1.9], "woodD");
 
-		for (let i = 0; i < 4; i++) {
-			s += sprite(fr.pt(-0.4 + i * 0.12, 0.12, 1.59), SPR.plate);
+		// Three plates stood on the shelf against the wall, facing the room: china discs with a rim and a well.
+		const Rack = surface((a, c) => fr.pt(a, 0.05, c));
+
+		for (let i = 0; i < 3; i++) {
+			const a = -0.42 + i * 0.16;
+			s +=
+				Rack.circle(
+					a,
+					1.665,
+					0.075,
+					`${cls("china", "chinaB")} stroke-width="${strokeAt(Rack, a, 1.665, 0.008)}"`
+				) + Rack.circle(a, 1.665, 0.042, cls("chinaB"));
 		}
 
 		s += sprite(fr.pt(0.22, 0.14, 1.59), SPR.jarA) + sprite(fr.pt(0.4, 0.14, 1.59), SPR.jarB);
 		s +=
 			sprite(fr.pt(-0.32, 0.15, 1.27), SPR.bowls) + sprite(fr.pt(0.05, 0.15, 1.27), SPR.cups);
 		s += box(fr, [-0.55, 0.55], [0.02, 0.56], [0, 0.06], "furnD");
+		// Two doors, each a raised panel in its frame, with a brass pull by the meeting edge.
 		s += box(fr, [-0.575, 0.575], [0, 0.58], [0.06, 0.86], "furn", {
 			front(S) {
-				const k = S.px(0, 0.45);
 				return (
 					S.rect(-0.53, 0.12, -0.03, 0.8, cls("furnL")) +
 					S.rect(0.03, 0.12, 0.53, 0.8, cls("furnL")) +
-					S.circle(
-						-0.28,
-						0.46,
-						0.1,
-						`${cls("blue", "cream")} stroke-width="${n(0.014 * k)}"`
-					) +
-					S.circle(
-						0.28,
-						0.46,
-						0.1,
-						`${cls("blue", "cream")} stroke-width="${n(0.014 * k)}"`
-					)
+					S.rect(-0.47, 0.18, -0.09, 0.74, cls("furn")) +
+					S.rect(0.09, 0.18, 0.47, 0.74, cls("furn")) +
+					S.rect(-0.075, 0.4, -0.055, 0.54, cls("handle")) +
+					S.rect(0.055, 0.4, 0.075, 0.54, cls("handle"))
 				);
 			},
 		});
-		s += box(fr, [-0.6, 0.6], [0, 0.62], [0.86, 0.9], "woodL");
-		s += sprite(fr.pt(-0.3, 0.3, 0.9), SPR.thermos) + sprite(fr.pt(0.2, 0.32, 0.9), SPR.basin);
+		// The counter, its top thick and overhanging the doors, the basin set into it.
+		s += box(fr, [-0.6, 0.6], [0, 0.63], [0.86, 0.91], "woodL");
+		const Top = surface((a, b) => fr.pt(a, b, 0.911));
+		s +=
+			Top.ellipse(
+				0.22,
+				0.34,
+				0.18,
+				0.14,
+				`${cls("china", "chinaB")} stroke-width="${strokeAt(Top, 0.22, 0.34, 0.01)}"`
+			) + Top.ellipse(0.22, 0.34, 0.14, 0.1, cls("chinaB"));
+		s += sprite(fr.pt(-0.3, 0.3, 0.91), SPR.thermos);
 		return {d: 0.62, svg: s};
 	},
 
