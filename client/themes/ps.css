@@ -1188,6 +1188,19 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	isolation: isolate;
 }
 
+/* A portrait window (a phone) shows the room's middle with the stove whole at
+ * its right edge (2026-11-27): the room's box reaches left by twice the shift,
+ * so the picture, centred in the box, and the moving overlays placed in the
+ * same box (psng/room-motion.ts) slide together. --ps-ym-dx is in the design
+ * frame's units; the scale on a portrait window is the height's, 100cqh / 800. */
+@container (max-aspect-ratio: 1/1) {
+	#theme-scene .ps-indoor {
+		--ps-ym-dx: 150;
+		/* stylelint-disable-next-line unit-no-unknown -- cqh: #theme-scene is a size container; stylelint predates it */
+		left: calc(-2 * var(--ps-ym-dx) * 100cqh / 800);
+	}
+}
+
 #theme-scene .ps-indoor > svg,
 #theme-scene .ps-indoor > div {
 	position: absolute;

@@ -3445,6 +3445,18 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 		expect(valueOf(`${S} .ps-l-pine`, "transform-origin")).to.equal("50% 100%");
 	});
 
+	it("slides the yurt's room on a portrait window so the stove stands whole at its right edge, the svg and the moving overlays alike (2026-11-27)", function () {
+		const PORTRAIT = "@container (max-aspect-ratio: 1/1)";
+		// The room's box reaches left by twice the shift: the centred picture and the overlays placed in
+		// the same box (room-motion.ts) move together.
+		expect(valueOf(`${S} .ps-indoor`, "--ps-ym-dx", PORTRAIT)).to.equal("150");
+		expect(valueOf(`${S} .ps-indoor`, "left", PORTRAIT)).to.equal(
+			"calc(-2 * var(--ps-ym-dx) * 100cqh / 800)"
+		);
+		// Not on a landscape window: 21:9 keeps the picture centred on the room's middle.
+		expect(valueOf(`${S} .ps-indoor`, "--ps-ym-dx")).to.equal(undefined);
+	});
+
 	it("paints the mountains' ranges, faces and caps from the palette, the caps at the date's level", function () {
 		const FILLS: Record<string, string> = {
 			"ps-m-far": "var(--ps-mount-far)",
