@@ -492,6 +492,15 @@ export function cylinderSide(
 	return poly3([...bottom, ...top.reverse()], attrs);
 }
 
+/**
+ * The roof's height `r` metres from the middle: the wall's top at the wall,
+ * the crown ring at the crown, straight between (the roof poles run straight).
+ */
+export function roofHeightAt(r: number): number {
+	const {radius, wallHeight, crownHeight, crownRadius} = ROOM_GEOMETRY;
+	return wallHeight + ((radius - r) / (radius - crownRadius)) * (crownHeight - wallHeight);
+}
+
 /** A small round thing drawn flat at its place (its base at q), `unit` metres per drawing unit; nothing behind the eye. */
 export function sprite(q: P3, body: string, unit = 0.0115): string {
 	if (depthOf(q) < ROOM_GEOMETRY.near) {

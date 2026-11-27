@@ -35,6 +35,7 @@ import {
 	project,
 	pts,
 	quadratic,
+	roofHeightAt,
 	ROOM_GEOMETRY,
 	sprite,
 	strokeAt,
@@ -68,7 +69,8 @@ const ROOM: ReadonlyArray<readonly [Piece, number]> = [
 const SIDE_WINDOWS = [-60, 69] as const;
 const RUG_R = 2.5;
 const TABLE = [-1.35, -0.55] as const;
-const BASKET = [-0.75, 0.35] as const;
+/** The wood basket, beside the stove toward the middle, on the rug. */
+const BASKET = [1.2, 0.05] as const;
 /** The back window: 3.1 m wide, from 0.45 m to 1.9 m, flat in the curved wall. */
 const WX = 1.55;
 const WY0 = 0.45;
@@ -82,7 +84,20 @@ const ZW = Math.sqrt(R * R - WX * WX) - 0.02;
  * forward of the window's plane past the window, so the rod stands forward enough to clear it there.
  */
 export const CURTAIN_ROD = {height: 1.95, end: 1.95, depth: 3.45} as const;
-const STOVE_R = 0.38;
+/**
+ * The stove (the user, 2026-11-27): on the right, between the bed and the kitchen, as the outside yurt's
+ * pipe stands on its roof's right slope; on its hearth plate wholly on the big rug (the user's rule for
+ * the table, 2026-11-14), so as far right as that allows. Its pipe rises through the roof, not the crown.
+ */
+export const STOVE = {x: 1.75, z: 0.5, r: 0.38, plate: 0.6} as const;
+/** The way the stove faces: toward the eye, so its door and fire show. */
+const STOVE_FACE = Math.atan2(ROOM_GEOMETRY.eye[2] - STOVE.z, ROOM_GEOMETRY.eye[0] - STOVE.x);
+/** A point on the stove: `a` to its right as the eye sees it, `b` toward the eye, at height `y`. */
+const onStove = (a: number, y: number, b: number): P3 => [
+	STOVE.x - a * Math.sin(STOVE_FACE) + b * Math.cos(STOVE_FACE),
+	y,
+	STOVE.z + a * Math.cos(STOVE_FACE) + b * Math.sin(STOVE_FACE),
+];
 
 /** The clips of the three windows' panes, which the windows' weather (task 5) is clipped to. */
 export const WINDOW_CLIPS = ["ps-yt-win-back", "ps-yt-win-left", "ps-yt-win-right"] as const;
@@ -1436,38 +1451,35 @@ export function roomMarkup(): string {
 		);
 	});
 
-	// The round stove and its pipe through the crown.
+	// The round stove and its pipe through the roof.
 	const doorMap = (s: number, t: number): P3 => {
-		const ph = -Math.PI / 2 + s / STOVE_R;
-		return [(STOVE_R + 0.003) * Math.cos(ph), t, (STOVE_R + 0.003) * Math.sin(ph)];
+		const ph = STOVE_FACE + s / STOVE.r;
+		return [
+			STOVE.x + (STOVE.r + 0.003) * Math.cos(ph),
+			t,
+			STOVE.z + (STOVE.r + 0.003) * Math.sin(ph),
+		];
 	};
 	const Dr = surface(doorMap);
-	const across = (y0: number, y1: number, half: number, z: number, attrs: string) =>
-		poly3(
-			[
-				[-half, y0, z],
-				[half, y0, z],
-				[half, y1, z],
-				[-half, y1, z],
-			],
-			attrs
-		);
+	// The pipe stands a little behind the stove's middle and rises to the roof above it.
+	const [pipeX, , pipeZ] = onStove(0, 0, -0.1);
+	const pipeTop = roofHeightAt(Math.hypot(pipeX, pipeZ));
 	// The stove, drawn twice: once in its place among what stands, once over the glows (body, below).
 	const stoveBody =
 		[-2.4, -0.75, 0.9, 2.55]
 			.map((a) =>
 				abox(
-					[Math.cos(a) * 0.3 - 0.03, Math.cos(a) * 0.3 + 0.03],
+					[STOVE.x + Math.cos(a) * 0.3 - 0.03, STOVE.x + Math.cos(a) * 0.3 + 0.03],
 					[0, 0.16],
-					[Math.sin(a) * 0.3 - 0.03, Math.sin(a) * 0.3 + 0.03],
+					[STOVE.z + Math.sin(a) * 0.3 - 0.03, STOVE.z + Math.sin(a) * 0.3 + 0.03],
 					"ironD"
 				)
 			)
 			.join("") +
-		cylinderSide(0, 0, STOVE_R + 0.02, 0.14, 0.18, cls("ironTop")) +
-		cylinderSide(0, 0, STOVE_R, 0.18, 0.72, 'fill="url(#ps-yt-iron)"') +
-		cylinderSide(0, 0, STOVE_R + 0.008, 0.22, 0.25, 'fill="url(#ps-yt-brass)"') +
-		cylinderSide(0, 0, STOVE_R + 0.008, 0.64, 0.67, 'fill="url(#ps-yt-brass)"') +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.02, 0.14, 0.18, cls("ironTop")) +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r, 0.18, 0.72, 'fill="url(#ps-yt-iron)"') +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.008, 0.22, 0.25, 'fill="url(#ps-yt-brass)"') +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.008, 0.64, 0.67, 'fill="url(#ps-yt-brass)"') +
 		Dr.arched(
 			-0.17,
 			0.17,
@@ -1478,23 +1490,28 @@ export function roomMarkup(): string {
 		) +
 		Dr.rect(-0.11, 0.26, 0.11, 0.28, cls("ironD")) +
 		Dr.circle(0.148, 0.42, 0.017, cls("gold")) +
-		cylinderSide(0, 0, STOVE_R + 0.04, 0.72, 0.76, cls("ironTop")) +
-		poly3(circle3(0, 0.76, 0, STOVE_R + 0.04), cls("ironTopL")) +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.04, 0.72, 0.76, cls("ironTop")) +
+		poly3(circle3(STOVE.x, 0.76, STOVE.z, STOVE.r + 0.04), cls("ironTopL")) +
 		poly3(
-			circle3(0, 0.762, 0, STOVE_R - 0.06),
+			circle3(STOVE.x, 0.762, STOVE.z, STOVE.r - 0.06),
 			`fill="none" ${cls(undefined, "ironRing")} stroke-width="1.2"`
 		) +
-		cylinderSide(0, 0.1, 0.11, 0.76, 0.84, cls("collar")) +
-		poly3(circle3(0, 0.84, 0.1, 0.11, 24), cls("collarTop")) +
-		across(0.84, CROWN_H + 0.3, 0.075, 0.1, cls("pipe")) +
-		[1.1, 1.6, 2.1, 2.6].map((h) => across(h, h + 0.04, 0.088, 0.1, cls("pipeBand"))).join("") +
-		sprite([-0.17, 0.76, -0.1], SPR.pot, 0.0055) +
-		sprite([0.18, 0.76, -0.12], SPR.kettle, 0.0055);
+		cylinderSide(pipeX, pipeZ, 0.11, 0.76, 0.84, cls("collar")) +
+		poly3(circle3(pipeX, 0.84, pipeZ, 0.11, 24), cls("collarTop")) +
+		cylinderSide(pipeX, pipeZ, 0.075, 0.84, pipeTop, cls("pipe")) +
+		[1.1, 1.6, 2.1]
+			.filter((h) => h + 0.04 < pipeTop - 0.1)
+			.map((h) => cylinderSide(pipeX, pipeZ, 0.088, h, h + 0.04, cls("pipeBand")))
+			.join("") +
+		// Where it passes through the roof's felt, a collar.
+		cylinderSide(pipeX, pipeZ, 0.13, pipeTop - 0.06, pipeTop, cls("collar")) +
+		sprite(onStove(-0.17, 0.76, 0.1), SPR.pot, 0.0055) +
+		sprite(onStove(0.18, 0.76, 0.12), SPR.kettle, 0.0055);
 	const stove = piece("stove", stoveBody);
 	// The pot's still steam, drawn once, over the stove's second drawing: the first is covered by the
 	// second, and two .45 strokes read as 0.70 (the red team's D3).
 	const potSteam = sprite(
-		[-0.17, 0.76, -0.1],
+		onStove(-0.17, 0.76, 0.1),
 		`<g class="ps-yt-still-steam ps-yt-burn">${SPR.steam}</g>`,
 		0.0055
 	);
@@ -1658,7 +1675,7 @@ export function roomMarkup(): string {
 		{z: depthOf([-0.63, 1, 0]), svg: post(-0.63)},
 		{z: depthOf([0.63, 1, 0]), svg: post(0.63)}
 	);
-	things.push({z: depthOf([0, 0.4, -STOVE_R]), svg: stove});
+	things.push({z: depthOf(onStove(0, 0.4, STOVE.r)), svg: stove});
 	things.push({z: depthOf([TABLE[0], 0.4, TABLE[1]]), svg: table()});
 
 	for (const [dx, dz] of [
@@ -1839,8 +1856,8 @@ export function roomMarkup(): string {
 		sideWindows +
 		// On the floor: the rug, the hearth, the light that falls there.
 		piece("rug", rug) +
-		Fl.ellipse(0, 0, 0.66, 0.66, cls("hearth")) +
-		Fl.ellipse(0, 0, 0.58, 0.58, cls("hearthL")) +
+		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate, STOVE.plate, cls("hearth")) +
+		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate - 0.08, STOVE.plate - 0.08, cls("hearthL")) +
 		`<g class="ps-yt-pool-sun">${Fl.ellipse(
 			patch[0],
 			patch[1],
@@ -1869,8 +1886,8 @@ export function roomMarkup(): string {
 			(FOCAL * 2.4) / door[2]
 		)}" fill="url(#ps-yt-g-fire)"/>` +
 		`<g class="ps-yt-glow-fire">${Fl.ellipse(
-			0,
-			-0.5,
+			onStove(0, 0, 0.5)[0],
+			onStove(0, 0, 0.5)[2],
 			1.3,
 			1.0,
 			'fill="url(#ps-yt-g-fire)"'
@@ -1985,7 +2002,7 @@ export function roomMarkup(): string {
 		}</svg></div></div>`;
 	}
 
-	const potRim = project([-0.17, 0.84, -0.1]);
+	const potRim = project(onStove(-0.17, 0.84, 0.1));
 	moving +=
 		`<div class="ps-ym-steam" style="--x:${n(potRim[0])};--y:${n(potRim[1])};--w:0;--h:0">` +
 		[0, -1.2, -2.4].map((d) => `<i style="--sd:3.6s;--sdl:${d}s"></i>`).join("") +

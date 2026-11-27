@@ -1,10 +1,17 @@
 import {expect} from "chai";
 import {WEATHERS} from "../../../client/js/scenes/ps/engine";
 import {roomCss} from "../../../client/js/scenes/ps/indoor";
-import {DESIGN_FRAME, project, ROOM_GEOMETRY} from "../../../client/js/scenes/ps/yurt";
+import {
+	circle3,
+	DESIGN_FRAME,
+	project,
+	roofHeightAt,
+	ROOM_GEOMETRY,
+} from "../../../client/js/scenes/ps/yurt";
 import {
 	CURTAIN_ROD,
 	ROOM_PIECES,
+	STOVE,
 	roomMarkup,
 	WINDOW_CLIPS,
 	windowMotion,
@@ -489,5 +496,118 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 				expect(num("cp")).to.be.within(0, 1);
 			}
 		}
+	});
+
+	describe("the stove on the right, its pipe through the roof (the user, 2026-11-27)", function () {
+		/** The first `<g class="ps-yt-p-stove">` group's markup. */
+		const stoveGroup = (() => {
+			const at = markup.indexOf('<g class="ps-yt-p-stove">');
+			let depth = 0;
+			let i = at;
+
+			for (; i < markup.length; i++) {
+				if (markup.startsWith("<g", i)) {
+					depth++;
+				}
+
+				if (markup.startsWith("</g>", i) && --depth === 0) {
+					break;
+				}
+			}
+
+			return markup.slice(at, i + 4);
+		})();
+		const pairs = (svg: string) =>
+			[...svg.matchAll(/points="([^"]*)"/g)].flatMap((m) =>
+				m[1]
+					.trim()
+					.split(/\s+/)
+					.map((p) => p.split(",").map(Number))
+			);
+
+		it("stands on the right, its plate wholly on the big rug, clear of the bed's foot post", function () {
+			expect(STOVE.x).to.be.within(1.7, 1.9);
+			expect(STOVE.z).to.be.within(0.3, 0.8);
+			expect(Math.hypot(STOVE.x, STOVE.z - 0.1) + STOVE.plate).to.be.at.most(2.5);
+			expect(Math.hypot(STOVE.x - 2.65, STOVE.z - 1.07)).to.be.at.least(STOVE.plate + 0.1);
+		});
+
+		it("lays the hearth plate under the stove, and nothing of it at the room's middle", function () {
+			const hearths = [
+				...markup.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-hearthL?"/g),
+			];
+			expect(hearths.length).to.equal(2);
+			const mid = project([0, 0, 0]);
+			const stove = project([STOVE.x, 0, STOVE.z]);
+
+			for (const m of hearths) {
+				const xs = m[1]
+					.trim()
+					.split(/\s+/)
+					.map((p) => Number(p.split(",")[0]));
+				const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+				expect(Math.abs(cx - stove[0]), "under the stove").to.be.below(40);
+				expect(Math.abs(cx - mid[0]), "not at the middle").to.be.above(100);
+			}
+		});
+
+		it("knows the roof's height: the wall's top at the wall, the crown ring at the crown", function () {
+			expect(roofHeightAt(4)).to.be.closeTo(2.0, 1e-9);
+			expect(roofHeightAt(0.75)).to.be.closeTo(3.2, 1e-9);
+			expect(roofHeightAt(2.375)).to.be.closeTo(2.6, 1e-9);
+		});
+
+		it("raises a round pipe that ends where it meets the roof, and none of it in the crown", function () {
+			const pipes = [
+				...stoveGroup.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-pipe"/g),
+			];
+			expect(pipes.length, "the pipe").to.be.at.least(1);
+
+			for (const m of pipes) {
+				expect(
+					m[1].trim().split(/\s+/).length,
+					"a cylinder, not a flat strip"
+				).to.be.at.least(20);
+			}
+
+			const top = project([
+				STOVE.x,
+				roofHeightAt(Math.hypot(STOVE.x, STOVE.z)) + 0.15,
+				STOVE.z,
+			])[1];
+			const ys = pairs(stoveGroup).map((p) => p[1]);
+			expect(Math.min(...ys), "nothing of the stove above the roof").to.be.above(top);
+			const crown = circle3(0, ROOM_GEOMETRY.crownHeight, 0, ROOM_GEOMETRY.crownRadius).map(
+				project
+			);
+			const cx = crown.map((q) => q[0]);
+			const cy = crown.map((q) => q[1]);
+
+			for (const [x, y] of pairs(stoveGroup)) {
+				const inCrown = x > Math.min(...cx) && x < Math.max(...cx) && y < Math.max(...cy);
+				expect(inCrown, `${x},${y} inside the crown`).to.equal(false);
+			}
+		});
+
+		it("stands the fire, its glow and the steam on the stove", function () {
+			const at = project([STOVE.x, 0.44, STOVE.z]);
+			const reach = (STOVE.r * ROOM_GEOMETRY.focal) / at[2] + 4;
+			const fire =
+				/<div class="ps-ym-fire" style="--x:([\d.-]+);--y:([\d.-]+);--w:([\d.-]+);--h:([\d.-]+)/.exec(
+					markup
+				)!;
+			const fx = Number(fire[1]) + Number(fire[3]) / 2;
+			expect(Math.abs(fx - at[0]), "the fire in the stove's door").to.be.below(reach);
+			const glow = /<circle class="ps-yt-glow-fire" cx="([\d.-]+)" cy="([\d.-]+)"/.exec(
+				markup
+			)!;
+			expect(Math.abs(Number(glow[1]) - at[0]), "the glow on the stove").to.be.below(reach);
+			const steam = /<div class="ps-ym-steam" style="--x:([\d.-]+);--y:([\d.-]+)/.exec(
+				markup
+			)!;
+			expect(Math.abs(Number(steam[1]) - at[0]), "the steam over the stove").to.be.below(
+				reach
+			);
+		});
 	});
 });
