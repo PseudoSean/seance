@@ -686,4 +686,45 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			).to.be.at.least(4);
 		});
 	});
+
+	describe("the rest of the furniture, whole (the user, 2026-11-27)", function () {
+		const group = (name: string) => {
+			const at = markup.indexOf(`<g class="ps-yt-p-${name}">`);
+			return markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+		};
+		const blueShapes = (svg: string) =>
+			[...svg.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-blue ps-yt-s-cream"/g)].map(
+				(m) => m[1].trim().split(/\s+/).length
+			);
+
+		for (const name of ["chests", "closet"]) {
+			it(`paints the ${name}' ornament as a lozenge medallion, not a plain blue disc`, function () {
+				const shapes = blueShapes(group(name));
+				expect(shapes.length, "a medallion").to.be.at.least(1);
+				shapes.forEach((k) => expect(k, "a lozenge, not a disc").to.be.at.most(8));
+				expect(
+					group(name).split("ps-yt-c-cream").length - 1,
+					"its cream dots"
+				).to.be.at.least(3);
+			});
+		}
+
+		it("turns the bed's four corner posts round, with rings, not square boxes", function () {
+			const posts = [...group("bed").matchAll(/<g class="ps-yt-bedpost">(.*?)<\/g>/g)].map(
+				(m) => m[1]
+			);
+			expect(posts).to.have.length(4);
+
+			for (const p of posts) {
+				const counts = [...p.matchAll(/<polygon points="([^"]*)"/g)].map(
+					(m) => m[1].trim().split(/\s+/).length
+				);
+				expect(Math.max(...counts), "a round post").to.be.at.least(20);
+				expect(
+					counts.filter((k) => k >= 20).length,
+					"the post and its rings"
+				).to.be.at.least(3);
+			}
+		});
+	});
 });

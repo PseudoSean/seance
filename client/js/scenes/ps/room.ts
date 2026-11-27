@@ -375,14 +375,31 @@ const BENCH_PARTS: readonly Part[] = [
 	{part: "cushion", a: [-0.48, 0.48], b: [-0.14, 0.14], c: [0.43, 0.49], colour: "curtain"},
 ];
 
+/**
+ * The painted furniture's medallion (the user, 2026-11-27: the plain blue discs read as nonsense): a blue
+ * lozenge edged in cream, a cream lozenge inside it with a gold heart, and a cream dot past each side tip.
+ */
+function paintedMedallion(S: Painter, s0: number, t0: number, r: number): string {
+	return (
+		S.diamond(
+			s0,
+			t0,
+			r * 0.95,
+			r * 1.3,
+			`${cls("blue", "cream")} stroke-width="${strokeAt(S, s0, t0, 0.012)}"`
+		) +
+		S.diamond(s0, t0, r * 0.42, r * 0.6, cls("cream")) +
+		S.circle(s0, t0, r * 0.14, cls("gold")) +
+		S.circle(s0 - r * 1.35, t0, r * 0.16, cls("cream")) +
+		S.circle(s0 + r * 1.35, t0, r * 0.16, cls("cream"))
+	);
+}
+
 /* ---------- the furniture along the round wall: each gives how far it stands out, and its markup ---------- */
 const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: string}> = {
 	closet(fr) {
 		const front = (S: Painter) => {
-			const k = S.px(0, 1);
-			const orn = (s: number) =>
-				S.circle(s, 1.08, 0.11, `${cls("blue", "cream")} stroke-width="${n(0.014 * k)}"`) +
-				S.diamond(s, 1.08, 0.03, 0.08, cls("cream"));
+			const orn = (s: number) => paintedMedallion(S, s, 1.08, 0.1);
 			return (
 				S.rect(-0.4, 0.42, -0.02, 1.74, cls("furnL")) +
 				S.rect(0.02, 0.42, 0.4, 1.74, cls("furnL")) +
@@ -549,11 +566,18 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 			);
 		};
 		/** A corner post to the floor with a brass finial: four of them, at the wall and at the front; they are its legs. */
-		const post = (a0: number, a1: number, b0: number, h: number) =>
-			`<g class="ps-yt-bedpost">` +
-			box(fr, [a0, a1], [b0, b0 + 0.1], [0, h], "furnD") +
-			sprite(fr.pt((a0 + a1) / 2, b0 + 0.05, h), SPR.finial, 0.008) +
-			`</g>`;
+		const post = (a0: number, a1: number, b0: number, h: number) => {
+			// Turned round (the user, 2026-11-27: the square posts read as flat slabs), with two rings.
+			const [px, , pz] = fr.pt((a0 + a1) / 2, b0 + 0.05, 0);
+			return (
+				`<g class="ps-yt-bedpost">` +
+				cylinderSide(px, pz, 0.048, 0, h, 'fill="url(#ps-yt-wood)"') +
+				cylinderSide(px, pz, 0.062, h * 0.32, h * 0.32 + 0.05, cls("furnD")) +
+				cylinderSide(px, pz, 0.06, h - 0.1, h - 0.06, cls("furnD")) +
+				sprite(fr.pt((a0 + a1) / 2, b0 + 0.05, h), SPR.finial, 0.008) +
+				`</g>`
+			);
+		};
 		const headboard =
 			board(
 				HEAD - T,
@@ -747,7 +771,7 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 					c0 + h - 0.05,
 					`fill="none" ${cls(undefined, "cream")} stroke-width="${n(0.012 * k)}"`
 				) +
-				S.circle(0, m, h * 0.26, `${cls("blue", "cream")} stroke-width="${n(0.012 * k)}"`) +
+				paintedMedallion(S, 0, m, h * 0.24) +
 				scroll(-w + 0.1) +
 				scroll(w - 0.26)
 			);
