@@ -227,12 +227,17 @@ function caps(pts: readonly Pt[], above: number, depth: number): string {
 		.join(" ");
 }
 
-/** The three ranges' markup on the view's own 1600 × 480 units: each lit outline, its faces and its caps. */
-function rangesBody(): string {
+/**
+ * The three ranges' markup on the view's own 1600 × 480 units: each lit outline, its faces and its caps;
+ * given a crop, only the vertices within 200 units of it (a window shows a part, and need not carry all).
+ */
+function rangesBody(crop?: {from: number; to: number}): string {
 	let body = "";
 
 	for (const r of RANGES) {
-		const pts = outline(r);
+		const pts = outline(r).filter(
+			([x]) => !crop || (x >= crop.from - 200 && x <= crop.to + 200)
+		);
 		body +=
 			`<path class="ps-m-${r.name}" d="${poly([
 				[pts[0][0], FOOT],
@@ -264,7 +269,7 @@ export function rangesIn(
 	const kk = String(Math.round(k * 10000) / 10000);
 	return `<g transform="translate(${n(x - crop.from * k)},${n(
 		foot - FOOT * k
-	)}) scale(${kk})">${rangesBody()}</g>`;
+	)}) scale(${kk})">${rangesBody(crop)}</g>`;
 }
 
 export function mountainsSvg(): string {

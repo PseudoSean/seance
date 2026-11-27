@@ -10,6 +10,7 @@ import {
 	ROOM_GEOMETRY,
 } from "../../../client/js/scenes/ps/yurt";
 import {
+	BASKET,
 	BENCH,
 	CHAIR_PARTS,
 	CHAIRS,
@@ -822,6 +823,36 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 				(g) => g.area === "room pane mountNear"
 			)!;
 			expect(pane.hex).to.equal(paletteAt(snowy).mountNear);
+		});
+	});
+
+	describe("the final review's fixes (2026-11-27)", function () {
+		it("keeps the wood basket off the stove on screen: the stove is drawn again over its glow, and would cover it", function () {
+			const xs = (pts: ReadonlyArray<readonly number[]>) =>
+				pts.map((q) => project(q as [number, number, number])[0]);
+			const stove = [0.18, 0.76].flatMap((y) =>
+				xs(circle3(STOVE.x, y, STOVE.z, STOVE.r + 0.06))
+			);
+			const basket = [0, 0.45].flatMap((y) => xs(circle3(BASKET[0], y, BASKET[1], 0.2)));
+			const apart =
+				Math.max(...basket) < Math.min(...stove) ||
+				Math.min(...basket) > Math.max(...stove);
+			expect(apart, "the basket clear of the stove's screen footprint").to.equal(true);
+			expect(
+				Math.hypot(BASKET[0] - STOVE.x, BASKET[1] - STOVE.z) - 0.2,
+				"off the hearth plate"
+			).to.be.at.least(STOVE.plate);
+		});
+
+		it("paints the washstand's cupboard with the medallion and a pull, not the plain blue disc", function () {
+			const at = markup.indexOf('<g class="ps-yt-p-washstand">');
+			const wash = markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+			const blue = [
+				...wash.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-blue ps-yt-s-cream"/g),
+			].map((m) => m[1].trim().split(/\s+/).length);
+			expect(blue.length).to.be.at.least(1);
+			blue.forEach((k) => expect(k, "a lozenge, not a disc").to.be.at.most(8));
+			expect(wash).to.include("ps-yt-c-handle");
 		});
 	});
 });

@@ -81,8 +81,11 @@ export const CHAIRS = [
 ] as const;
 /** A low bench where the table stood, on the rug, facing the room's middle. */
 export const BENCH = {x: -1.45, z: -0.35, length: 1.1, nx: 1, nz: 0.35} as const;
-/** The wood basket, beside the stove toward the middle, on the rug. */
-const BASKET = [1.2, 0.05] as const;
+/**
+ * The wood basket, beside the stove toward the middle, on the rug, off the hearth plate; left of the
+ * stove on screen as well, since the stove is drawn again over its glow and would cover it.
+ */
+export const BASKET = [0.95, 0.5] as const;
 /** The back window: 3.1 m wide, from 0.45 m to 1.9 m, flat in the curved wall. */
 const WX = 1.55;
 const WY0 = 0.45;
@@ -923,12 +926,8 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		s += box(fr, [-0.32, 0.32], [0, 0.45], [0.06, 0.78], "furn", {
 			front: (S) =>
 				S.rect(-0.26, 0.14, 0.26, 0.72, cls("furnL")) +
-				S.circle(
-					0,
-					0.43,
-					0.1,
-					`${cls("blue", "cream")} stroke-width="${strokeAt(S, 0, 0.43, 0.014)}"`
-				),
+				paintedMedallion(S, 0, 0.43, 0.09) +
+				S.rect(0.19, 0.38, 0.21, 0.5, cls("handle")),
 		});
 		s += box(fr, [-0.35, 0.35], [0, 0.48], [0.78, 0.82], "woodL");
 		s +=

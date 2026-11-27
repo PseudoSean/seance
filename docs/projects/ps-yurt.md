@@ -349,6 +349,10 @@ The candidates are the user's call:
 
 Scripts: `tmp/yurt-check/perf3-run.sh`, `perf3-iso.sh`, `probe-anc.mjs` and `trace-fire.mjs` (scratch).
 
+### 11.4 The room made real: what it adds (2026-11-27)
+
+The furniture's missing parts, the contact shadows and the outside in the windows add static markup, nothing that moves: the room's markup went from 1,277 elements (201.9 KB) to 1,413 (about 245 KB), +10.6 % elements and about +21 % bytes (`roomMarkup()`, counted in node at 28b53f761 and after; the back window's view draws only the part of the ranges it shows). Each animation tick, the minute's restyle at dawn and dusk and the first open of a private conversation scale with the room's elements (§11.1–11.3), so those may be about a tenth dearer; they were **not measured** in this change (no Chrome ranks before and after, and no iPhone). That is open: the iPhone sitting that measures the plains' shooting stars in calm (ps-ng.md) measures a private conversation's first open, its dawn restyle and its full and calm tiers against §11.1–11.3 too.
+
 ## 12. Tests and checks
 
 **Mocha:**
