@@ -1,4 +1,6 @@
 import {expect} from "chai";
+import * as roomModule from "../../client/js/scenes/ps/room";
+import * as yurtModule from "../../client/js/scenes/ps/yurt";
 import fs from "fs";
 import path from "path";
 import {
@@ -3443,6 +3445,34 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 		);
 		expect(valueOf(`${S} .ps-l-pine`, "transform-box")).to.equal("fill-box");
 		expect(valueOf(`${S} .ps-l-pine`, "transform-origin")).to.equal("50% 100%");
+	});
+
+	it("slides the yurt's room on a portrait window so the stove stands whole at its right edge, the svg and the moving overlays alike (2026-11-27)", function () {
+		const PORTRAIT = "@container (max-aspect-ratio: 1/1)";
+		// The room's box reaches left by twice the shift: the centred picture and the overlays placed in
+		// the same box (room-motion.ts) move together.
+		// It slides only as far as the stove needs to be whole at the right edge, and at most 150 frame
+		// units (a 390 × 844 phone); a near-square window (960 × 1000) whose stove is already whole does
+		// not slide (the final review, 2026-11-27).
+		expect(valueOf(`${S} .ps-indoor`, "--ps-ym-dx", PORTRAIT)).to.equal("150");
+		const edge = Number(valueOf(`${S} .ps-indoor`, "--ps-ym-edge", PORTRAIT));
+		const {project, circle3} = yurtModule;
+		const {STOVE} = roomModule;
+		const stoveEdge =
+			Math.max(
+				...[0.14, 0.76].flatMap((h) =>
+					circle3(STOVE.x, h, STOVE.z, STOVE.r + 0.04).map((q) => project(q)[0])
+				)
+			) - 640;
+		expect(edge, "the stove's right edge in frame units, with a margin").to.be.within(
+			stoveEdge + 5,
+			stoveEdge + 40
+		);
+		expect(valueOf(`${S} .ps-indoor`, "left", PORTRAIT)).to.equal(
+			"calc(-2 * min(var(--ps-ym-dx) * 100cqh / 800, max(0px, var(--ps-ym-edge) * 100cqh / 800 - 50cqw)))"
+		);
+		// Not on a landscape window: 21:9 keeps the picture centred on the room's middle.
+		expect(valueOf(`${S} .ps-indoor`, "--ps-ym-dx")).to.equal(undefined);
 	});
 
 	it("paints the mountains' ranges, faces and caps from the palette, the caps at the date's level", function () {

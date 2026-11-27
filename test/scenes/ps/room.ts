@@ -1,10 +1,23 @@
 import {expect} from "chai";
-import {WEATHERS} from "../../../client/js/scenes/ps/engine";
-import {roomCss} from "../../../client/js/scenes/ps/indoor";
-import {DESIGN_FRAME, project, ROOM_GEOMETRY} from "../../../client/js/scenes/ps/yurt";
+import {indoorGrounds, roomCss} from "../../../client/js/scenes/ps/indoor";
+import {momentFor, WEATHERS} from "../../../client/js/scenes/ps/engine";
+import {paletteAt} from "../../../client/js/scenes/ps/palette";
 import {
+	circle3,
+	DESIGN_FRAME,
+	project,
+	roofHeightAt,
+	ROOM_GEOMETRY,
+} from "../../../client/js/scenes/ps/yurt";
+import {
+	BASKET,
+	BENCH,
+	CHAIR_PARTS,
+	CHAIRS,
 	CURTAIN_ROD,
 	ROOM_PIECES,
+	STOVE,
+	TABLE,
 	roomMarkup,
 	WINDOW_CLIPS,
 	windowMotion,
@@ -489,5 +502,357 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 				expect(num("cp")).to.be.within(0, 1);
 			}
 		}
+	});
+
+	describe("the stove on the right, its pipe through the roof (the user, 2026-11-27)", function () {
+		/** The first `<g class="ps-yt-p-stove">` group's markup. */
+		const stoveGroup = (() => {
+			const at = markup.indexOf('<g class="ps-yt-p-stove">');
+			let depth = 0;
+			let i = at;
+
+			for (; i < markup.length; i++) {
+				if (markup.startsWith("<g", i)) {
+					depth++;
+				}
+
+				if (markup.startsWith("</g>", i) && --depth === 0) {
+					break;
+				}
+			}
+
+			return markup.slice(at, i + 4);
+		})();
+		const pairs = (svg: string) =>
+			[...svg.matchAll(/points="([^"]*)"/g)].flatMap((m) =>
+				m[1]
+					.trim()
+					.split(/\s+/)
+					.map((p) => p.split(",").map(Number))
+			);
+
+		it("stands on the right, its plate wholly on the big rug, clear of the bed's foot post", function () {
+			expect(STOVE.x).to.be.within(1.7, 1.9);
+			expect(STOVE.z).to.be.within(0.3, 0.8);
+			expect(Math.hypot(STOVE.x, STOVE.z - 0.1) + STOVE.plate).to.be.at.most(2.5);
+			expect(Math.hypot(STOVE.x - 2.65, STOVE.z - 1.07)).to.be.at.least(STOVE.plate + 0.1);
+		});
+
+		it("lays the hearth plate under the stove, and nothing of it at the room's middle", function () {
+			const hearths = [
+				...markup.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-hearthL?"/g),
+			];
+			expect(hearths.length).to.equal(2);
+			const mid = project([0, 0, 0]);
+			const stove = project([STOVE.x, 0, STOVE.z]);
+
+			for (const m of hearths) {
+				const xs = m[1]
+					.trim()
+					.split(/\s+/)
+					.map((p) => Number(p.split(",")[0]));
+				const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+				expect(Math.abs(cx - stove[0]), "under the stove").to.be.below(40);
+				expect(Math.abs(cx - mid[0]), "not at the middle").to.be.above(100);
+			}
+		});
+
+		it("knows the roof's height: the wall's top at the wall, the crown ring at the crown", function () {
+			expect(roofHeightAt(4)).to.be.closeTo(2.0, 1e-9);
+			expect(roofHeightAt(0.75)).to.be.closeTo(3.2, 1e-9);
+			expect(roofHeightAt(2.375)).to.be.closeTo(2.6, 1e-9);
+		});
+
+		it("raises a round pipe that ends where it meets the roof, and none of it in the crown", function () {
+			const pipes = [
+				...stoveGroup.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-pipe"/g),
+			];
+			expect(pipes.length, "the pipe").to.be.at.least(1);
+
+			for (const m of pipes) {
+				expect(
+					m[1].trim().split(/\s+/).length,
+					"a cylinder, not a flat strip"
+				).to.be.at.least(20);
+			}
+
+			const top = project([
+				STOVE.x,
+				roofHeightAt(Math.hypot(STOVE.x, STOVE.z)) + 0.15,
+				STOVE.z,
+			])[1];
+			const ys = pairs(stoveGroup).map((p) => p[1]);
+			expect(Math.min(...ys), "nothing of the stove above the roof").to.be.above(top);
+			const crown = circle3(0, ROOM_GEOMETRY.crownHeight, 0, ROOM_GEOMETRY.crownRadius).map(
+				project
+			);
+			const cx = crown.map((q) => q[0]);
+			const cy = crown.map((q) => q[1]);
+
+			for (const [x, y] of pairs(stoveGroup)) {
+				const inCrown = x > Math.min(...cx) && x < Math.max(...cx) && y < Math.max(...cy);
+				expect(inCrown, `${x},${y} inside the crown`).to.equal(false);
+			}
+		});
+
+		it("stands the fire, its glow and the steam on the stove", function () {
+			const at = project([STOVE.x, 0.44, STOVE.z]);
+			const reach = (STOVE.r * ROOM_GEOMETRY.focal) / at[2] + 4;
+			const fire =
+				/<div class="ps-ym-fire" style="--x:([\d.-]+);--y:([\d.-]+);--w:([\d.-]+);--h:([\d.-]+)/.exec(
+					markup
+				)!;
+			const fx = Number(fire[1]) + Number(fire[3]) / 2;
+			expect(Math.abs(fx - at[0]), "the fire in the stove's door").to.be.below(reach);
+			const glow = /<circle class="ps-yt-glow-fire" cx="([\d.-]+)" cy="([\d.-]+)"/.exec(
+				markup
+			)!;
+			expect(Math.abs(Number(glow[1]) - at[0]), "the glow on the stove").to.be.below(reach);
+			const steam = /<div class="ps-ym-steam" style="--x:([\d.-]+);--y:([\d.-]+)/.exec(
+				markup
+			)!;
+			expect(Math.abs(Number(steam[1]) - at[0]), "the steam over the stove").to.be.below(
+				reach
+			);
+		});
+	});
+
+	describe("the dining set at the centre, solid; a bench where it stood (the user, 2026-11-27)", function () {
+		const onRug = (x: number, z: number, reach: number) =>
+			Math.hypot(x, z - 0.1) + reach <= 2.5;
+
+		it("stands the table at the middle of the rug, a little behind the posts, wholly on the rug", function () {
+			expect(Math.abs(TABLE[0])).to.be.at.most(0.15);
+			expect(TABLE[1]).to.be.within(0.5, 1.0);
+			expect(onRug(TABLE[0], TABLE[1], 0.52)).to.equal(true);
+		});
+
+		it("puts both chairs on the rug, clear of the posts and of the stove's plate", function () {
+			expect(CHAIRS).to.have.length(2);
+
+			for (const c of CHAIRS) {
+				expect(onRug(c.x, c.z, 0.3), `${c.x},${c.z} on the rug`).to.equal(true);
+				expect(
+					Math.min(Math.hypot(c.x - 0.63, c.z), Math.hypot(c.x + 0.63, c.z))
+				).to.be.at.least(0.35);
+				expect(Math.hypot(c.x - STOVE.x, c.z - STOVE.z)).to.be.at.least(STOVE.plate + 0.3);
+			}
+		});
+
+		it("builds each chair whole: four legs, a seat with thickness, two back posts and at least two slats", function () {
+			const of = (k: string) => CHAIR_PARTS.filter((p) => p.part === k);
+			expect(of("leg")).to.have.length(4);
+			of("leg").forEach((l) => expect(l.c[0]).to.equal(0));
+			expect(of("seat")).to.have.length(1);
+			expect(of("seat")[0].c[1] - of("seat")[0].c[0]).to.be.at.least(0.04);
+			expect(of("post")).to.have.length(2);
+			of("post").forEach((p) => expect(p.c[1]).to.be.at.least(0.9));
+			expect(of("slat").length).to.be.at.least(2);
+			expect(of("rail").length).to.be.at.least(1);
+		});
+
+		it("gives the table no blue band, and the room a bench wholly on the rug where the table stood", function () {
+			const at = markup.indexOf('<g class="ps-yt-p-table">');
+			const end = markup.indexOf('<g class="ps-yt-p-', at + 10);
+			// No band round the pedestal (a cylinder in the blue class); the blue teapot is a sprite, not a polygon.
+			expect(markup.slice(at, end)).to.not.match(
+				/<polygon points="[^"]*" class="ps-yt-c-blue"/
+			);
+			expect(ROOM_PIECES).to.include("ps-yt-p-bench");
+			expect(markup).to.include('<g class="ps-yt-p-bench">');
+			expect(onRug(BENCH.x, BENCH.z, BENCH.length / 2 + 0.05)).to.equal(true);
+		});
+	});
+
+	describe("the kitchen, solid (the user, 2026-11-27: nonsensical things)", function () {
+		const kitchen = (() => {
+			const at = markup.indexOf('<g class="ps-yt-p-kitchen">');
+			return markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+		})();
+
+		it("gives the cupboard doors pulls, not big blue ovals", function () {
+			// The doors' ovals were polygons in the blue class; the blue jar on the shelf is a sprite.
+			expect(kitchen).to.not.match(/<polygon points="[^"]*" class="ps-yt-c-blue/);
+			expect(kitchen.split("ps-yt-c-handle").length - 1).to.be.at.least(2);
+		});
+
+		it("sets the basin into the counter and stands the plates as china discs, not hoops", function () {
+			expect(kitchen).to.not.include("ps-yt-c-plate");
+			expect(
+				kitchen.split('class="ps-yt-c-china ps-yt-s-chinaB"').length - 1,
+				"plates"
+			).to.be.at.least(3);
+			expect(
+				kitchen.split('class="ps-yt-c-chinaB"').length - 1,
+				"the basin's bowl and the plates' wells"
+			).to.be.at.least(4);
+		});
+	});
+
+	describe("the rest of the furniture, whole (the user, 2026-11-27)", function () {
+		const group = (name: string) => {
+			const at = markup.indexOf(`<g class="ps-yt-p-${name}">`);
+			return markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+		};
+		const blueShapes = (svg: string) =>
+			[...svg.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-blue ps-yt-s-cream"/g)].map(
+				(m) => m[1].trim().split(/\s+/).length
+			);
+
+		for (const name of ["chests", "closet"]) {
+			it(`paints the ${name}' ornament as a lozenge medallion, not a plain blue disc`, function () {
+				const shapes = blueShapes(group(name));
+				expect(shapes.length, "a medallion").to.be.at.least(1);
+				shapes.forEach((k) => expect(k, "a lozenge, not a disc").to.be.at.most(8));
+				expect(
+					group(name).split("ps-yt-c-cream").length - 1,
+					"its cream dots"
+				).to.be.at.least(3);
+			});
+		}
+
+		it("turns the bed's four corner posts round, with rings, not square boxes", function () {
+			const posts = [...group("bed").matchAll(/<g class="ps-yt-bedpost">(.*?)<\/g>/g)].map(
+				(m) => m[1]
+			);
+			expect(posts).to.have.length(4);
+
+			for (const p of posts) {
+				const counts = [...p.matchAll(/<polygon points="([^"]*)"/g)].map(
+					(m) => m[1].trim().split(/\s+/).length
+				);
+				expect(Math.max(...counts), "a round post").to.be.at.least(20);
+				expect(
+					counts.filter((k) => k >= 20).length,
+					"the post and its rings"
+				).to.be.at.least(3);
+			}
+		});
+	});
+
+	describe("soft shadows under what stands, and the wall's foot (2026-11-27)", function () {
+		it("lays a soft shadow under each piece on the floor, after the rug and before what stands", function () {
+			const at = markup.indexOf('<g class="ps-yt-shadows"');
+			expect(at).to.be.above(markup.indexOf('<g class="ps-yt-p-rug">'));
+			const first = Math.min(
+				...["stove", "table", "chair", "bench", "closet", "bed", "kitchen"].map((p) =>
+					markup.indexOf(`<g class="ps-yt-p-${p}">`)
+				)
+			);
+			expect(at).to.be.below(first);
+			const g = /<g class="ps-yt-shadows" opacity="([\d.]+)">(.*?)<\/g>/.exec(markup)!;
+			expect(Number(g[1]), "no more than a fifth black").to.be.at.most(0.2);
+			// The stove, the table, two chairs, the bench, the basket, and the seven pieces along the wall.
+			expect(g[2].split("<polygon").length - 1).to.be.at.least(13);
+		});
+
+		it("shades the wall's foot", function () {
+			expect(markup).to.match(
+				/<polygon points="[^"]+" class="[^"]*\bps-yt-wallfoot\b[^"]*" opacity="\.1\d?"/
+			);
+		});
+	});
+
+	describe("the windows show the outside (the user, 2026-11-27)", function () {
+		/** The view clipped to a window's pane: from its clip-path group to its end. */
+		const view = (clip: string) => {
+			const at = markup.indexOf(`<g clip-path="url(#${clip})"><rect`);
+			let depth = 0;
+			let i = at;
+
+			for (; i < markup.length; i++) {
+				if (markup.startsWith("<g", i)) {
+					depth++;
+				}
+
+				if (markup.startsWith("</g>", i) && --depth === 0) {
+					break;
+				}
+			}
+
+			return markup.slice(at, i + 4);
+		};
+
+		it("draws the outside's own three ranges in the back window, their faces and their caps", function () {
+			const back = view(WINDOW_CLIPS[0]);
+
+			for (const c of [
+				"ps-m-far",
+				"ps-m-far-sh",
+				"ps-m-mid",
+				"ps-m-mid-sh",
+				"ps-m-near",
+				"ps-m-near-sh",
+			]) {
+				expect(back, c).to.include(`class="${c}"`);
+			}
+
+			expect(back.split('class="ps-m-snow"').length - 1).to.equal(3);
+			// The old soft swells and the pale highlight that showed in every season are gone.
+			expect(back).to.not.include("var(--ps-mount)");
+			expect(back).to.not.include("#fff 55%");
+			expect(back, "pines on the far plain").to.include('class="ps-l-pine-lit"');
+		});
+
+		it("shows the river and the left stand of pines to the left, the right stand to the right", function () {
+			const left = view(WINDOW_CLIPS[1]);
+			const right = view(WINDOW_CLIPS[2]);
+			expect(left).to.include('class="ps-yt-view-river"');
+			expect(left.split('class="ps-l-pine-lit"').length - 1).to.be.at.least(3);
+			expect(right.split('class="ps-l-pine-lit"').length - 1).to.be.at.least(3);
+			expect(right).to.not.include('class="ps-yt-view-river"');
+		});
+
+		it("holds the words over the panes' new colours, the caps only while they show, frosted on a snowy day as outside", function () {
+			const at = (minute: number, doy: number, weather: "clear" | "snow" = "clear") =>
+				momentFor({minute, doy, dayNumber: doy, epochDays: 20000, weather});
+			const areas = (m: ReturnType<typeof at>) =>
+				indoorGrounds(m, paletteAt(m)).map((g) => g.area);
+			const winter = at(750, 15);
+			const summer = at(750, 196);
+
+			for (const k of ["mountNear", "mountFar", "pine"]) {
+				expect(areas(summer), k).to.include(`room pane ${k}`);
+			}
+
+			expect(areas(summer)).to.not.include("room pane mount2");
+			expect(areas(winter)).to.include("room pane peak snow");
+			expect(areas(summer)).to.not.include("room pane peak snow");
+			const snowy = at(750, 15, "snow");
+			const pane = indoorGrounds(snowy, paletteAt(snowy)).find(
+				(g) => g.area === "room pane mountNear"
+			)!;
+			expect(pane.hex).to.equal(paletteAt(snowy).mountNear);
+		});
+	});
+
+	describe("the final review's fixes (2026-11-27)", function () {
+		it("keeps the wood basket off the stove on screen: the stove is drawn again over its glow, and would cover it", function () {
+			const xs = (pts: ReadonlyArray<readonly number[]>) =>
+				pts.map((q) => project(q as [number, number, number])[0]);
+			const stove = [0.18, 0.76].flatMap((y) =>
+				xs(circle3(STOVE.x, y, STOVE.z, STOVE.r + 0.06))
+			);
+			const basket = [0, 0.45].flatMap((y) => xs(circle3(BASKET[0], y, BASKET[1], 0.2)));
+			const apart =
+				Math.max(...basket) < Math.min(...stove) ||
+				Math.min(...basket) > Math.max(...stove);
+			expect(apart, "the basket clear of the stove's screen footprint").to.equal(true);
+			expect(
+				Math.hypot(BASKET[0] - STOVE.x, BASKET[1] - STOVE.z) - 0.2,
+				"off the hearth plate"
+			).to.be.at.least(STOVE.plate);
+		});
+
+		it("paints the washstand's cupboard with the medallion and a pull, not the plain blue disc", function () {
+			const at = markup.indexOf('<g class="ps-yt-p-washstand">');
+			const wash = markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+			const blue = [
+				...wash.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-blue ps-yt-s-cream"/g),
+			].map((m) => m[1].trim().split(/\s+/).length);
+			expect(blue.length).to.be.at.least(1);
+			blue.forEach((k) => expect(k, "a lozenge, not a disc").to.be.at.most(8));
+			expect(wash).to.include("ps-yt-c-handle");
+		});
 	});
 });

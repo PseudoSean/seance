@@ -12,7 +12,7 @@
  */
 
 export type P3 = readonly [number, number, number];
-export type Face = "front" | "left" | "right" | "top" | "bottom";
+export type Face = "front" | "back" | "left" | "right" | "top" | "bottom";
 type Pair = readonly [number, number];
 type Deco = Partial<Record<Face, (S: Painter) => string>>;
 
@@ -414,7 +414,7 @@ function faces(F: Record<Face, FaceSpec>, colour: string, deco: Deco): string {
 	const eye = ROOM_GEOMETRY.eye;
 	let out = "";
 
-	for (const name of ["left", "right", "top", "bottom", "front"] as const) {
+	for (const name of ["left", "right", "top", "bottom", "front", "back"] as const) {
 		const f = F[name];
 		const m = f.map((f.s[0] + f.s[1]) / 2, (f.t[0] + f.t[1]) / 2);
 
@@ -443,6 +443,8 @@ export function box(fr: Frame, a: Pair, b: Pair, c: Pair, colour: string, deco: 
 			top: {nrm: [0, 1, 0], map: (s, t) => fr.pt(s, t, c[1]), s: a, t: b},
 			bottom: {nrm: [0, -1, 0], map: (s, t) => fr.pt(s, t, c[0]), s: a, t: b},
 			front: {nrm: fr.n, map: (s, t) => fr.pt(s, b[1], t), s: a, t: c},
+			// The back, which a piece turned away from the eye shows (a chair seen from behind, 2026-11-27).
+			back: {nrm: neg(fr.n), map: (s, t) => fr.pt(s, b[0], t), s: a, t: c},
 		},
 		colour,
 		deco
@@ -458,6 +460,7 @@ export function abox(x: Pair, y: Pair, z: Pair, colour: string, deco: Deco = {})
 			top: {nrm: [0, 1, 0], map: (s, t) => [s, y[1], t], s: x, t: z},
 			bottom: {nrm: [0, -1, 0], map: (s, t) => [s, y[0], t], s: x, t: z},
 			front: {nrm: [0, 0, -1], map: (s, t) => [s, t, z[0]], s: x, t: y},
+			back: {nrm: [0, 0, 1], map: (s, t) => [s, t, z[1]], s: x, t: y},
 		},
 		colour,
 		deco
@@ -487,6 +490,15 @@ export function cylinderSide(
 	}
 
 	return poly3([...bottom, ...top.reverse()], attrs);
+}
+
+/**
+ * The roof's height `r` metres from the middle: the wall's top at the wall,
+ * the crown ring at the crown, straight between (the roof poles run straight).
+ */
+export function roofHeightAt(r: number): number {
+	const {radius, wallHeight, crownHeight, crownRadius} = ROOM_GEOMETRY;
+	return wallHeight + ((radius - r) / (radius - crownRadius)) * (crownHeight - wallHeight);
 }
 
 /** A small round thing drawn flat at its place (its base at q), `unit` metres per drawing unit; nothing behind the eye. */

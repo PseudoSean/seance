@@ -16,6 +16,7 @@ import {rainTiles} from "../psng/rain";
 import {WEATHERS, type Weather} from "./engine";
 import {FLAME_CORE, FLAME_LAYERS, FLAME_POSES, FLAME_SPACE, flameShape, flameSvg} from "./flames";
 import {FIREBOX_BURNING, type RoomColour} from "./indoor";
+import {rangesIn} from "./peaks";
 import {
 	abox,
 	arc,
@@ -35,6 +36,7 @@ import {
 	project,
 	pts,
 	quadratic,
+	roofHeightAt,
 	ROOM_GEOMETRY,
 	sprite,
 	strokeAt,
@@ -67,8 +69,23 @@ const ROOM: ReadonlyArray<readonly [Piece, number]> = [
 ];
 const SIDE_WINDOWS = [-60, 69] as const;
 const RUG_R = 2.5;
-const TABLE = [-1.35, -0.55] as const;
-const BASKET = [-0.75, 0.35] as const;
+/** The dining table (the user, 2026-11-27): at the middle of the big rug, a little behind the posts. */
+export const TABLE = [0, 0.8] as const;
+/**
+ * Its two chairs, on the table's far side either way, facing it, so the eye sees their seats and backs
+ * between the posts (beside them, the posts hid the chairs).
+ */
+export const CHAIRS = [
+	{x: -0.45, z: 1.35, nx: 0.45, nz: -0.55},
+	{x: 0.45, z: 1.35, nx: -0.45, nz: -0.55},
+] as const;
+/** A low bench where the table stood, on the rug, facing the room's middle. */
+export const BENCH = {x: -1.45, z: -0.35, length: 1.1, nx: 1, nz: 0.35} as const;
+/**
+ * The wood basket, beside the stove toward the middle, on the rug, off the hearth plate; left of the
+ * stove on screen as well, since the stove is drawn again over its glow and would cover it.
+ */
+export const BASKET = [0.95, 0.5] as const;
 /** The back window: 3.1 m wide, from 0.45 m to 1.9 m, flat in the curved wall. */
 const WX = 1.55;
 const WY0 = 0.45;
@@ -82,7 +99,20 @@ const ZW = Math.sqrt(R * R - WX * WX) - 0.02;
  * forward of the window's plane past the window, so the rod stands forward enough to clear it there.
  */
 export const CURTAIN_ROD = {height: 1.95, end: 1.95, depth: 3.45} as const;
-const STOVE_R = 0.38;
+/**
+ * The stove (the user, 2026-11-27): on the right, between the bed and the kitchen, as the outside yurt's
+ * pipe stands on its roof's right slope; on its hearth plate wholly on the big rug (the user's rule for
+ * the table, 2026-11-14), so as far right as that allows. Its pipe rises through the roof, not the crown.
+ */
+export const STOVE = {x: 1.75, z: 0.5, r: 0.38, plate: 0.6} as const;
+/** The way the stove faces: toward the eye, so its door and fire show. */
+const STOVE_FACE = Math.atan2(ROOM_GEOMETRY.eye[2] - STOVE.z, ROOM_GEOMETRY.eye[0] - STOVE.x);
+/** A point on the stove: `a` to its right as the eye sees it, `b` toward the eye, at height `y`. */
+const onStove = (a: number, y: number, b: number): P3 => [
+	STOVE.x - a * Math.sin(STOVE_FACE) + b * Math.cos(STOVE_FACE),
+	y,
+	STOVE.z + a * Math.cos(STOVE_FACE) + b * Math.sin(STOVE_FACE),
+];
 
 /** The clips of the three windows' panes, which the windows' weather (task 5) is clipped to. */
 export const WINDOW_CLIPS = ["ps-yt-win-back", "ps-yt-win-left", "ps-yt-win-right"] as const;
@@ -102,6 +132,7 @@ export const ROOM_PIECES: readonly string[] = [
 	"post",
 	"table",
 	"chair",
+	"bench",
 	"rug",
 	"crown",
 	"window-back",
@@ -140,7 +171,6 @@ const SPR = {
 		"cream"
 	)} stroke-width="2.4"/>`,
 	plant: `<path d="${PLANT.pot}" ${cls("clay")}/><path d="${PLANT.leaves}" ${cls("leaf")}/>`,
-	plate: `<ellipse cx="0" cy="-11" rx="5" ry="11" ${cls("plate", "blue")} stroke-width="1.5"/>`,
 	jarA: `<rect x="-7" y="-22" width="14" height="22" rx="3" ${cls(
 		"jarAmber"
 	)}/><rect x="-8" y="-25" width="16" height="4" rx="1" ${cls("woodD")}/>`,
@@ -269,36 +299,111 @@ interface Lights {
 }
 
 /** A chair in a frame turned toward what it serves (b toward it): legs, seat, and a back away from it. */
+type Span = readonly [number, number];
+
+/** A part of a piece built of boxes in its own frame: along it (a), toward where it faces (b), up (c). */
+interface Part {
+	part: string;
+	a: Span;
+	b: Span;
+	c: Span;
+	colour: RoomColour;
+}
+
+/**
+ * The parts drawn from the ground up, by the height each starts at (the legs, then the seat, then what
+ * stands on it), and far to near among those that start alike, so the nearer covers the farther and
+ * nothing that stands on a part is hidden under it.
+ */
+function partsInFrame(fr: Frame, parts: readonly Part[]): string {
+	const mid = (q: Span) => (q[0] + q[1]) / 2;
+	const depth = (p: Part) => depthOf(fr.pt(mid(p.a), mid(p.b), mid(p.c)));
+	return [...parts]
+		.sort((p, q) => p.c[0] - q.c[0] || depth(q) - depth(p))
+		.map((p) => box(fr, p.a, p.b, p.c, p.colour))
+		.join("");
+}
+
+/**
+ * A chair, whole (the user, 2026-11-27: "the backs of chairs missing"): four legs, a seat with its
+ * thickness, a back of two posts, a top rail and two slats, its back away from where it faces.
+ */
+export const CHAIR_PARTS: readonly Part[] = [
+	...(
+		[
+			[-0.19, -0.19],
+			[0.15, -0.19],
+			[-0.19, 0.15],
+			[0.15, 0.15],
+		] as const
+	).map(
+		([a, b]): Part => ({
+			part: "leg",
+			a: [a, a + 0.04],
+			b: [b, b + 0.04],
+			c: [0, 0.45],
+			colour: "wood",
+		})
+	),
+	{part: "seat", a: [-0.21, 0.21], b: [-0.21, 0.21], c: [0.45, 0.495], colour: "woodL"},
+	{part: "post", a: [-0.2, -0.16], b: [-0.21, -0.17], c: [0.495, 0.97], colour: "wood"},
+	{part: "post", a: [0.16, 0.2], b: [-0.21, -0.17], c: [0.495, 0.97], colour: "wood"},
+	{part: "rail", a: [-0.16, 0.16], b: [-0.205, -0.175], c: [0.86, 0.95], colour: "woodL"},
+	{part: "slat", a: [-0.09, -0.05], b: [-0.2, -0.18], c: [0.495, 0.86], colour: "wood"},
+	{part: "slat", a: [0.05, 0.09], b: [-0.2, -0.18], c: [0.495, 0.86], colour: "wood"},
+];
+
 function chair(fr: Frame): string {
-	let s = "";
+	return piece("chair", partsInFrame(fr, CHAIR_PARTS));
+}
 
-	for (const [a, b] of [
-		[-0.19, -0.19],
-		[0.14, -0.19],
-		[-0.19, 0.14],
-		[0.14, 0.14],
-	]) {
-		s += box(fr, [a, a + 0.05], [b, b + 0.05], [0, 0.45], "wood");
-	}
+/** A low wooden bench with a cushion. */
+const BENCH_PARTS: readonly Part[] = [
+	...(
+		[
+			[-0.5, -0.14],
+			[0.46, -0.14],
+			[-0.5, 0.1],
+			[0.46, 0.1],
+		] as const
+	).map(
+		([a, b]): Part => ({
+			part: "leg",
+			a: [a, a + 0.05],
+			b: [b, b + 0.05],
+			c: [0, 0.38],
+			colour: "wood",
+		})
+	),
+	{part: "seat", a: [-0.55, 0.55], b: [-0.17, 0.17], c: [0.38, 0.43], colour: "woodL"},
+	{part: "cushion", a: [-0.48, 0.48], b: [-0.14, 0.14], c: [0.43, 0.49], colour: "curtain"},
+];
 
-	s += box(fr, [-0.21, 0.21], [-0.21, 0.21], [0.45, 0.5], "woodL");
-	s +=
-		box(fr, [-0.2, -0.15], [-0.21, -0.16], [0.5, 0.98], "wood") +
-		box(fr, [0.15, 0.2], [-0.21, -0.16], [0.5, 0.98], "wood");
-	s += box(fr, [-0.2, 0.2], [-0.21, -0.16], [0.74, 0.95], "woodL", {
-		front: (S) => S.circle(0, 0.845, 0.05, cls("furn")),
-	});
-	return piece("chair", s);
+/**
+ * The painted furniture's medallion (the user, 2026-11-27: the plain blue discs read as nonsense): a blue
+ * lozenge edged in cream, a cream lozenge inside it with a gold heart, and a cream dot past each side tip.
+ */
+function paintedMedallion(S: Painter, s0: number, t0: number, r: number): string {
+	return (
+		S.diamond(
+			s0,
+			t0,
+			r * 0.95,
+			r * 1.3,
+			`${cls("blue", "cream")} stroke-width="${strokeAt(S, s0, t0, 0.012)}"`
+		) +
+		S.diamond(s0, t0, r * 0.42, r * 0.6, cls("cream")) +
+		S.circle(s0, t0, r * 0.14, cls("gold")) +
+		S.circle(s0 - r * 1.35, t0, r * 0.16, cls("cream")) +
+		S.circle(s0 + r * 1.35, t0, r * 0.16, cls("cream"))
+	);
 }
 
 /* ---------- the furniture along the round wall: each gives how far it stands out, and its markup ---------- */
 const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: string}> = {
 	closet(fr) {
 		const front = (S: Painter) => {
-			const k = S.px(0, 1);
-			const orn = (s: number) =>
-				S.circle(s, 1.08, 0.11, `${cls("blue", "cream")} stroke-width="${n(0.014 * k)}"`) +
-				S.diamond(s, 1.08, 0.03, 0.08, cls("cream"));
+			const orn = (s: number) => paintedMedallion(S, s, 1.08, 0.1);
 			return (
 				S.rect(-0.4, 0.42, -0.02, 1.74, cls("furnL")) +
 				S.rect(0.02, 0.42, 0.4, 1.74, cls("furnL")) +
@@ -465,11 +570,18 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 			);
 		};
 		/** A corner post to the floor with a brass finial: four of them, at the wall and at the front; they are its legs. */
-		const post = (a0: number, a1: number, b0: number, h: number) =>
-			`<g class="ps-yt-bedpost">` +
-			box(fr, [a0, a1], [b0, b0 + 0.1], [0, h], "furnD") +
-			sprite(fr.pt((a0 + a1) / 2, b0 + 0.05, h), SPR.finial, 0.008) +
-			`</g>`;
+		const post = (a0: number, a1: number, b0: number, h: number) => {
+			// Turned round (the user, 2026-11-27: the square posts read as flat slabs), with two rings.
+			const [px, , pz] = fr.pt((a0 + a1) / 2, b0 + 0.05, 0);
+			return (
+				`<g class="ps-yt-bedpost">` +
+				cylinderSide(px, pz, 0.048, 0, h, 'fill="url(#ps-yt-wood)"') +
+				cylinderSide(px, pz, 0.062, h * 0.32, h * 0.32 + 0.05, cls("furnD")) +
+				cylinderSide(px, pz, 0.06, h - 0.1, h - 0.06, cls("furnD")) +
+				sprite(fr.pt((a0 + a1) / 2, b0 + 0.05, h), SPR.finial, 0.008) +
+				`</g>`
+			);
+		};
 		const headboard =
 			board(
 				HEAD - T,
@@ -663,7 +775,7 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 					c0 + h - 0.05,
 					`fill="none" ${cls(undefined, "cream")} stroke-width="${n(0.012 * k)}"`
 				) +
-				S.circle(0, m, h * 0.26, `${cls("blue", "cream")} stroke-width="${n(0.012 * k)}"`) +
+				paintedMedallion(S, 0, m, h * 0.24) +
 				scroll(-w + 0.1) +
 				scroll(w - 0.26)
 			);
@@ -750,37 +862,49 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 
 		s += box(fr, [-0.575, 0.575], [0, 0.34], [1.87, 1.9], "woodD");
 
-		for (let i = 0; i < 4; i++) {
-			s += sprite(fr.pt(-0.4 + i * 0.12, 0.12, 1.59), SPR.plate);
+		// Three plates stood on the shelf against the wall, facing the room: china discs with a rim and a well.
+		const Rack = surface((a, c) => fr.pt(a, 0.05, c));
+
+		for (let i = 0; i < 3; i++) {
+			const a = -0.42 + i * 0.16;
+			s +=
+				Rack.circle(
+					a,
+					1.665,
+					0.075,
+					`${cls("china", "chinaB")} stroke-width="${strokeAt(Rack, a, 1.665, 0.008)}"`
+				) + Rack.circle(a, 1.665, 0.042, cls("chinaB"));
 		}
 
 		s += sprite(fr.pt(0.22, 0.14, 1.59), SPR.jarA) + sprite(fr.pt(0.4, 0.14, 1.59), SPR.jarB);
 		s +=
 			sprite(fr.pt(-0.32, 0.15, 1.27), SPR.bowls) + sprite(fr.pt(0.05, 0.15, 1.27), SPR.cups);
 		s += box(fr, [-0.55, 0.55], [0.02, 0.56], [0, 0.06], "furnD");
+		// Two doors, each a raised panel in its frame, with a brass pull by the meeting edge.
 		s += box(fr, [-0.575, 0.575], [0, 0.58], [0.06, 0.86], "furn", {
 			front(S) {
-				const k = S.px(0, 0.45);
 				return (
 					S.rect(-0.53, 0.12, -0.03, 0.8, cls("furnL")) +
 					S.rect(0.03, 0.12, 0.53, 0.8, cls("furnL")) +
-					S.circle(
-						-0.28,
-						0.46,
-						0.1,
-						`${cls("blue", "cream")} stroke-width="${n(0.014 * k)}"`
-					) +
-					S.circle(
-						0.28,
-						0.46,
-						0.1,
-						`${cls("blue", "cream")} stroke-width="${n(0.014 * k)}"`
-					)
+					S.rect(-0.47, 0.18, -0.09, 0.74, cls("furn")) +
+					S.rect(0.09, 0.18, 0.47, 0.74, cls("furn")) +
+					S.rect(-0.075, 0.4, -0.055, 0.54, cls("handle")) +
+					S.rect(0.055, 0.4, 0.075, 0.54, cls("handle"))
 				);
 			},
 		});
-		s += box(fr, [-0.6, 0.6], [0, 0.62], [0.86, 0.9], "woodL");
-		s += sprite(fr.pt(-0.3, 0.3, 0.9), SPR.thermos) + sprite(fr.pt(0.2, 0.32, 0.9), SPR.basin);
+		// The counter, its top thick and overhanging the doors, the basin set into it.
+		s += box(fr, [-0.6, 0.6], [0, 0.63], [0.86, 0.91], "woodL");
+		const Top = surface((a, b) => fr.pt(a, b, 0.911));
+		s +=
+			Top.ellipse(
+				0.22,
+				0.34,
+				0.18,
+				0.14,
+				`${cls("china", "chinaB")} stroke-width="${strokeAt(Top, 0.22, 0.34, 0.01)}"`
+			) + Top.ellipse(0.22, 0.34, 0.14, 0.1, cls("chinaB"));
+		s += sprite(fr.pt(-0.3, 0.3, 0.91), SPR.thermos);
 		return {d: 0.62, svg: s};
 	},
 
@@ -802,12 +926,8 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		s += box(fr, [-0.32, 0.32], [0, 0.45], [0.06, 0.78], "furn", {
 			front: (S) =>
 				S.rect(-0.26, 0.14, 0.26, 0.72, cls("furnL")) +
-				S.circle(
-					0,
-					0.43,
-					0.1,
-					`${cls("blue", "cream")} stroke-width="${strokeAt(S, 0, 0.43, 0.014)}"`
-				),
+				paintedMedallion(S, 0, 0.43, 0.09) +
+				S.rect(0.19, 0.38, 0.21, 0.5, cls("handle")),
 		});
 		s += box(fr, [-0.35, 0.35], [0, 0.48], [0.78, 0.82], "woodL");
 		s +=
@@ -904,6 +1024,27 @@ function windowMoon(cx: number, cy: number, r: number): string {
 	);
 }
 
+/** A small pine in a window's view, in the plains' pine colours: a lit and a shaded half, on a trunk. */
+function viewPine(x: number, foot: number, h: number): string {
+	const w = h * 0.5;
+	const p = (dx: number, dy: number) => `${n(x + dx)},${n(foot - dy)}`;
+	let lit = "";
+	let shade = `M${p(-h * 0.035, 0)} L${p(h * 0.035, 0)} L${p(h * 0.035, h * 0.12)} L${p(
+		-h * 0.035,
+		h * 0.12
+	)} Z`;
+
+	for (let k = 0; k < 3; k++) {
+		const base = h * 0.12 + k * h * 0.24;
+		const apex = k === 2 ? h : base + h * 0.42;
+		const half = (w / 2) * (1 - k * 0.24);
+		lit += `M${p(0, apex)} L${p(-half, base)} L${p(0, base + h * 0.04)} Z`;
+		shade += ` M${p(0, apex)} L${p(0, base + h * 0.04)} L${p(half, base)} Z`;
+	}
+
+	return `<path class="ps-l-pine-lit" d="${lit}"/><path class="ps-l-pine-sh" d="${shade}"/>`;
+}
+
 /** The view out of one window: the sky and the land in the plains' own colours, the stars, and (the back window) the moon and the low sun. */
 function windowView(q: Quad, clip: string, side: boolean, seed: number): string {
 	const {x: ix, y: iy, w: iw, h: ih} = bbox(q);
@@ -921,22 +1062,49 @@ function windowView(q: Quad, clip: string, side: boolean, seed: number): string 
 
 	s += `<g class="ps-yt-star">${stars}</g>`;
 
+	// The land outside, as the plains draw it (2026-11-27): low hills on the horizon to the sides and the
+	// outside's own three ranges out the back, the far plain with its pines, the near hill.
+	const plain = iy + ih * 0.64;
+	const hill = `<path style="fill: var(--ps-hill2)" d="M${n(ix)},${n(iy + ih * 0.86)} Q${n(
+		ix + iw * 0.5
+	)},${n(iy + ih * 0.76)} ${n(ix + iw)},${n(iy + ih * 0.84)} V${n(iy + ih)} H${n(ix)} Z"/>`;
+	const far = `<rect x="${n(ix)}" y="${n(plain)}" width="${n(iw)}" height="${n(
+		ih - (plain - iy)
+	)}" style="fill: var(--ps-far)"/>`;
+	const stand = (xs: readonly number[], sizes: readonly number[]) =>
+		xs
+			.map((fx, k) =>
+				viewPine(
+					ix + iw * fx,
+					plain + ih * (0.05 + 0.04 * (k % 2)),
+					ih * sizes[k % sizes.length]
+				)
+			)
+			.join("");
+
 	if (side) {
-		// To the side the plains run flat to low hills.
+		const left = clip === WINDOW_CLIPS[1];
 		s +=
-			`<path style="fill: color-mix(in oklab, var(--ps-mount), var(--ps-sky-hor) 50%)" d="M${n(
-				ix
-			)},${n(iy + ih * 0.6)} Q${n(ix + iw * 0.3)},${n(iy + ih * 0.5)} ${n(ix + iw * 0.6)},${n(
-				iy + ih * 0.58
-			)} T${n(ix + iw)},${n(iy + ih * 0.55)} V${n(iy + ih)} H${n(ix)} Z"/>` +
-			`<rect x="${n(ix)}" y="${n(iy + ih * 0.66)}" width="${n(iw)}" height="${n(
-				ih * 0.34
-			)}" style="fill: var(--ps-far)"/>` +
-			`<path style="fill: var(--ps-hill2)" d="M${n(ix)},${n(iy + ih * 0.84)} Q${n(
-				ix + iw * 0.5
-			)},${n(iy + ih * 0.74)} ${n(ix + iw)},${n(iy + ih * 0.82)} V${n(iy + ih)} H${n(
-				ix
-			)} Z"/>`;
+			`<path class="ps-m-far" d="M${n(ix)},${n(iy + ih * 0.6)} Q${n(ix + iw * 0.3)},${n(
+				iy + ih * 0.5
+			)} ${n(ix + iw * 0.6)},${n(iy + ih * 0.58)} T${n(ix + iw)},${n(iy + ih * 0.55)} V${n(
+				iy + ih
+			)} H${n(ix)} Z"/>` +
+			far +
+			(left
+				? // The river, carrying the sky, out to the left as on the plains.
+				  `<path class="ps-yt-view-river" fill="url(#ps-yt-sky)" d="M${n(
+						ix + iw * 0.55
+				  )},${n(plain)} C${n(ix + iw * 0.4)},${n(plain + ih * 0.06)} ${n(
+						ix + iw * 0.75
+				  )},${n(plain + ih * 0.12)} ${n(ix + iw * 0.45)},${n(iy + ih)} L${n(
+						ix + iw * 0.7
+				  )},${n(iy + ih)} C${n(ix + iw * 0.95)},${n(plain + ih * 0.12)} ${n(
+						ix + iw * 0.55
+				  )},${n(plain + ih * 0.06)} ${n(ix + iw * 0.62)},${n(plain)} Z"/>` +
+				  stand([0.08, 0.2, 0.3, 0.86], [0.22, 0.3, 0.18])
+				: stand([0.12, 0.62, 0.74, 0.88], [0.2, 0.3, 0.24])) +
+			hill;
 	} else {
 		s += windowMoon(ix + iw * 0.24, iy + ih * 0.2, 8);
 		s += `<g class="ps-yt-window-sun"><circle cx="${n(ix + iw * 0.78)}" cy="${n(
@@ -944,16 +1112,11 @@ function windowView(q: Quad, clip: string, side: boolean, seed: number): string 
 		)}" r="36" fill="url(#ps-yt-sun-glow)"/><circle cx="${n(ix + iw * 0.78)}" cy="${n(
 			iy + ih * 0.5
 		)}" r="9" fill="#fff3cf" ${LIT}/></g>`;
-		const sx = Math.round((iw / 400) * 1000) / 1000;
-		const sy = Math.round((ih / 161) * 1000) / 1000;
 		s +=
-			`<g transform="translate(${n(ix - 470 * sx)},${n(iy)}) scale(${sx},${sy})">` +
-			`<path style="fill: color-mix(in oklab, var(--ps-mount), var(--ps-sky-hor) 45%)" d="M0,86 C60,70 110,54 170,62 C230,70 260,40 330,44 C400,48 430,76 500,70 C580,62 620,30 700,36 C780,42 820,70 900,64 C980,58 1030,34 1100,42 C1150,48 1180,60 1200,62 L1200,400 L0,400 Z"/>` +
-			`<path style="fill: color-mix(in oklab, var(--ps-mount), #fff 55%)" opacity=".7" d="M580,62 C600,46 620,30 700,36 C730,38 752,46 770,54 C740,52 720,50 700,52 C670,48 640,58 600,64 Z"/>` +
-			`<path style="fill: var(--ps-mount)" d="M0,112 C80,96 140,84 220,92 C300,100 340,76 420,80 C500,84 560,104 640,98 C720,92 780,72 860,78 C940,84 1000,102 1080,96 C1140,92 1180,98 1200,100 L1200,400 L0,400 Z"/>` +
-			`<path style="fill: var(--ps-far)" d="M0,128 C200,120 400,132 600,126 C800,120 1000,132 1200,126 L1200,400 L0,400 Z"/>` +
-			`<path style="fill: var(--ps-hill2)" transform="translate(0,-58)" d="M0,190 C120,170 260,160 400,172 C520,182 600,200 740,188 C880,176 1000,160 1200,176 L1200,400 L0,400 Z"/>` +
-			`</g>`;
+			rangesIn(ix, plain + ih * 0.02, iw, {from: 200, to: 1400}) +
+			far +
+			stand([0.1, 0.26, 0.47, 0.66, 0.9], [0.06, 0.09, 0.07]) +
+			hill;
 	}
 
 	s += `<polygon points="${n(ix + iw * 0.1)},${n(iy)} ${n(ix + iw * 0.32)},${n(iy)} ${n(
@@ -1436,38 +1599,35 @@ export function roomMarkup(): string {
 		);
 	});
 
-	// The round stove and its pipe through the crown.
+	// The round stove and its pipe through the roof.
 	const doorMap = (s: number, t: number): P3 => {
-		const ph = -Math.PI / 2 + s / STOVE_R;
-		return [(STOVE_R + 0.003) * Math.cos(ph), t, (STOVE_R + 0.003) * Math.sin(ph)];
+		const ph = STOVE_FACE + s / STOVE.r;
+		return [
+			STOVE.x + (STOVE.r + 0.003) * Math.cos(ph),
+			t,
+			STOVE.z + (STOVE.r + 0.003) * Math.sin(ph),
+		];
 	};
 	const Dr = surface(doorMap);
-	const across = (y0: number, y1: number, half: number, z: number, attrs: string) =>
-		poly3(
-			[
-				[-half, y0, z],
-				[half, y0, z],
-				[half, y1, z],
-				[-half, y1, z],
-			],
-			attrs
-		);
+	// The pipe stands a little behind the stove's middle and rises to the roof above it.
+	const [pipeX, , pipeZ] = onStove(0, 0, -0.1);
+	const pipeTop = roofHeightAt(Math.hypot(pipeX, pipeZ));
 	// The stove, drawn twice: once in its place among what stands, once over the glows (body, below).
 	const stoveBody =
 		[-2.4, -0.75, 0.9, 2.55]
 			.map((a) =>
 				abox(
-					[Math.cos(a) * 0.3 - 0.03, Math.cos(a) * 0.3 + 0.03],
+					[STOVE.x + Math.cos(a) * 0.3 - 0.03, STOVE.x + Math.cos(a) * 0.3 + 0.03],
 					[0, 0.16],
-					[Math.sin(a) * 0.3 - 0.03, Math.sin(a) * 0.3 + 0.03],
+					[STOVE.z + Math.sin(a) * 0.3 - 0.03, STOVE.z + Math.sin(a) * 0.3 + 0.03],
 					"ironD"
 				)
 			)
 			.join("") +
-		cylinderSide(0, 0, STOVE_R + 0.02, 0.14, 0.18, cls("ironTop")) +
-		cylinderSide(0, 0, STOVE_R, 0.18, 0.72, 'fill="url(#ps-yt-iron)"') +
-		cylinderSide(0, 0, STOVE_R + 0.008, 0.22, 0.25, 'fill="url(#ps-yt-brass)"') +
-		cylinderSide(0, 0, STOVE_R + 0.008, 0.64, 0.67, 'fill="url(#ps-yt-brass)"') +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.02, 0.14, 0.18, cls("ironTop")) +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r, 0.18, 0.72, 'fill="url(#ps-yt-iron)"') +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.008, 0.22, 0.25, 'fill="url(#ps-yt-brass)"') +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.008, 0.64, 0.67, 'fill="url(#ps-yt-brass)"') +
 		Dr.arched(
 			-0.17,
 			0.17,
@@ -1478,23 +1638,28 @@ export function roomMarkup(): string {
 		) +
 		Dr.rect(-0.11, 0.26, 0.11, 0.28, cls("ironD")) +
 		Dr.circle(0.148, 0.42, 0.017, cls("gold")) +
-		cylinderSide(0, 0, STOVE_R + 0.04, 0.72, 0.76, cls("ironTop")) +
-		poly3(circle3(0, 0.76, 0, STOVE_R + 0.04), cls("ironTopL")) +
+		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.04, 0.72, 0.76, cls("ironTop")) +
+		poly3(circle3(STOVE.x, 0.76, STOVE.z, STOVE.r + 0.04), cls("ironTopL")) +
 		poly3(
-			circle3(0, 0.762, 0, STOVE_R - 0.06),
+			circle3(STOVE.x, 0.762, STOVE.z, STOVE.r - 0.06),
 			`fill="none" ${cls(undefined, "ironRing")} stroke-width="1.2"`
 		) +
-		cylinderSide(0, 0.1, 0.11, 0.76, 0.84, cls("collar")) +
-		poly3(circle3(0, 0.84, 0.1, 0.11, 24), cls("collarTop")) +
-		across(0.84, CROWN_H + 0.3, 0.075, 0.1, cls("pipe")) +
-		[1.1, 1.6, 2.1, 2.6].map((h) => across(h, h + 0.04, 0.088, 0.1, cls("pipeBand"))).join("") +
-		sprite([-0.17, 0.76, -0.1], SPR.pot, 0.0055) +
-		sprite([0.18, 0.76, -0.12], SPR.kettle, 0.0055);
+		cylinderSide(pipeX, pipeZ, 0.11, 0.76, 0.84, cls("collar")) +
+		poly3(circle3(pipeX, 0.84, pipeZ, 0.11, 24), cls("collarTop")) +
+		cylinderSide(pipeX, pipeZ, 0.075, 0.84, pipeTop, cls("pipe")) +
+		[1.1, 1.6, 2.1]
+			.filter((h) => h + 0.04 < pipeTop - 0.1)
+			.map((h) => cylinderSide(pipeX, pipeZ, 0.088, h, h + 0.04, cls("pipeBand")))
+			.join("") +
+		// Where it passes through the roof's felt, a collar.
+		cylinderSide(pipeX, pipeZ, 0.13, pipeTop - 0.06, pipeTop, cls("collar")) +
+		sprite(onStove(-0.17, 0.76, 0.1), SPR.pot, 0.0055) +
+		sprite(onStove(0.18, 0.76, 0.12), SPR.kettle, 0.0055);
 	const stove = piece("stove", stoveBody);
 	// The pot's still steam, drawn once, over the stove's second drawing: the first is covered by the
 	// second, and two .45 strokes read as 0.70 (the red team's D3).
 	const potSteam = sprite(
-		[-0.17, 0.76, -0.1],
+		onStove(-0.17, 0.76, 0.1),
 		`<g class="ps-yt-still-steam ps-yt-burn">${SPR.steam}</g>`,
 		0.0055
 	);
@@ -1608,18 +1773,34 @@ export function roomMarkup(): string {
 		);
 	};
 
-	// The dining table on its pedestal, all of it on the rug.
+	// The dining table on its pedestal and four feet, all of it on the rug: its top with a thick edge.
 	const table = () => {
 		const [tx, tz] = TABLE;
-		let s =
-			cylinderSide(tx, tz, 0.28, 0, 0.05, cls("furnD")) +
-			poly3(circle3(tx, 0.05, tz, 0.28, 32), fill("furnD", "top"));
-		s += cylinderSide(tx, tz, 0.07, 0.05, 0.71, 'fill="url(#ps-yt-wood)"');
-		s += cylinderSide(tx, tz, 0.11, 0.3, 0.36, cls("blue"));
+		const foot = (dx: number, dz: number) =>
+			abox(
+				dx === 0
+					? [tx - 0.04, tx + 0.04]
+					: dx > 0
+					? [tx + 0.05, tx + 0.32]
+					: [tx - 0.32, tx - 0.05],
+				[0, 0.06],
+				dz === 0
+					? [tz - 0.04, tz + 0.04]
+					: dz > 0
+					? [tz + 0.05, tz + 0.32]
+					: [tz - 0.32, tz - 0.05],
+				"furnD"
+			);
+		let s = foot(0, 1) + foot(-1, 0) + foot(1, 0);
 		s +=
-			cylinderSide(tx, tz, 0.52, 0.71, 0.75, cls("furnD")) +
-			poly3(circle3(tx, 0.75, tz, 0.52), cls("furn"));
-		const T = surface((a, b) => [tx + a, 0.751, tz + b]);
+			cylinderSide(tx, tz, 0.065, 0.06, 0.71, 'fill="url(#ps-yt-wood)"') +
+			cylinderSide(tx, tz, 0.1, 0.22, 0.36, 'fill="url(#ps-yt-wood)"') +
+			cylinderSide(tx, tz, 0.12, 0.66, 0.7, cls("furnD"));
+		s += foot(0, -1);
+		s +=
+			cylinderSide(tx, tz, 0.52, 0.7, 0.755, cls("furnD")) +
+			poly3(circle3(tx, 0.755, tz, 0.52), cls("furn"));
+		const T = surface((a, b) => [tx + a, 0.756, tz + b]);
 		s +=
 			T.ellipse(
 				0,
@@ -1641,34 +1822,40 @@ export function roomMarkup(): string {
 				)}" stroke-dasharray="${strokeAt(T, 0, 0, 0.05)} ${strokeAt(T, 0, 0, 0.05)}"`
 			);
 		s +=
-			sprite([tx + 0.08, 0.75, tz + 0.2], SPR.teapot, 0.006) +
-			sprite([tx - 0.1, 0.75, tz - 0.05], SPR.dumplings, 0.006) +
-			sprite([tx + 0.24, 0.75, tz - 0.14], SPR.tbowl, 0.006);
+			sprite([tx + 0.08, 0.755, tz + 0.2], SPR.teapot, 0.006) +
+			sprite([tx - 0.1, 0.755, tz - 0.05], SPR.dumplings, 0.006) +
+			sprite([tx + 0.24, 0.755, tz - 0.14], SPR.tbowl, 0.006);
 		return piece("table", s);
 	};
 
 	// The pieces along the wall, then everything standing, far to near.
 	const lights: Lights = {};
+	/** Each piece along the wall: its frame and how far it stands out, for its shadow on the floor. */
+	const footprints: Array<{fr: Frame; d: number}> = [];
 	const things: Array<{z: number; svg: string}> = ROOM.map(([kind, th]) => {
 		const fr = wallFrame(th);
 		const p = PIECES[kind](fr, lights);
+		footprints.push({fr, d: p.d});
 		return {z: depthOf(fr.pt(0, p.d, 0.6)), svg: piece(kind, p.svg)};
 	});
 	things.push(
 		{z: depthOf([-0.63, 1, 0]), svg: post(-0.63)},
 		{z: depthOf([0.63, 1, 0]), svg: post(0.63)}
 	);
-	things.push({z: depthOf([0, 0.4, -STOVE_R]), svg: stove});
+	things.push({z: depthOf(onStove(0, 0.4, STOVE.r)), svg: stove});
 	things.push({z: depthOf([TABLE[0], 0.4, TABLE[1]]), svg: table()});
 
-	for (const [dx, dz] of [
-		[-0.66, 0.0],
-		[0.06, 0.66],
-	]) {
-		const cx = TABLE[0] + dx;
-		const cz = TABLE[1] + dz;
-		things.push({z: depthOf([cx, 0.5, cz]), svg: chair(freeFrame(cx, cz, -dx, -dz))});
+	for (const c of CHAIRS) {
+		things.push({z: depthOf([c.x, 0.5, c.z]), svg: chair(freeFrame(c.x, c.z, c.nx, c.nz))});
 	}
+
+	things.push({
+		z: depthOf([BENCH.x, 0.4, BENCH.z]),
+		svg: piece(
+			"bench",
+			partsInFrame(freeFrame(BENCH.x, BENCH.z, BENCH.nx, BENCH.nz), BENCH_PARTS)
+		),
+	});
 
 	things.push({
 		z: depthOf([BASKET[0], 0.3, BASKET[1]]),
@@ -1682,6 +1869,29 @@ export function roomMarkup(): string {
 
 	// The floor's things: the rug, the hearth, the light that falls there.
 	const Fl = surface((a, b) => [a, 0.005, b]);
+	// Soft contact shadows under what stands on the floor (2026-11-27): each a soft-edged ellipse on its
+	// footprint, the whole set light (a fifth black at most), drawn under the standing pieces.
+	const SH = 'fill="url(#ps-yt-shadow)"';
+	const Fs = surface((a, b) => [a, 0.006, b]);
+	const shadows =
+		`<g class="ps-yt-shadows" opacity=".18">` +
+		Fs.ellipse(STOVE.x, STOVE.z, STOVE.r + 0.12, STOVE.r + 0.12, SH) +
+		Fs.ellipse(TABLE[0], TABLE[1], 0.5, 0.5, SH) +
+		CHAIRS.map((c) => Fs.ellipse(c.x, c.z, 0.28, 0.28, SH)).join("") +
+		surface((a, b) => freeFrame(BENCH.x, BENCH.z, BENCH.nx, BENCH.nz).pt(a, b, 0.006)).ellipse(
+			0,
+			0,
+			0.62,
+			0.24,
+			SH
+		) +
+		Fs.ellipse(BASKET[0], BASKET[1], 0.2, 0.2, SH) +
+		footprints
+			.map(({fr, d}) =>
+				surface((a, b) => fr.pt(a, b, 0.006)).ellipse(0, d / 2, 0.62, d / 2 + 0.08, SH)
+			)
+			.join("") +
+		`</g>`;
 	const rug =
 		Fl.ellipse(0, 0.1, RUG_R, RUG_R, cls("rug"), 72) +
 		Fl.ellipse(
@@ -1773,6 +1983,7 @@ export function roomMarkup(): string {
 		`<radialGradient id="ps-yt-g-fire"><stop offset="0" stop-color="#ffa040" stop-opacity=".85"/><stop offset=".45" stop-color="#ff7a2a" stop-opacity=".32"/><stop offset="1" stop-color="#ff6a20" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-g-lamp"><stop offset="0" stop-color="#ffd08a" stop-opacity=".8"/><stop offset="1" stop-color="#ffb060" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-g-screen"><stop offset="0" stop-color="#9fbaff" stop-opacity=".55"/><stop offset="1" stop-color="#7f9fff" stop-opacity="0"/></radialGradient>` +
+		`<radialGradient id="ps-yt-shadow"><stop offset="0" stop-color="#000"/><stop offset=".6" stop-color="#000" stop-opacity=".7"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-yt-g-golden"><stop offset="0" stop-color="#ffb070" stop-opacity=".9"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></radialGradient>` +
 		`<linearGradient id="ps-yt-beam-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffbe8" stop-opacity=".34"/><stop offset="1" stop-color="#fff3cc" stop-opacity=".07"/></linearGradient>` +
 		`<clipPath id="ps-yt-roof-clip"><polygon points="${roofPoly}"/></clipPath>` +
@@ -1825,6 +2036,8 @@ export function roomMarkup(): string {
 		`<g clip-path="url(#ps-yt-wall-clip)" opacity=".9">${lattice}</g>` +
 		ribbon(WALL_H - 0.09, WALL_H, R - 0.04, cls("band")) +
 		ribbon(0, 0.1, R - 0.04, cls("skirt")) +
+		// The wall's foot a little darker above its skirt, where the floor and the wall meet (2026-11-27).
+		ribbon(0.1, 0.32, R - 0.045, `${cls("woodD", undefined, "ps-yt-wallfoot")} opacity=".12"`) +
 		`</g>` +
 		// The crown's bent ribs and its rim, over its sky.
 		`<g class="ps-yt-ribs"><g clip-path="url(#ps-yt-crown)">${ribs}</g>` +
@@ -1839,8 +2052,9 @@ export function roomMarkup(): string {
 		sideWindows +
 		// On the floor: the rug, the hearth, the light that falls there.
 		piece("rug", rug) +
-		Fl.ellipse(0, 0, 0.66, 0.66, cls("hearth")) +
-		Fl.ellipse(0, 0, 0.58, 0.58, cls("hearthL")) +
+		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate, STOVE.plate, cls("hearth")) +
+		Fl.ellipse(STOVE.x, STOVE.z, STOVE.plate - 0.08, STOVE.plate - 0.08, cls("hearthL")) +
+		shadows +
 		`<g class="ps-yt-pool-sun">${Fl.ellipse(
 			patch[0],
 			patch[1],
@@ -1869,8 +2083,8 @@ export function roomMarkup(): string {
 			(FOCAL * 2.4) / door[2]
 		)}" fill="url(#ps-yt-g-fire)"/>` +
 		`<g class="ps-yt-glow-fire">${Fl.ellipse(
-			0,
-			-0.5,
+			onStove(0, 0, 0.5)[0],
+			onStove(0, 0, 0.5)[2],
 			1.3,
 			1.0,
 			'fill="url(#ps-yt-g-fire)"'
@@ -1985,7 +2199,7 @@ export function roomMarkup(): string {
 		}</svg></div></div>`;
 	}
 
-	const potRim = project([-0.17, 0.84, -0.1]);
+	const potRim = project(onStove(-0.17, 0.84, 0.1));
 	moving +=
 		`<div class="ps-ym-steam" style="--x:${n(potRim[0])};--y:${n(potRim[1])};--w:0;--h:0">` +
 		[0, -1.2, -2.4].map((d) => `<i style="--sd:3.6s;--sdl:${d}s"></i>`).join("") +

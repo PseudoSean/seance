@@ -1188,6 +1188,23 @@ html:not([data-reduce-motion]) #chat .chat-view[data-type="channel"] .content:ha
 	isolation: isolate;
 }
 
+/* A portrait window (a phone) shows the room's middle with the stove whole at
+ * its right edge (2026-11-27): the room's box reaches left by twice the shift,
+ * so the picture, centred in the box, and the moving overlays placed in the
+ * same box (psng/room-motion.ts) slide together. The shift is just what the
+ * stove needs (its right edge, --ps-ym-edge frame units right of the middle,
+ * past half the window's width), at most --ps-ym-dx; a near-square window whose
+ * stove is already whole does not slide. Frame units become px at the height's
+ * scale on a portrait window, 100cqh / 800. */
+@container (max-aspect-ratio: 1/1) {
+	#theme-scene .ps-indoor {
+		--ps-ym-dx: 150;
+		--ps-ym-edge: 340;
+		/* stylelint-disable-next-line unit-no-unknown -- cqh, cqw: #theme-scene is a size container; stylelint predates them */
+		left: calc(-2 * min(var(--ps-ym-dx) * 100cqh / 800, max(0px, var(--ps-ym-edge) * 100cqh / 800 - 50cqw)));
+	}
+}
+
 #theme-scene .ps-indoor > svg,
 #theme-scene .ps-indoor > div {
 	position: absolute;

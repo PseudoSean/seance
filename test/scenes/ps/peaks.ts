@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {mountainsSvg} from "../../../client/js/scenes/ps/peaks";
+import {mountainsSvg, rangesIn} from "../../../client/js/scenes/ps/peaks";
 
 /** Every vertex of the three ranges' lit silhouettes, as [x, y] on the 1600 × 480 view. */
 function litPathVertices(svg: string): Array<[number, number]> {
@@ -75,5 +75,22 @@ describe("the mountains (peaks.ts, the avatar's ranges, 2026-11-26)", function (
 		for (const g of caps) {
 			expect((g.match(/<path /g) ?? []).length).to.be.at.least(2);
 		}
+	});
+
+	it("draws a window's ranges from the part of the view it shows, not all of it (the final review, 2026-11-27)", function () {
+		const view = rangesIn(10, 100, 240, {from: 200, to: 1400});
+		expect(view).to.match(/^<g transform="translate\([\d.-]+,[\d.-]+\) scale\(0\.2\)">/);
+		// The paths' own points, after the group's transform.
+		const paths = view.slice(view.indexOf('">') + 2);
+		const xs = [...paths.matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)].map((m) =>
+			Number(m[1])
+		);
+		expect(Math.min(...xs)).to.be.at.least(200 - 200);
+		expect(Math.max(...xs)).to.be.at.most(1400 + 200);
+		for (const c of ["ps-m-far", "ps-m-mid", "ps-m-near"]) {
+			expect(view).to.include(`class="${c}"`);
+		}
+
+		expect(view.split('class="ps-m-snow"').length - 1).to.equal(3);
 	});
 });
