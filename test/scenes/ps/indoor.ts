@@ -24,22 +24,20 @@ describe("ps yurt: the room's colour and light by the minute (indoor.ts, docs/pr
 	it("is lit by day and shaded at night", function () {
 		const noon = at(new Date(2026, 5, 21, 12, 30), "clear");
 		const night = at(new Date(2026, 5, 21, 23, 0), "clear");
+		// No beam through the crown (the user, 2026-11-27: it washed what it crossed).
 		expect(indoorLevels(noon.m, noon.p))
 			.to.include({shade: 0, lamp: 0})
-			.and.have.property("beam")
-			.above(0.9);
+			.and.not.have.property("beam");
 		const n = indoorLevels(night.m, night.p);
 		expect(n.shade).to.be.closeTo(0.74, 0.001);
 		expect(n.lamp).to.equal(1);
 		expect(n.fire).to.be.closeTo(0.8, 0.001);
-		expect(n.beam).to.equal(0);
 	});
 
-	it("dims and lights the lamp in a storm, and has no beam under cloud", function () {
+	it("dims and lights the lamp in a storm", function () {
 		const {m, p} = at(new Date(2026, 5, 21, 12, 30), "storm");
 		const l = indoorLevels(m, p);
 		expect(l.lamp).to.equal(1);
-		expect(l.beam).to.equal(0);
 		expect(l.shade).to.be.closeTo(0.55 * 0.46, 1e-9);
 	});
 
@@ -120,10 +118,9 @@ describe("ps yurt: the room's colour and light by the minute (indoor.ts, docs/pr
 		expect(roomCss()).to.contain(".ps-yt-burn { opacity: var(--ps-in-burn); }");
 	});
 
-	it("writes exactly the ten levels", function () {
+	it("writes exactly the nine levels", function () {
 		const {m, p} = at(new Date(2026, 5, 21, 18, 30), "clear");
 		expect(Object.keys(indoorVars(m, p)).sort()).to.deep.equal([
-			"--ps-in-beam",
 			"--ps-in-burn",
 			"--ps-in-cavity",
 			"--ps-in-fire",

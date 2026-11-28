@@ -11,10 +11,12 @@ import {
 } from "../../../client/js/scenes/ps/yurt";
 import {
 	BASKET,
+	BED,
 	BENCH,
 	CHAIR_PARTS,
 	CHAIRS,
 	CURTAIN_ROD,
+	PIPE,
 	ROOM_PIECES,
 	STOVE,
 	TABLE,
@@ -100,11 +102,6 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 		expect(markup.indexOf('class="ps-yt-still-hearth ps-yt-burn"')).to.be.above(over);
 	});
 
-	it("lets the sun through the crown fall over the stove and its pipe, drawn twice or not", function () {
-		const over = markup.indexOf('class="ps-yt-stove-over"');
-		expect(markup.indexOf('class="ps-yt-beam"')).to.be.above(over);
-	});
-
 	it("draws the fire, the lamp's flame and the steam over the over layer (plan 2, task 4)", function () {
 		const topAt = markup.indexOf('<div class="ps-ym-top">');
 		const top = markup.slice(topAt);
@@ -175,17 +172,15 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 		boxes.forEach((b) => expect(b).to.equal(`${f.x} ${f.y} ${f.width} ${f.height}`));
 	});
 
-	it("draws each crown post's pole after its base and its cap: above the eye, the pole covers the cap's underside (the user, 2026-11-19)", function () {
-		const starts = [...markup.matchAll(/<g class="ps-yt-p-post">/g)].map((m) => m.index ?? 0);
-		expect(starts.length, "two posts").to.equal(2);
+	it("has no posts under the crown: the roof poles hold it (the user, 2026-11-27)", function () {
+		expect(markup).to.not.include("ps-yt-p-post");
+		expect(ROOM_PIECES).to.not.include("ps-yt-p-post");
+	});
 
-		for (const at of starts) {
-			const next = markup.indexOf('class="ps-yt-p-', at + 20);
-			const post = markup.slice(at, next < 0 ? undefined : next);
-			expect(post.lastIndexOf("ps-yt-c-furnD"), "the cap before the pole").to.be.below(
-				post.indexOf("ps-yt-c-pole")
-			);
-		}
+	it("draws no sunbeam through the crown and no pool of sun on the floor: the beam washed out whatever it crossed, the pool read as a stray mat (the user, 2026-11-27)", function () {
+		expect(markup).to.not.include("ps-yt-beam");
+		expect(markup).to.not.include("ps-yt-pool-sun");
+		expect(roomCss()).to.not.include("--ps-in-beam");
 	});
 
 	it("hangs the back curtains' rod on the wall: under the lattice's top, across the curtains' heads, ending just past them on finials and brackets (the user, 2026-11-19)", function () {
@@ -853,6 +848,49 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			expect(blue.length).to.be.at.least(1);
 			blue.forEach((k) => expect(k, "a lozenge, not a disc").to.be.at.most(8));
 			expect(wash).to.include("ps-yt-c-handle");
+		});
+	});
+
+	describe('the bed, put right (the user, 2026-11-27: "several things wrong with it")', function () {
+		const bed = (() => {
+			const at = markup.indexOf('<g class="ps-yt-p-bed">');
+			return markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+		})();
+		const discs = (cls: string) =>
+			[...bed.matchAll(new RegExp(`<polygon points="([^"]*)" class="${cls}"`, "g"))].filter(
+				(m) => m[1].trim().split(/\s+/).length > 8
+			).length;
+
+		it("stands its head posts taller than the headboard's arch, as a four-poster's", function () {
+			expect(BED.headPost).to.be.above(BED.headPeak + 0.05);
+		});
+
+		it("paints its boards with the lozenge medallion, no blue or green discs, and no stray dots on the rail", function () {
+			expect(discs("ps-yt-c-blue ps-yt-s-cream"), "blue discs").to.equal(0);
+			expect(discs("ps-yt-c-green ps-yt-s-cream"), "green discs").to.equal(0);
+			// Two medallions (head and foot), two cream dots each: the rail's three dots are gone.
+			expect(discs("ps-yt-c-cream"), "cream dots").to.equal(4);
+		});
+
+		it("hangs the wall rug where the stove's pipe does not cut through its medallion", function () {
+			const xs = [...bed.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-rugP"/g)].flatMap(
+				(m) =>
+					m[1]
+						.trim()
+						.split(/\s+/)
+						.map((p) => Number(p.split(",")[0]))
+			);
+			const pipe = [PIPE.x - 0.09, PIPE.x + 0.09].map((x) => project([x, 1.39, PIPE.z])[0]);
+			const clear =
+				Math.max(...pipe) < Math.min(...xs) || Math.min(...pipe) > Math.max(...xs);
+			expect(
+				clear,
+				`the pipe ${pipe
+					.map((x) => x.toFixed(0))
+					.join("–")} against the medallion ${Math.min(...xs).toFixed(0)}–${Math.max(
+					...xs
+				).toFixed(0)}`
+			).to.equal(true);
 		});
 	});
 });

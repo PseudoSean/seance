@@ -177,8 +177,6 @@ export interface IndoorLevels {
 	cavity: number;
 	/** The lamp on the chests: on at night, in a storm and in an overcast golden hour. */
 	lamp: number;
-	/** The sun through the crown, and its pool on the floor. */
-	beam: number;
 	/** The sun's disc low in the back window. */
 	sun: number;
 	/** The computer's screen glowing at night. */
@@ -202,7 +200,6 @@ export function indoorLevels(m: Moment, p: Palette): IndoorLevels {
 			wx.storm,
 			wx.hide > 0 && p.glowOpacity > 0.5 ? 1 : 0
 		),
-		beam: clear && m.sun.up ? clamp01(m.sun.alt * 1.6) : 0,
 		sun: clear && m.sun.up && m.sun.alt >= 0 && m.sun.alt < 0.2 ? 1 - m.sun.alt / 0.2 : 0,
 		screen: p.dark,
 	};
@@ -244,7 +241,6 @@ export function roomCss(): string {
 		"\n.ps-yt-f-side, .ps-yt-f-left, .ps-yt-f-right, .ps-yt-f-back { fill: color-mix(in oklab, var(--c), #000 16%); }" +
 		"\n.ps-yt-f-top { fill: color-mix(in oklab, var(--c), #fff 14%); }" +
 		"\n.ps-yt-f-bottom { fill: color-mix(in oklab, var(--c), #000 28%); }" +
-		"\n.ps-yt-beam, .ps-yt-pool-sun { opacity: var(--ps-in-beam); }" +
 		"\n.ps-yt-golden { opacity: var(--ps-in-golden); }" +
 		"\n.ps-yt-glow-fire { opacity: var(--ps-in-fire); }" +
 		"\n.ps-yt-burn { opacity: var(--ps-in-burn); }" +
