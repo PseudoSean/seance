@@ -7,6 +7,7 @@ import {
 	freeFrame,
 	project,
 	ROOM_GEOMETRY,
+	softBox,
 	sprite,
 	wallFrame,
 } from "../../../client/js/scenes/ps/yurt";
@@ -73,5 +74,26 @@ describe("ps yurt: the room's geometry (yurt.ts, docs/projects/ps-yurt.md §5)",
 		const facing = box(freeFrame(0, 2, 0, -1), [-0.2, 0.2], [-0.03, 0.03], [0.5, 1], "wood");
 		expect(facing).to.include('class="ps-yt-c-wood"');
 		expect(facing).to.not.include("ps-yt-f-back");
+	});
+
+	it("draws a soft box: a rounded silhouette and a rounded top, in its colour, for bedding (2026-11-28)", function () {
+		const soft = softBox(
+			freeFrame(1, 2, 0, -1),
+			[-0.3, 0.3],
+			[-0.2, 0.2],
+			[0.5, 0.65],
+			"pillow",
+			0.06
+		);
+		const polys = [...soft.matchAll(/<polygon points="([^"]*)" class="([^"]*)"/g)].map((m) => ({
+			n: m[1].trim().split(/\s+/).length,
+			cls: m[2],
+		}));
+		expect(polys.length).to.be.at.least(2);
+		expect(polys[0].cls, "the silhouette").to.equal("ps-yt-c-pillow");
+		expect(polys[0].n, "rounded, not four corners").to.be.at.least(16);
+		const top = polys.find((p) => p.cls === "ps-yt-c-pillow ps-yt-f-top");
+		expect(top, "the top").to.not.equal(undefined);
+		expect(top!.n, "its rounded corners").to.be.at.least(16);
 	});
 });

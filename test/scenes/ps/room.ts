@@ -18,6 +18,7 @@ import {
 	CURTAIN_ROD,
 	ROOM_PIECES,
 	STOVE,
+	STOVE_FEET,
 	TABLE,
 	roomMarkup,
 	WINDOW_CLIPS,
@@ -881,8 +882,9 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 		it("paints its boards with the lozenge medallion, no blue or green discs, and no stray dots on the rail", function () {
 			expect(discs("ps-yt-c-blue ps-yt-s-cream"), "blue discs").to.equal(0);
 			expect(discs("ps-yt-c-green ps-yt-s-cream"), "green discs").to.equal(0);
-			// Two medallions (head and foot), two cream dots each: the rail's three dots are gone.
-			expect(discs("ps-yt-c-cream"), "cream dots").to.equal(4);
+			// One medallion, on the headboard (the footboard is a plain panel, 2026-11-28), its two cream
+			// dots: the rail's three dots are gone.
+			expect(discs("ps-yt-c-cream"), "cream dots").to.equal(2);
 		});
 
 		it("hangs the wall rug centred over the bed (an offset rug read as an offset pattern, the user, 2026-11-28)", function () {
@@ -903,6 +905,46 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 
 		it("centres the quilt's pattern on the part of the quilt that shows, between the turned-down sheet and the throw", function () {
 			expect(BED.patternCentre).to.be.closeTo((BED.sheetEnd + BED.throwStart) / 2, 0.005);
+		});
+	});
+
+	describe("the bed softened and the stove squared to its door (the user, 2026-11-28)", function () {
+		const bed = (() => {
+			const at = markup.indexOf('<g class="ps-yt-p-bed">');
+			return markup.slice(at, markup.indexOf('<g class="ps-yt-p-', at + 10));
+		})();
+
+		it("rounds the pillows, the mattress and the quilt: no blocks", function () {
+			for (const c of ["pillow", "mattress", "blue"]) {
+				const counts = [
+					...bed.matchAll(
+						new RegExp(`<polygon points="([^"]*)" class="ps-yt-c-${c}"`, "g")
+					),
+				].map((m) => m[1].trim().split(/\s+/).length);
+				expect(counts.length, c).to.be.at.least(1);
+				counts.forEach((k) => expect(k, `${c}: a rounded silhouette`).to.be.at.least(16));
+			}
+		});
+
+		it("stands the stove's front feet either side of its door, mirror images about the way it faces", function () {
+			const eye = ROOM_GEOMETRY.eye;
+			const face = Math.atan2(eye[2] - STOVE.z, eye[0] - STOVE.x);
+			const off = STOVE_FEET.map(([x, z]) => {
+				let d = Math.atan2(z - STOVE.z, x - STOVE.x) - face;
+				while (d > Math.PI) {
+					d -= 2 * Math.PI;
+				}
+
+				while (d < -Math.PI) {
+					d += 2 * Math.PI;
+				}
+				return d;
+			}).sort((p, q) => Math.abs(p) - Math.abs(q));
+			const [f1, f2] = off;
+			expect(Math.sign(f1)).to.equal(-Math.sign(f2));
+			expect(Math.abs(Math.abs(f1) - Math.abs(f2)), "mirror images").to.be.below(
+				(1 * Math.PI) / 180
+			);
 		});
 	});
 });

@@ -35,8 +35,10 @@ import {
 	project,
 	pts,
 	quadratic,
+	roundedOutline,
 	roofHeightAt,
 	ROOM_GEOMETRY,
+	softBox,
 	sprite,
 	strokeAt,
 	surface,
@@ -131,6 +133,16 @@ export const BED = {
 	throwStart: BED_L - 0.44,
 	patternCentre: (-BED_L + 0.64 + BED_L - 0.44) / 2,
 } as const;
+/**
+ * The stove's four feet, turned with it: two either side of its door, two behind (they stood at the
+ * angles they had facing the door from the middle, so its base and its door faced different ways).
+ */
+export const STOVE_FEET: ReadonlyArray<readonly [number, number]> = [-2.4, -0.75, 0.9, 2.55].map(
+	(a) => {
+		const t = a + STOVE_FACE + Math.PI / 2;
+		return [STOVE.x + Math.cos(t) * 0.3, STOVE.z + Math.sin(t) * 0.3] as const;
+	}
+);
 /** The stove's pipe: a little behind its middle, rising to the roof above it. */
 export const PIPE = {x: onStove(0, 0, -0.1)[0], z: onStove(0, 0, -0.1)[2]} as const;
 
@@ -574,15 +586,27 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 			post(HEAD - 0.09, HEAD + 0.02, 0, BED.headPost) +
 			post(HEAD - 0.09, HEAD + 0.02, D - 0.1, BED.headPost);
 		const footboard =
+			// A plain panel with a straight top (2026-11-28): seen nearly edge-on from here, the arch and its
+			// medallion read lopsided.
 			board(
 				FOOT,
 				FOOT + T,
-				archOutline(0, D, 0, 0.66, 0.8),
-				archOutline(0.12, D - 0.12, 0.2, 0.58, 0.7),
-				(S) => paintedMedallion(S, D / 2, 0.42, 0.065)
+				[
+					[0, 0],
+					[D, 0],
+					[D, 0.7],
+					[0, 0.7],
+				],
+				[
+					[0.12, 0.2],
+					[D - 0.12, 0.2],
+					[D - 0.12, 0.6],
+					[0.12, 0.6],
+				],
+				() => ""
 			) +
-			post(FOOT - 0.02, FOOT + 0.09, 0, 0.9) +
-			post(FOOT - 0.02, FOOT + 0.09, D - 0.1, 0.9);
+			post(FOOT - 0.02, FOOT + 0.09, 0, 0.86) +
+			post(FOOT - 0.02, FOOT + 0.09, D - 0.1, 0.86);
 		// Seen from the side the bed faces, a board is behind the bedding; seen from beyond it, in front.
 		const headBehind = seesPlus(HEAD);
 		const footBehind = !seesPlus(FOOT + T);
@@ -614,24 +638,26 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		// The bedding, as solids that rest on one another (2026-11-28: the tilted cards read in a perspective
 		// of their own): a slim mattress; two pillows lying on it at the head (the upright cushion read as a
 		// book standing on the bed); the quilt on the mattress, its sheet turned down at the head; the throw across the foot.
-		s += box(
+		s += softBox(
 			fr,
 			[HEAD + 0.02, FOOT - 0.02],
 			[0.04, D - 0.02],
 			[BED.mattressBottom, BED.mattressTop],
-			"mattress"
+			"mattress",
+			0.04
 		);
 
 		for (const [b0, b1] of [
 			[0.1, 0.68],
 			[0.74, 1.32],
 		]) {
-			s += box(
+			s += softBox(
 				fr,
 				[HEAD + 0.08, HEAD + 0.46],
 				[b0, b1],
 				[BED.pillowBottom, BED.pillowBottom + 0.14],
-				"pillow"
+				"pillow",
+				0.065
 			);
 		}
 
@@ -642,15 +668,13 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		const HEM = 0.33;
 		const PC = BED.patternCentre;
 		const MB = (0.02 + QB) / 2;
-		s += box(fr, [QA, QF], [0.02, QB], [HEM, QT], "blue", {
+		const QR = 0.04;
+		s += softBox(fr, [QA, QF], [0.02, QB], [HEM, QT], "blue", QR, {
 			top: (S) =>
-				S.rect(QA, 0.02, QF, QB, cls("quiltTop")) +
-				S.rect(QA, 0.02, BED.sheetEnd, QB, cls("sheet")) +
-				S.rect(
-					PC - 0.42,
-					0.18,
-					PC + 0.42,
-					QB - 0.16,
+				S.poly(roundedOutline(QA, 0.02, QF, QB, QR), cls("quiltTop")) +
+				S.poly(roundedOutline(QA, 0.02, BED.sheetEnd, QB, QR), cls("sheet")) +
+				S.poly(
+					roundedOutline(PC - 0.42, 0.18, PC + 0.42, QB - 0.16, 0.05),
 					`fill="none" ${cls(undefined, "cream")} stroke-width="${strokeAt(
 						S,
 						PC,
@@ -668,7 +692,7 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 					.map(([da, db]) => S.circle(PC + da, MB + db, 0.035, cls("gold")))
 					.join(""),
 			front: (S) =>
-				S.rect(QA, HEM, BED.sheetEnd, QT, cls("sheetSide")) +
+				S.poly(roundedOutline(QA, HEM, BED.sheetEnd, QT, QR), cls("sheetSide")) +
 				S.line(
 					[
 						[BED.sheetEnd, HEM + 0.05],
@@ -682,7 +706,7 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		const stripes = (S: Painter, t0: number, t1: number) =>
 			S.rect(TA + 0.06, t0, TA + 0.1, t1, cls("rug")) +
 			S.rect(TB - 0.1, t0, TB - 0.06, t1, cls("rug"));
-		s += box(fr, [TA, TB], [0, QB + 0.02], [HEM + 0.04, QT + 0.02], "gold", {
+		s += softBox(fr, [TA, TB], [0, QB + 0.02], [HEM + 0.04, QT + 0.02], "gold", 0.015, {
 			top: (S) => stripes(S, 0, QB + 0.02),
 			front(S) {
 				let fringe = stripes(S, HEM + 0.04, QT + 0.02);
@@ -1579,16 +1603,9 @@ export function roomMarkup(): string {
 	const pipeTop = roofHeightAt(Math.hypot(pipeX, pipeZ));
 	// The stove, drawn twice: once in its place among what stands, once over the glows (body, below).
 	const stoveBody =
-		[-2.4, -0.75, 0.9, 2.55]
-			.map((a) =>
-				abox(
-					[STOVE.x + Math.cos(a) * 0.3 - 0.03, STOVE.x + Math.cos(a) * 0.3 + 0.03],
-					[0, 0.16],
-					[STOVE.z + Math.sin(a) * 0.3 - 0.03, STOVE.z + Math.sin(a) * 0.3 + 0.03],
-					"ironD"
-				)
-			)
-			.join("") +
+		STOVE_FEET.map(([fx, fz]) =>
+			abox([fx - 0.03, fx + 0.03], [0, 0.16], [fz - 0.03, fz + 0.03], "ironD")
+		).join("") +
 		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.02, 0.14, 0.18, cls("ironTop")) +
 		cylinderSide(STOVE.x, STOVE.z, STOVE.r, 0.18, 0.72, 'fill="url(#ps-yt-iron)"') +
 		cylinderSide(STOVE.x, STOVE.z, STOVE.r + 0.008, 0.22, 0.25, 'fill="url(#ps-yt-brass)"') +
