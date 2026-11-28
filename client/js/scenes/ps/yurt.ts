@@ -451,6 +451,85 @@ export function box(fr: Frame, a: Pair, b: Pair, c: Pair, colour: string, deco: 
 	);
 }
 
+/** A rounded rectangle's outline from (s0, t0) to (s1, t1), its corners of radius r. */
+export function roundedOutline(
+	s0: number,
+	t0: number,
+	s1: number,
+	t1: number,
+	r: number,
+	k = 5
+): Array<[number, number]> {
+	const l: Array<[number, number]> = [];
+	const corner = (cs: number, ct: number, a0: number) => {
+		for (let i = 0; i <= k; i++) {
+			const a = a0 + (Math.PI / 2) * (i / k);
+			l.push([cs + r * Math.cos(a), ct + r * Math.sin(a)]);
+		}
+	};
+	corner(s1 - r, t0 + r, -Math.PI / 2);
+	corner(s1 - r, t1 - r, 0);
+	corner(s0 + r, t1 - r, Math.PI / 2);
+	corner(s0 + r, t0 + r, Math.PI);
+	return l;
+}
+
+/**
+ * A soft box in a frame (2026-11-28: the bed's boxes read as blocks): every edge and corner rounded
+ * by `r`. Its silhouette (the hull of its rounded corners, projected) in its colour, then its top, a
+ * rounded rectangle in the top's shade, with any decoration of the top and of the face toward where
+ * it faces. For bedding: pillows, a mattress, a quilt.
+ */
+export function softBox(
+	fr: Frame,
+	a: Pair,
+	b: Pair,
+	c: Pair,
+	colour: string,
+	r: number,
+	deco: {top?: (S: Painter) => string; front?: (S: Painter) => string} = {}
+): string {
+	const q: Array<[number, number, number]> = [];
+
+	for (const ia of [0, 1]) {
+		for (const ib of [0, 1]) {
+			for (const ic of [0, 1]) {
+				const sa = ia ? 1 : -1;
+				const sb = ib ? 1 : -1;
+				const sc = ic ? 1 : -1;
+				const ca = a[ia] - sa * r;
+				const cb = b[ib] - sb * r;
+				const cc = c[ic] - sc * r;
+
+				for (let u = 0; u <= 3; u++) {
+					for (let v = 0; v <= 3; v++) {
+						const th = (u / 3) * (Math.PI / 2);
+						const ph = (v / 3) * (Math.PI / 2);
+						q.push(
+							project(
+								fr.pt(
+									ca + sa * r * Math.cos(ph) * Math.cos(th),
+									cb + sb * r * Math.cos(ph) * Math.sin(th),
+									cc + sc * r * Math.sin(ph)
+								)
+							)
+						);
+					}
+				}
+			}
+		}
+	}
+
+	const T = surface((s, t) => fr.pt(s, t, c[1]));
+	const F = surface((s, t) => fr.pt(s, b[1], t));
+	return (
+		`<polygon points="${pts(hull(q))}" class="ps-yt-c-${colour}"/>` +
+		(deco.front?.(F) ?? "") +
+		T.poly(roundedOutline(a[0], b[0], a[1], b[1], r), fill(colour, "top")) +
+		(deco.top?.(T) ?? "")
+	);
+}
+
 /** A box standing square to the room. */
 export function abox(x: Pair, y: Pair, z: Pair, colour: string, deco: Deco = {}): string {
 	return faces(
