@@ -112,8 +112,25 @@ const onStove = (a: number, y: number, b: number): P3 => [
 	y,
 	STOVE.z + a * Math.cos(STOVE_FACE) + b * Math.sin(STOVE_FACE),
 ];
-/** The bed's head posts and its headboard's arch: a four-poster's posts stand over its boards. */
-export const BED = {headPost: 1.52, headPeak: 1.42} as const;
+/** The bed's half-length along the wall. */
+const BED_L = 1.08;
+/**
+ * The bed's measures (2026-11-27/28): a four-poster's head posts over its headboard; the wall rug centred
+ * over it; a slim mattress, the quilt resting on it and the pillows lying on it; the quilt's pattern
+ * centred on the part that shows, between the turned-down sheet at the head and the throw at the foot.
+ */
+export const BED = {
+	headPost: 1.52,
+	headPeak: 1.42,
+	rugOffset: 0,
+	mattressBottom: 0.36,
+	mattressTop: 0.54,
+	quiltTop: 0.575,
+	pillowBottom: 0.54,
+	sheetEnd: -BED_L + 0.64,
+	throwStart: BED_L - 0.44,
+	patternCentre: (-BED_L + 0.64 + BED_L - 0.44) / 2,
+} as const;
 /** The stove's pipe: a little behind its middle, rising to the roof above it. */
 export const PIPE = {x: onStove(0, 0, -0.1)[0], z: onStove(0, 0, -0.1)[2]} as const;
 
@@ -436,16 +453,16 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		};
 	},
 
-	/* A painted four-poster: shaped head- and footboards with thickness, posts with brass finials,
-	 * an orange frame with cream line-work; soft bedding in its own colours — a blue quilt turned
-	 * down at the head and draped over the side, puffy pillows, a red cushion, and a mustard throw
-	 * folded across the foot; the rug on the wall above it below the roof line. */
+	/* A painted four-poster: shaped head- and footboards with thickness, turned posts with brass
+	 * finials, the head posts over the headboard, an orange frame with cream line-work; the bedding as
+	 * solids in its own colours (2026-11-28) — a slim mattress, two pillows lying at the head, a blue
+	 * quilt resting on the mattress with its sheet turned down at the head and its pattern centred, and
+	 * a mustard throw across the foot; the rug on the wall above it, centred, below the roof line. */
 	bed(fr) {
 		const Wl = surface((s, t) => onWall(fr, s, t));
 		const kw = Wl.px(0, 1.4);
-		// The wall rug hangs toward the bed's head, so the stove's pipe (2026-11-27) does not cut
-		// through its medallion.
-		const RA = -0.45;
+		// The wall rug, centred over the bed (hung toward its head it read as an offset pattern, 2026-11-28).
+		const RA = BED.rugOffset;
 		let s =
 			Wl.rect(RA - 0.7, 0.98, RA + 0.7, 1.8, cls("rug"), 8) +
 			Wl.rect(
@@ -477,7 +494,7 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 			);
 		}
 
-		const L = 1.08;
+		const L = BED_L;
 		const D = 1.42;
 		const HEAD = -L;
 		const FOOT = L;
@@ -487,30 +504,6 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		const seesPlus = (A: number) => {
 			const p = fr.pt(A, D / 2, 0.6);
 			return fr.u[0] * (eye[0] - p[0]) + fr.u[2] * (eye[2] - p[2]) > 0;
-		};
-		const roundRect = (
-			s0: number,
-			t0: number,
-			s1: number,
-			t1: number,
-			rs: number,
-			rt: number,
-			k = 5
-		) => {
-			const l: Array<[number, number]> = [];
-			const corner = (cs: number, ct: number, a0: number) => {
-				for (let i = 0; i <= k; i++) {
-					l.push([
-						cs + rs * Math.cos(a0 + (Math.PI / 2) * (i / k)),
-						ct + rt * Math.sin(a0 + (Math.PI / 2) * (i / k)),
-					]);
-				}
-			};
-			corner(s1 - rs, t0 + rt, -Math.PI / 2);
-			corner(s1 - rs, t1 - rt, 0);
-			corner(s0 + rs, t1 - rt, Math.PI / 2);
-			corner(s0 + rs, t0 + rt, Math.PI);
-			return l;
 		};
 		const archOutline = (
 			s0: number,
@@ -603,131 +596,115 @@ const PIECES: Record<Piece, (fr: Frame, lights: Lights) => {d: number; svg: stri
 		}
 
 		// The frame between the posts, which are its legs (two leg boxes beside the posts stood out as stubs).
-		s += box(fr, [HEAD, FOOT], [0.02, D], [0.14, 0.4], "furn", {
+		s += box(fr, [HEAD, FOOT], [0.02, D], [0.16, BED.mattressBottom], "furn", {
 			front: (S) =>
 				S.rect(
 					HEAD + 0.07,
-					0.17,
+					0.19,
 					FOOT - 0.07,
-					0.27,
+					0.33,
 					`fill="none" ${cls(undefined, "cream")} stroke-width="${strokeAt(
 						S,
 						0,
-						0.22,
+						0.26,
 						0.012
 					)}"`
 				),
 		});
-		s += box(fr, [HEAD + 0.02, FOOT - 0.02], [0.04, D - 0.02], [0.4, 0.58], "mattress");
-		const lean = (aBot: number, aTop: number, cBot: number, cTop: number) =>
-			surface((b, t) => fr.pt(aBot + (aTop - aBot) * t, b, cBot + (cTop - cBot) * t));
+		// The bedding, as solids that rest on one another (2026-11-28: the tilted cards read in a perspective
+		// of their own): a slim mattress; two pillows lying on it at the head (the upright cushion read as a
+		// book standing on the bed); the quilt on the mattress, its sheet turned down at the head; the throw across the foot.
+		s += box(
+			fr,
+			[HEAD + 0.02, FOOT - 0.02],
+			[0.04, D - 0.02],
+			[BED.mattressBottom, BED.mattressTop],
+			"mattress"
+		);
 
 		for (const [b0, b1] of [
-			[0.08, 0.68],
-			[0.74, 1.34],
+			[0.1, 0.68],
+			[0.74, 1.32],
 		]) {
-			const P = lean(HEAD + 0.27, HEAD + 0.06, 0.58, 0.96);
-			s +=
-				P.poly(roundRect(b0, 0, b1, 1, 0.09, 0.24), cls("pillow")) +
-				P.poly(roundRect(b0 + 0.03, 0, b1 - 0.03, 0.36, 0.07, 0.14), cls("pillowShade")) +
-				P.line(
-					[
-						[b0 + 0.1, 0.62],
-						[(b0 + b1) / 2, 0.56],
-						[b1 - 0.1, 0.62],
-					],
-					`${cls(undefined, "crease")} stroke-width="${strokeAt(
-						P,
-						(b0 + b1) / 2,
-						0.5,
-						0.01
-					)}"`
-				);
-		}
-
-		const Cu = lean(HEAD + 0.42, HEAD + 0.29, 0.58, 0.84);
-		s +=
-			Cu.poly(roundRect(0.46, 0, 0.96, 1, 0.07, 0.26), cls("rug")) +
-			Cu.poly(
-				roundRect(0.5, 0.12, 0.92, 0.88, 0.05, 0.2),
-				`fill="none" ${cls(undefined, "gold")} stroke-width="${strokeAt(
-					Cu,
-					0.7,
-					0.5,
-					0.012
-				)}"`
-			) +
-			Cu.diamond(0.71, 0.5, 0.06, 0.2, cls("gold"));
-		const QA = HEAD + 0.5;
-		const QT = 0.66;
-		const QB = D + 0.03;
-		const QF = FOOT - 0.01;
-		const Qtop = surface((a, b) => fr.pt(a, b, QT));
-		s += Qtop.poly(roundRect(QA, 0.02, QF, QB, 0.07, 0.07), cls("quiltTop"));
-		s += Qtop.poly(
-			roundRect(QA + 0.24, 0.16, QF - 0.14, QB - 0.14, 0.05, 0.05),
-			`fill="none" ${cls(undefined, "cream")} stroke-width="${strokeAt(Qtop, 0, 0.7, 0.018)}"`
-		);
-
-		for (const [a, b] of [
-			[QA + 0.55, 0.45],
-			[QA + 0.55, 0.98],
-			[QA + 1.05, 0.45],
-			[QA + 1.05, 0.98],
-			[QA + 0.8, 0.71],
-		]) {
-			s += Qtop.circle(a, b, 0.04, cls("gold"));
-		}
-
-		s += Qtop.poly(roundRect(QA, 0.02, QA + 0.16, QB, 0.04, 0.05), cls("sheet"));
-		const Qf = surface((a, c) => fr.pt(a, QB, c));
-		const hemAt = (a: number) => 0.3 + 0.016 * Math.sin(a * 6.5);
-		const hem: Array<[number, number]> = [];
-
-		for (let i = 0; i <= 48; i++) {
-			const a = QF - ((QF - QA) * i) / 48;
-			hem.push([a, hemAt(a)]);
-		}
-
-		s += Qf.poly([[QA, QT], [QF, QT], ...hem], cls("blue"));
-		s += Qf.line(
-			hem.filter(([a]) => a > QA + 0.18).map(([a, c]) => [a, c + 0.07] as [number, number]),
-			`${cls(undefined, "cream")} stroke-width="${strokeAt(Qf, 0, 0.4, 0.016)}"`
-		);
-		// The turned-down fold hangs down the side with the quilt, its lining showing to the hem (it was a
-		// short block at the top, the user, 2026-11-20).
-		s += Qf.poly(
-			[
-				[QA, QT],
-				[QA + 0.16, QT],
-				[QA + 0.16, hemAt(QA + 0.16)],
-				...hem.filter(([a]) => a < QA + 0.16),
-			],
-			cls("sheetSide")
-		);
-		const TA = FOOT - 0.44;
-		const TB = FOOT - 0.12;
-		const TT = QT + 0.025;
-		const Ttop = surface((a, b) => fr.pt(a, b, TT));
-		s +=
-			Ttop.rect(TA, 0, TB, QB + 0.02, cls("gold")) +
-			Ttop.rect(TA + 0.05, 0, TA + 0.09, QB + 0.02, cls("rug")) +
-			Ttop.rect(TB - 0.09, 0, TB - 0.05, QB + 0.02, cls("rug"));
-		const Tf = surface((a, c) => fr.pt(a, QB + 0.02, c));
-		s +=
-			Tf.rect(TA, 0.36, TB, TT, fill("gold", "side")) +
-			Tf.rect(TA + 0.05, 0.36, TA + 0.09, TT, cls("rug")) +
-			Tf.rect(TB - 0.09, 0.36, TB - 0.05, TT, cls("rug"));
-
-		for (let a = TA + 0.02; a < TB; a += 0.035) {
-			s += Tf.line(
-				[
-					[a, 0.36],
-					[a, 0.32],
-				],
-				`${cls(undefined, "gold")} stroke-width="${strokeAt(Tf, a, 0.34, 0.008)}"`
+			s += box(
+				fr,
+				[HEAD + 0.08, HEAD + 0.46],
+				[b0, b1],
+				[BED.pillowBottom, BED.pillowBottom + 0.14],
+				"pillow"
 			);
 		}
+
+		const QA = HEAD + 0.5;
+		const QF = FOOT - 0.03;
+		const QB = D + 0.03;
+		const QT = BED.quiltTop;
+		const HEM = 0.33;
+		const PC = BED.patternCentre;
+		const MB = (0.02 + QB) / 2;
+		s += box(fr, [QA, QF], [0.02, QB], [HEM, QT], "blue", {
+			top: (S) =>
+				S.rect(QA, 0.02, QF, QB, cls("quiltTop")) +
+				S.rect(QA, 0.02, BED.sheetEnd, QB, cls("sheet")) +
+				S.rect(
+					PC - 0.42,
+					0.18,
+					PC + 0.42,
+					QB - 0.16,
+					`fill="none" ${cls(undefined, "cream")} stroke-width="${strokeAt(
+						S,
+						PC,
+						MB,
+						0.016
+					)}"`
+				) +
+				S.diamond(PC, MB, 0.1, 0.18, cls("gold")) +
+				[
+					[-0.26, -0.32],
+					[0.26, -0.32],
+					[-0.26, 0.32],
+					[0.26, 0.32],
+				]
+					.map(([da, db]) => S.circle(PC + da, MB + db, 0.035, cls("gold")))
+					.join(""),
+			front: (S) =>
+				S.rect(QA, HEM, BED.sheetEnd, QT, cls("sheetSide")) +
+				S.line(
+					[
+						[BED.sheetEnd, HEM + 0.05],
+						[QF, HEM + 0.05],
+					],
+					`${cls(undefined, "cream")} stroke-width="${strokeAt(S, 0, HEM + 0.05, 0.014)}"`
+				),
+		});
+		const TA = BED.throwStart;
+		const TB = FOOT - 0.12;
+		const stripes = (S: Painter, t0: number, t1: number) =>
+			S.rect(TA + 0.06, t0, TA + 0.1, t1, cls("rug")) +
+			S.rect(TB - 0.1, t0, TB - 0.06, t1, cls("rug"));
+		s += box(fr, [TA, TB], [0, QB + 0.02], [HEM + 0.04, QT + 0.02], "gold", {
+			top: (S) => stripes(S, 0, QB + 0.02),
+			front(S) {
+				let fringe = stripes(S, HEM + 0.04, QT + 0.02);
+
+				for (let a = TA + 0.02; a < TB; a += 0.035) {
+					fringe += S.line(
+						[
+							[a, HEM + 0.04],
+							[a, HEM],
+						],
+						`${cls(undefined, "gold")} stroke-width="${strokeAt(
+							S,
+							a,
+							HEM + 0.02,
+							0.008
+						)}"`
+					);
+				}
+
+				return fringe;
+			},
+		});
 
 		if (!headBehind) {
 			s += headboard;
@@ -1844,19 +1821,6 @@ export function roomMarkup(): string {
 			RUG_R - 0.14,
 			RUG_R - 0.14,
 			`fill="none" ${cls(undefined, "rugB")} stroke-width="${strokeAt(Fl, 0, 0.1, 0.05)}"`,
-			72
-		) +
-		Fl.ellipse(
-			0,
-			0.1,
-			RUG_R - 0.38,
-			RUG_R - 0.38,
-			`fill="none" ${cls(undefined, "rugP")} stroke-width="${strokeAt(
-				Fl,
-				0,
-				0.1,
-				0.045
-			)}" stroke-dasharray="${strokeAt(Fl, 0, 0.1, 0.12)} ${strokeAt(Fl, 0, 0.1, 0.08)}"`,
 			72
 		) +
 		Fl.ellipse(
