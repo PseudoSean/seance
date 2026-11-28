@@ -16,7 +16,6 @@ import {
 	CHAIR_PARTS,
 	CHAIRS,
 	CURTAIN_ROD,
-	PIPE,
 	ROOM_PIECES,
 	STOVE,
 	TABLE,
@@ -172,6 +171,13 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 		boxes.forEach((b) => expect(b).to.equal(`${f.x} ${f.y} ${f.width} ${f.height}`));
 	});
 
+	it("lays the big rug without its dark blue dashed ring (the user, 2026-11-28)", function () {
+		const at = markup.indexOf('<g class="ps-yt-p-rug">');
+		const rug = markup.slice(at, markup.indexOf("</g>", at));
+		expect(rug).to.not.include("ps-yt-s-rugP");
+		expect(rug).to.include("ps-yt-c-rug");
+	});
+
 	it("has no posts under the crown: the roof poles hold it (the user, 2026-11-27)", function () {
 		expect(markup).to.not.include("ps-yt-p-post");
 		expect(ROOM_PIECES).to.not.include("ps-yt-p-post");
@@ -240,15 +246,22 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			const cuff = points(
 				(/<polygon points="([^"]+)" class="ps-yt-c-sheetSide"/.exec(bed) ?? ["", ""])[1]
 			);
+			// The quilt's drape: its box's face toward the room (no face shade), the lowest of them (2026-11-28).
 			const drape = [...bed.matchAll(/<polygon points="([^"]+)" class="ps-yt-c-blue"/g)]
 				.map((m) => points(m[1]))
-				.find((l) => l.length > 40);
+				.sort(
+					(p, q) => Math.max(...q.map(([, y]) => y)) - Math.max(...p.map(([, y]) => y))
+				)[0];
 			expect(drape, "the quilt's drape").to.not.equal(undefined);
-			const right = Math.max(...cuff.map(([x]) => x));
-			const hem = Math.max(
-				...(drape ?? []).filter(([x]) => x <= right + 1).map(([, y]) => y)
+			// At the head end, where the cuff and the drape share an edge: the cuff's foot is the hem's.
+			const lowestAtLeft = (l: number[][]) => {
+				const left = [...l].sort((p, q) => p[0] - q[0]).slice(0, 2);
+				return Math.max(...left.map(([, y]) => y));
+			};
+			expect(lowestAtLeft(cuff), "down to the hem").to.be.closeTo(
+				lowestAtLeft(drape ?? []),
+				1.5
 			);
-			expect(Math.max(...cuff.map(([, y]) => y)), "down to the hem").to.be.closeTo(hem, 1.5);
 		});
 	});
 
@@ -872,25 +885,24 @@ describe("ps yurt: the room's markup (room.ts, docs/projects/ps-yurt.md §5)", f
 			expect(discs("ps-yt-c-cream"), "cream dots").to.equal(4);
 		});
 
-		it("hangs the wall rug where the stove's pipe does not cut through its medallion", function () {
-			const xs = [...bed.matchAll(/<polygon points="([^"]*)" class="ps-yt-c-rugP"/g)].flatMap(
-				(m) =>
-					m[1]
-						.trim()
-						.split(/\s+/)
-						.map((p) => Number(p.split(",")[0]))
-			);
-			const pipe = [PIPE.x - 0.09, PIPE.x + 0.09].map((x) => project([x, 1.39, PIPE.z])[0]);
-			const clear =
-				Math.max(...pipe) < Math.min(...xs) || Math.min(...pipe) > Math.max(...xs);
+		it("hangs the wall rug centred over the bed (an offset rug read as an offset pattern, the user, 2026-11-28)", function () {
+			expect(BED.rugOffset).to.equal(0);
+		});
+
+		it("lays the bedding as solids that rest on one another: a slim mattress, the quilt on it, the pillows on the mattress", function () {
 			expect(
-				clear,
-				`the pipe ${pipe
-					.map((x) => x.toFixed(0))
-					.join("–")} against the medallion ${Math.min(...xs).toFixed(0)}–${Math.max(
-					...xs
-				).toFixed(0)}`
-			).to.equal(true);
+				BED.quiltTop - BED.mattressTop,
+				"the quilt on the mattress, not floating over it"
+			).to.be.within(0.02, 0.05);
+			expect(BED.mattressTop - BED.mattressBottom, "a slim mattress").to.be.at.most(0.2);
+			expect(BED.pillowBottom, "the pillows on the mattress").to.equal(BED.mattressTop);
+			// The old tilted cards: the pillows' shade patches and creases, the cushion's plane, the wavy hem.
+			expect(bed).to.not.include("ps-yt-c-pillowShade");
+			expect(bed).to.not.include("ps-yt-s-crease");
+		});
+
+		it("centres the quilt's pattern on the part of the quilt that shows, between the turned-down sheet and the throw", function () {
+			expect(BED.patternCentre).to.be.closeTo((BED.sheetEnd + BED.throwStart) / 2, 0.005);
 		});
 	});
 });
